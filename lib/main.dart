@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 import 'gradients.dart';
+import 'supabase_config.dart';
+import 'screens/auth_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Supabaseを初期化
+  await SupabaseConfig.initialize();
+  
   runApp(const MyApp());
 }
 
@@ -12,11 +19,11 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'ThisOne',
       theme: ThemeData(
         colorScheme: ColorScheme.dark(
-          primary: const Color(0xFFFF6347), // 程よい赤っぽいオレンジ（Tomato）
-          secondary: const Color(0xFFFF6347), // サブカラーも同じ色
+          primary: const Color(0xFFE85A3B), // 赤みの強いオレンジ（画像の色に近い）
+          secondary: const Color(0xFFE85A3B), // サブカラーも同じ色
           surface: const Color(0xFF2B2B2B), // 全体のベース色
           background: const Color(0xFF2B2B2B), // 背景色
           onPrimary: Colors.white, // オレンジの上の文字色
@@ -29,12 +36,12 @@ class MyApp extends StatelessWidget {
           elevation: 0, // 影を削除
         ),
         floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: Color(0xFFFF6347), // FABを程よいオレンジに
+          backgroundColor: Color(0xFFE85A3B), // FABを程よいオレンジに
           foregroundColor: Colors.white, // FABのアイコン色
         ),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'ThisOne'),
     );
   }
 }
@@ -71,6 +78,13 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
+  void _navigateToAuth() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AuthScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // This method is rerun every time setState is called, for instance as done
@@ -80,11 +94,14 @@ class _MyHomePageState extends State<MyHomePage> {
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: createHorizontalOrangeYellowGradient(),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(28.0), // 通常の約半分の高さ
+        child: AppBar(
+          title: Text(widget.title),
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: createHorizontalOrangeYellowGradient(),
+            ),
           ),
         ),
       ),
@@ -111,6 +128,26 @@ class _MyHomePageState extends State<MyHomePage> {
             Text(
               '$_counter',
               style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            const SizedBox(height: 32),
+            // Supabase認証画面へのボタン
+            Container(
+              decoration: BoxDecoration(
+                gradient: createHorizontalOrangeYellowGradient(),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: ElevatedButton(
+                onPressed: _navigateToAuth,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                ),
+                child: const Text(
+                  'ログイン / サインアップ',
+                  style: TextStyle(color: Colors.white, fontSize: 16),
+                ),
+              ),
             ),
           ],
         ),
