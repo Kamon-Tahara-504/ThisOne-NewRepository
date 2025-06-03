@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'gradients.dart';
 import 'supabase_config.dart';
 import 'screens/auth_screen.dart';
+import 'screens/task_screen.dart';
+import 'screens/schedule_screen.dart';
+import 'screens/memo_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,7 +18,6 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -41,42 +43,26 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'ThisOne'),
+      home: const MainScreen(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+class MainScreen extends StatefulWidget {
+  const MainScreen({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
+class _MainScreenState extends State<MainScreen> {
+  int _currentIndex = 0;
+  
+  final List<Widget> _screens = [
+    const TaskScreen(),
+    const ScheduleScreen(),
+    const MemoScreen(),
+  ];
 
   void _navigateToAuth() {
     Navigator.push(
@@ -87,110 +73,164 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(56.0), // 標準的なAppBarの高さ
+        preferredSize: const Size.fromHeight(40.0), // 56pxから40pxに縮小
         child: Container(
-          decoration: BoxDecoration(
-            gradient: createHorizontalOrangeYellowGradient(),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Row(
-                children: [
-                  // 左寄せのタイトル
-                  Text(
-                    widget.title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20, // ヘッダーの文字のピクセル数
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const Spacer(), // 右側にスペースを作る
-                  // 右側にアイコンを配置（インスタグラム風）
-                  IconButton(
-                    onPressed: _navigateToAuth,
-                    icon: const Icon(
-                      Icons.person_outline,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                  ),
-                ],
+          color: const Color(0xFF2B2B2B), // 全体を黒背景に統一
+          child: Column(
+            children: [
+              // ステータスバー部分（黒背景に変更）
+              Container(
+                height: MediaQuery.of(context).padding.top,
+                width: double.infinity,
+                color: const Color(0xFF2B2B2B), // 黒背景
               ),
-            ),
+              // AppBar部分（黒背景）
+              Expanded(
+                child: Container(
+                  color: const Color(0xFF2B2B2B), // サブカラーの黒
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0), // 縦パディングを追加
+                          child: Row(
+                            children: [
+                              // 左寄せのタイトル
+                              Text(
+                                'ThisOne',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20, // 18pxから20pxに戻す
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              const Spacer(), // 右側にスペースを作る
+                              // 右側にアイコンを配置（インスタグラム風）
+                              IconButton(
+                                onPressed: _navigateToAuth,
+                                padding: const EdgeInsets.all(4), // アイコンボタンのパディングを縮小
+                                constraints: const BoxConstraints(
+                                  minWidth: 32,
+                                  minHeight: 32,
+                                ),
+                                icon: const Icon(
+                                  Icons.person_outline,
+                                  color: Colors.white,
+                                  size: 26, // 24pxから26pxに拡大
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // グラデーションガイドライン
+                      Container(
+                        height: 2,
+                        decoration: BoxDecoration(
+                          gradient: createHorizontalOrangeYellowGradient(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+      body: _screens[_currentIndex],
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF2B2B2B), // 黒背景
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
             ),
-            const SizedBox(height: 32),
-            // Supabase認証画面へのボタン
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // グラデーションガイドライン（上部）
             Container(
+              height: 2,
               decoration: BoxDecoration(
                 gradient: createHorizontalOrangeYellowGradient(),
-                borderRadius: BorderRadius.circular(8),
               ),
-              child: ElevatedButton(
-                onPressed: _navigateToAuth,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                ),
-                child: const Text(
-                  'ログイン / サインアップ',
-                  style: TextStyle(color: Colors.white, fontSize: 16),
+            ),
+            // ナビゲーションバー本体
+            Container(
+              color: const Color(0xFF2B2B2B),
+              child: SafeArea(
+                child: SizedBox(
+                  height: 60,
+                  child: Row(
+                    children: [
+                      _buildNavItem(0, Icons.task_alt, 'タスク'),
+                      _buildNavItem(1, Icons.calendar_today, 'スケジュール'),
+                      _buildNavItem(2, Icons.note_alt, 'メモ'),
+                    ],
+                  ),
                 ),
               ),
             ),
           ],
         ),
       ),
-      floatingActionButton: Container(
-        decoration: BoxDecoration(
-          gradient: createOrangeYellowGradient(),
-          shape: BoxShape.circle,
+    );
+  }
+
+  Widget _buildNavItem(int index, IconData icon, String label) {
+    final isSelected = _currentIndex == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        child: Container(
+          color: Colors.transparent,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ShaderMask(
+                shaderCallback: (bounds) => isSelected
+                    ? createHorizontalOrangeYellowGradient().createShader(bounds)
+                    : LinearGradient(
+                        colors: [Colors.grey[500]!, Colors.grey[500]!],
+                      ).createShader(bounds),
+                child: Icon(
+                  icon,
+                  size: 24,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 4),
+              ShaderMask(
+                shaderCallback: (bounds) => isSelected
+                    ? createHorizontalOrangeYellowGradient().createShader(bounds)
+                    : LinearGradient(
+                        colors: [Colors.grey[500]!, Colors.grey[500]!],
+                      ).createShader(bounds),
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-        child: FloatingActionButton(
-          onPressed: _incrementCounter,
-          tooltip: 'Increment',
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          child: const Icon(Icons.add, color: Colors.white),
-        ),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      ),
     );
   }
 }

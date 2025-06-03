@@ -110,40 +110,70 @@ class _AuthScreenState extends State<AuthScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(56.0), // 標準的なAppBarの高さ
+        preferredSize: const Size.fromHeight(40.0), // 56pxから40pxに縮小
         child: Container(
-          decoration: BoxDecoration(
-            gradient: createHorizontalOrangeYellowGradient(),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Row(
-                children: [
-                  // 戻るボタン
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(
-                      Icons.arrow_back_ios,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // 左寄せのタイトル
-                  Text(
-                    _isSignUp ? 'サインアップ' : 'ログイン',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20, // ヘッダーの文字のピクセル数
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const Spacer(), // 右側にスペースを作る
-                ],
+          color: const Color(0xFF2B2B2B), // 全体を黒背景に統一
+          child: Column(
+            children: [
+              // ステータスバー部分（黒背景に変更）
+              Container(
+                height: MediaQuery.of(context).padding.top,
+                width: double.infinity,
+                color: const Color(0xFF2B2B2B), // 黒背景
               ),
-            ),
+              // AppBar部分（黒背景）
+              Expanded(
+                child: Container(
+                  color: const Color(0xFF2B2B2B), // サブカラーの黒
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0), // 縦パディングを追加
+                          child: Row(
+                            children: [
+                              // 戻るボタン
+                              IconButton(
+                                onPressed: () => Navigator.pop(context),
+                                padding: const EdgeInsets.all(4), // アイコンボタンのパディングを縮小
+                                constraints: const BoxConstraints(
+                                  minWidth: 32,
+                                  minHeight: 32,
+                                ),
+                                icon: const Icon(
+                                  Icons.arrow_back_ios,
+                                  color: Colors.white,
+                                  size: 22, // 20pxから22pxに拡大
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              // 左寄せのタイトル
+                              Text(
+                                _isSignUp ? 'サインアップ' : 'ログイン',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20, // 18pxから20pxに戻す
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              const Spacer(), // 右側にスペースを作る
+                            ],
+                          ),
+                        ),
+                      ),
+                      // グラデーションガイドライン
+                      Container(
+                        height: 2,
+                        decoration: BoxDecoration(
+                          gradient: createHorizontalOrangeYellowGradient(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
