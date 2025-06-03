@@ -11,17 +11,10 @@ class MemoScreen extends StatefulWidget {
 class _MemoScreenState extends State<MemoScreen> {
   final List<Map<String, dynamic>> _memos = [];
 
-  void _addMemo() {
-    showDialog(
-      context: context,
-      builder: (context) => _AddMemoDialog(
-        onAdd: (memo) {
-          setState(() {
-            _memos.add(memo);
-          });
-        },
-      ),
-    );
+  void addMemo(Map<String, dynamic> memo) {
+    setState(() {
+      _memos.add(memo);
+    });
   }
 
   void _editMemo(int index) {
@@ -48,153 +41,107 @@ class _MemoScreenState extends State<MemoScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF2B2B2B),
-      body: Column(
-        children: [
-          // ヘッダーエリア
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF2B2B2B),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'メモ (${_memos.length})',
-                    style: const TextStyle(
-                      color: Colors.white,
+      body: _memos.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.note_alt_outlined,
+                    size: 64,
+                    color: Colors.grey[600],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'メモがありません',
+                    style: TextStyle(
+                      color: Colors.grey[400],
                       fontSize: 18,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                ),
-                Container(
+                  const SizedBox(height: 8),
+                  Text(
+                    '下部の + ボタンから新しいメモを追加してください',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _memos.length,
+              itemBuilder: (context, index) {
+                final memo = _memos[index];
+                final createdAt = memo['createdAt'] as DateTime;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
-                    gradient: createOrangeYellowGradient(),
+                    color: const Color(0xFF3A3A3A),
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[700]!),
                   ),
-                  child: IconButton(
-                    onPressed: _addMemo,
-                    icon: const Icon(Icons.add, color: Colors.white),
-                    iconSize: 24,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // メモリスト
-          Expanded(
-            child: _memos.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.note_alt_outlined,
-                          size: 64,
-                          color: Colors.grey[600],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'メモがありません',
-                          style: TextStyle(
-                            color: Colors.grey[400],
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '新しいメモを追加してください',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _memos.length,
-                    itemBuilder: (context, index) {
-                      final memo = _memos[index];
-                      final createdAt = memo['createdAt'] as DateTime;
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF3A3A3A),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey[700]!),
-                        ),
-                        child: InkWell(
-                          onTap: () => _editMemo(index),
-                          borderRadius: BorderRadius.circular(12),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        memo['title'],
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                    IconButton(
-                                      onPressed: () => _deleteMemo(index),
-                                      icon: Icon(
-                                        Icons.delete_outline,
-                                        color: Colors.grey[500],
-                                        size: 20,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                if (memo['content'].isNotEmpty) ...[
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    memo['content'],
-                                    style: TextStyle(
-                                      color: Colors.grey[300],
-                                      fontSize: 14,
-                                      height: 1.4,
-                                    ),
-                                    maxLines: 3,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                                const SizedBox(height: 12),
-                                Text(
-                                  '${createdAt.year}/${createdAt.month}/${createdAt.day} ${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}',
-                                  style: TextStyle(
-                                    color: Colors.grey[500],
-                                    fontSize: 12,
+                  child: InkWell(
+                    onTap: () => _editMemo(index),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  memo['title'],
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                              ],
+                              ),
+                              IconButton(
+                                onPressed: () => _deleteMemo(index),
+                                icon: Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.grey[500],
+                                  size: 20,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (memo['content'].isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              memo['content'],
+                              style: TextStyle(
+                                color: Colors.grey[300],
+                                fontSize: 14,
+                                height: 1.4,
+                              ),
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                          const SizedBox(height: 12),
+                          Text(
+                            '${createdAt.year}/${createdAt.month}/${createdAt.day} ${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}',
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 12,
                             ),
                           ),
-                        ),
-                      );
-                    },
+                        ],
+                      ),
+                    ),
                   ),
-          ),
-        ],
-      ),
+                );
+              },
+            ),
     );
   }
 }

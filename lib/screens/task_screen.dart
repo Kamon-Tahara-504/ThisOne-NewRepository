@@ -18,17 +18,16 @@ class _TaskScreenState extends State<TaskScreen> {
     super.dispose();
   }
 
-  void _addTask() {
-    if (_taskController.text.trim().isNotEmpty) {
+  void addTask(String title) {
+    if (title.trim().isNotEmpty) {
       setState(() {
         _tasks.add({
           'id': DateTime.now().millisecondsSinceEpoch,
-          'title': _taskController.text.trim(),
+          'title': title.trim(),
           'isCompleted': false,
           'createdAt': DateTime.now(),
         });
       });
-      _taskController.clear();
     }
   }
 
@@ -50,62 +49,6 @@ class _TaskScreenState extends State<TaskScreen> {
       backgroundColor: const Color(0xFF2B2B2B),
       body: Column(
         children: [
-          // タスク入力エリア
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF2B2B2B),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _taskController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      hintText: '新しいタスクを入力...',
-                      hintStyle: TextStyle(color: Colors.grey[400]),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey[600]!),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey[600]!),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFFE85A3B)),
-                      ),
-                      filled: true,
-                      fillColor: const Color(0xFF3A3A3A),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    ),
-                    onSubmitted: (_) => _addTask(),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: createOrangeYellowGradient(),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: IconButton(
-                    onPressed: _addTask,
-                    icon: const Icon(Icons.add, color: Colors.white),
-                    iconSize: 24,
-                  ),
-                ),
-              ],
-            ),
-          ),
           // タスクリスト
           Expanded(
             child: _tasks.isEmpty
@@ -129,7 +72,7 @@ class _TaskScreenState extends State<TaskScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          '上のフィールドから新しいタスクを追加してください',
+                          '下部の + ボタンから新しいタスクを追加してください',
                           style: TextStyle(
                             color: Colors.grey[600],
                             fontSize: 14,

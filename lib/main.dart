@@ -5,6 +5,7 @@ import 'screens/auth_screen.dart';
 import 'screens/task_screen.dart';
 import 'screens/schedule_screen.dart';
 import 'screens/memo_screen.dart';
+import 'screens/settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,12 +58,6 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
-  
-  final List<Widget> _screens = [
-    const TaskScreen(),
-    const ScheduleScreen(),
-    const MemoScreen(),
-  ];
 
   void _navigateToAuth() {
     Navigator.push(
@@ -73,6 +68,21 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 中央の作成ボタン（index 2）は画面を表示しないので、インデックスを調整
+    Widget currentScreen;
+    if (_currentIndex == 0) {
+      currentScreen = const TaskScreen();
+    } else if (_currentIndex == 1) {
+      currentScreen = const ScheduleScreen();
+    } else if (_currentIndex == 3) {
+      currentScreen = const MemoScreen();
+    } else if (_currentIndex == 4) {
+      currentScreen = const SettingsScreen();
+    } else {
+      // デフォルトはタスク画面
+      currentScreen = const TaskScreen();
+    }
+
     return Scaffold(
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(40.0), // 56pxから40pxに縮小
@@ -141,7 +151,7 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ),
       ),
-      body: _screens[_currentIndex],
+      body: currentScreen,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: const Color(0xFF2B2B2B), // 黒背景
@@ -173,7 +183,9 @@ class _MainScreenState extends State<MainScreen> {
                     children: [
                       _buildNavItem(0, Icons.task_alt, 'タスク'),
                       _buildNavItem(1, Icons.calendar_today, 'スケジュール'),
-                      _buildNavItem(2, Icons.note_alt, 'メモ'),
+                      _buildCreateButton(),
+                      _buildNavItem(3, Icons.note_alt, 'メモ'),
+                      _buildNavItem(4, Icons.settings, '設定'),
                     ],
                   ),
                 ),
@@ -231,6 +243,124 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildCreateButton() {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          // 作成ボタンのアクション（現在アクティブなタブに応じて）
+          if (_currentIndex == 0) {
+            // タスク作成（TaskScreenに委譲）
+            _showCreateTaskDialog();
+          } else if (_currentIndex == 1) {
+            // スケジュール作成（ScheduleScreenに委譲）
+            _showCreateScheduleDialog();
+          } else if (_currentIndex == 3) {
+            // メモ作成（MemoScreenに委譲）
+            _showCreateMemoDialog();
+          }
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            gradient: createOrangeYellowGradient(),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFE85A3B).withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.add,
+            color: Colors.white,
+            size: 28,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showCreateTaskDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final TextEditingController controller = TextEditingController();
+        return AlertDialog(
+          backgroundColor: const Color(0xFF3A3A3A),
+          title: const Text(
+            'タスク追加',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: TextField(
+            controller: controller,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              labelText: 'タスク名',
+              labelStyle: TextStyle(color: Colors.grey[400]),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey[600]!),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFFE85A3B)),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'キャンセル',
+                style: TextStyle(color: Colors.grey[400]),
+              ),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                gradient: createOrangeYellowGradient(),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: TextButton(
+                onPressed: () {
+                  if (controller.text.trim().isNotEmpty) {
+                    // タスク追加処理（現在は通知のみ）
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('タスク「${controller.text.trim()}」を追加しました')),
+                    );
+                    Navigator.pop(context);
+                  }
+                },
+                child: const Text(
+                  '追加',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showCreateScheduleDialog() {
+    // スケジュール作成のシンプルな実装
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('スケジュール作成機能（開発中）')),
+    );
+  }
+
+  void _showCreateMemoDialog() {
+    // メモ作成のシンプルな実装
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('メモ作成機能（開発中）')),
     );
   }
 }

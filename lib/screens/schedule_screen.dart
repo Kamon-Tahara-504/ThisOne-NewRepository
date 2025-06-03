@@ -57,6 +57,21 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     return _schedules[normalizedDate] ?? [];
   }
 
+  void addSchedule(Map<String, dynamic> schedule) {
+    setState(() {
+      final date = DateTime(
+        schedule['date'].year,
+        schedule['date'].month,
+        schedule['date'].day,
+      );
+      if (_schedules[date] != null) {
+        _schedules[date]!.add(schedule);
+      } else {
+        _schedules[date] = [schedule];
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final todaySchedules = _getSchedulesForDate(_selectedDate);
@@ -65,45 +80,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       backgroundColor: const Color(0xFF2B2B2B),
       body: Column(
         children: [
-          // ヘッダーエリア
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF2B2B2B),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'スケジュール',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: createOrangeYellowGradient(),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: IconButton(
-                    onPressed: _addSchedule,
-                    icon: const Icon(Icons.add, color: Colors.white),
-                    iconSize: 24,
-                  ),
-                ),
-              ],
-            ),
-          ),
           // カレンダー
           Container(
             margin: const EdgeInsets.all(16),
