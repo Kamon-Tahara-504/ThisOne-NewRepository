@@ -248,37 +248,46 @@ class _MainScreenState extends State<MainScreen> {
 
   Widget _buildCreateButton() {
     return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          // 作成ボタンのアクション（現在アクティブなタブに応じて）
-          if (_currentIndex == 0) {
-            // タスク作成（TaskScreenに委譲）
-            _showCreateTaskDialog();
-          } else if (_currentIndex == 1) {
-            // スケジュール作成（ScheduleScreenに委譲）
-            _showCreateScheduleDialog();
-          } else if (_currentIndex == 3) {
-            // メモ作成（MemoScreenに委譲）
-            _showCreateMemoDialog();
-          }
-        },
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            gradient: createOrangeYellowGradient(),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFE85A3B).withOpacity(0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: const Icon(
-            Icons.add,
-            color: Colors.white,
-            size: 28,
+      child: Transform.translate(
+        offset: const Offset(0, 5), // 上に移動から下に移動に変更
+        child: GestureDetector(
+          onTap: () {
+            // 作成ボタンのアクション（現在アクティブなタブに応じて）
+            if (_currentIndex == 0) {
+              // タスク作成（TaskScreenに委譲）
+              _showCreateTaskDialog();
+            } else if (_currentIndex == 1) {
+              // スケジュール作成（ScheduleScreenに委譲）
+              _showCreateScheduleDialog();
+            } else if (_currentIndex == 3) {
+              // メモ作成（MemoScreenに委譲）
+              _showCreateMemoDialog();
+            }
+          },
+          child: Container(
+            width: 60, // さらに少し大きくしてはみ出し効果を強調
+            height: 60,
+            decoration: BoxDecoration(
+              gradient: createOrangeYellowGradient(),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFE85A3B).withOpacity(0.4), // 影を少し濃く
+                  blurRadius: 12, // 影を大きく
+                  offset: const Offset(0, 4), // 影の位置も調整
+                ),
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2), // 追加の影で立体感
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.add,
+              color: Color(0xFF2B2B2B), // UIデザインで使われている黒色に変更
+              size: 34, // アイコンサイズも少し大きく
+            ),
           ),
         ),
       ),
