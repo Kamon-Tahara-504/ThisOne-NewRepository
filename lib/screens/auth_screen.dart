@@ -110,12 +110,39 @@ class _AuthScreenState extends State<AuthScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(28.0), // 通常の約半分の高さ
-        child: AppBar(
-          title: Text(_isSignUp ? 'サインアップ' : 'ログイン'),
-          flexibleSpace: Container(
-            decoration: BoxDecoration(
-              gradient: createHorizontalOrangeYellowGradient(),
+        preferredSize: const Size.fromHeight(56.0), // 標準的なAppBarの高さ
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: createHorizontalOrangeYellowGradient(),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                children: [
+                  // 戻るボタン
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(
+                      Icons.arrow_back_ios,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // 左寄せのタイトル
+                  Text(
+                    _isSignUp ? 'サインアップ' : 'ログイン',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20, // ヘッダーの文字のピクセル数
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const Spacer(), // 右側にスペースを作る
+                ],
+              ),
             ),
           ),
         ),

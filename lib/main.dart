@@ -95,12 +95,38 @@ class _MyHomePageState extends State<MyHomePage> {
     // than having to individually change instances of widgets.
     return Scaffold(
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(28.0), // 通常の約半分の高さ
-        child: AppBar(
-          title: Text(widget.title),
-          flexibleSpace: Container(
-            decoration: BoxDecoration(
-              gradient: createHorizontalOrangeYellowGradient(),
+        preferredSize: const Size.fromHeight(56.0), // 標準的なAppBarの高さ
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: createHorizontalOrangeYellowGradient(),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                children: [
+                  // 左寄せのタイトル
+                  Text(
+                    widget.title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20, // ヘッダーの文字のピクセル数
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const Spacer(), // 右側にスペースを作る
+                  // 右側にアイコンを配置（インスタグラム風）
+                  IconButton(
+                    onPressed: _navigateToAuth,
+                    icon: const Icon(
+                      Icons.person_outline,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
