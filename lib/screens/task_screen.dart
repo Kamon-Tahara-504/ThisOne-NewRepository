@@ -2,15 +2,32 @@ import 'package:flutter/material.dart';
 import '../gradients.dart';
 
 class TaskScreen extends StatefulWidget {
-  const TaskScreen({super.key});
+  final List<Map<String, dynamic>>? tasks;
+  final Function(List<Map<String, dynamic>>)? onTasksChanged;
+  
+  const TaskScreen({super.key, this.tasks, this.onTasksChanged});
 
   @override
   State<TaskScreen> createState() => _TaskScreenState();
 }
 
 class _TaskScreenState extends State<TaskScreen> {
-  final List<Map<String, dynamic>> _tasks = [];
+  late List<Map<String, dynamic>> _tasks;
   final TextEditingController _taskController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _tasks = widget.tasks != null ? List.from(widget.tasks!) : [];
+  }
+
+  @override
+  void didUpdateWidget(TaskScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.tasks != null) {
+      _tasks = List.from(widget.tasks!);
+    }
+  }
 
   @override
   void dispose() {
@@ -28,6 +45,7 @@ class _TaskScreenState extends State<TaskScreen> {
           'createdAt': DateTime.now(),
         });
       });
+      _notifyTasksChanged();
     }
   }
 
@@ -35,12 +53,20 @@ class _TaskScreenState extends State<TaskScreen> {
     setState(() {
       _tasks[index]['isCompleted'] = !_tasks[index]['isCompleted'];
     });
+    _notifyTasksChanged();
   }
 
   void _deleteTask(int index) {
     setState(() {
       _tasks.removeAt(index);
     });
+    _notifyTasksChanged();
+  }
+
+  void _notifyTasksChanged() {
+    if (widget.onTasksChanged != null) {
+      widget.onTasksChanged!(_tasks);
+    }
   }
 
   @override

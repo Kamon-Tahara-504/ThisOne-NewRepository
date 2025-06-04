@@ -58,6 +58,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
+  final List<Map<String, dynamic>> _tasks = [];
 
   void _navigateToAuth() {
     Navigator.push(
@@ -66,12 +67,33 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  void _addTask(String title) {
+    if (title.trim().isNotEmpty) {
+      setState(() {
+        _tasks.add({
+          'id': DateTime.now().millisecondsSinceEpoch,
+          'title': title.trim(),
+          'isCompleted': false,
+          'createdAt': DateTime.now(),
+        });
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // 中央の作成ボタン（index 2）は画面を表示しないので、インデックスを調整
     Widget currentScreen;
     if (_currentIndex == 0) {
-      currentScreen = const TaskScreen();
+      currentScreen = TaskScreen(
+        tasks: _tasks,
+        onTasksChanged: (updatedTasks) {
+          setState(() {
+            _tasks.clear();
+            _tasks.addAll(updatedTasks);
+          });
+        },
+      );
     } else if (_currentIndex == 1) {
       currentScreen = const ScheduleScreen();
     } else if (_currentIndex == 3) {
@@ -80,7 +102,15 @@ class _MainScreenState extends State<MainScreen> {
       currentScreen = const SettingsScreen();
     } else {
       // デフォルトはタスク画面
-      currentScreen = const TaskScreen();
+      currentScreen = TaskScreen(
+        tasks: _tasks,
+        onTasksChanged: (updatedTasks) {
+          setState(() {
+            _tasks.clear();
+            _tasks.addAll(updatedTasks);
+          });
+        },
+      );
     }
 
     return Scaffold(
@@ -343,7 +373,9 @@ class _MainScreenState extends State<MainScreen> {
               child: TextButton(
                 onPressed: () {
                   if (controller.text.trim().isNotEmpty) {
-                    // タスク追加処理（現在は通知のみ）
+                    // 直接MainScreenのタスクリストに追加
+                    _addTask(controller.text.trim());
+                    
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('タスク「${controller.text.trim()}」を追加しました')),
                     );
