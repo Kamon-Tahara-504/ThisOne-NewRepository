@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'gradients.dart';
 import 'supabase_config.dart';
 import 'screens/auth_screen.dart';
@@ -106,13 +107,13 @@ class _MainScreenState extends State<MainScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0), // 縦パディングを追加
                           child: Row(
                             children: [
-                              // 左寄せのタイトル
+                              // ヘッダー左寄せのタイトル 
                               Text(
                                 'ThisOne',
-                                style: const TextStyle(
+                                style: GoogleFonts.montserrat(
                                   color: Colors.white,
-                                  fontSize: 20, // 18pxから20pxに戻す
-                                  fontWeight: FontWeight.w700,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w500, // 文字の太さ
                                   letterSpacing: 0.5,
                                 ),
                               ),

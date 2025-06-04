@@ -38,6 +38,9 @@ dependencies:
   # Supabase dependencies
   supabase_flutter: ^2.5.6
   table_calendar: ^3.0.9
+  
+  # Google Fonts for custom typography
+  google_fonts: ^6.1.0
 
 dev_dependencies:
   flutter_test:

@@ -152,7 +152,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                 _isSignUp ? 'サインアップ' : 'ログイン',
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 20, // 18pxから20pxに戻す
+                                  fontSize: 20,
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: 0.5,
                                 ),
