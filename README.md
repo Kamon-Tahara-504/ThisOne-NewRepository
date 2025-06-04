@@ -91,9 +91,8 @@ flutter pub get
 
 ```dart
 class SupabaseConfig {
-  static const String supabaseUrl = 'YOUR_PROJECT_URL';
-  static const String supabaseAnonKey = 'YOUR_ANON_KEY';
-  // ...
+  static const String supabaseUrl = 'https://gpbyfivahcqkebvvpuuo.supabase.co';
+  static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwYnlmaXZhaGNxa2VidnZwdXVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgzMzAwNTUsImV4cCI6MjA2MzkwNjA1NX0.T-NC0Q6ogfDg3-XsAl9zNdx6ShJwoYJyyjQ1wiOrcdA';
 }
 ```
 
@@ -122,7 +121,13 @@ flutter run
 - [ ] プッシュ通知機能
 - [ ] データエクスポート機能
 - [ ] オフライン対応
-- [ ] ダークモード切り替え機能
+- [ ] タスク作成画面
+- [ ] メモ作成画面
+- [ ] カレンダー作成画面
+- [ ] タスクの予定とカレンダーの連携機能
+- [ ] モバイルの通知欄でのタスクの表示
+- [ ] 他言語対応【英語】
+- [ ] 
 
 ## 🛠️ 技術スタック
 

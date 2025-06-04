@@ -186,10 +186,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(
-                                  Icons.event_note,
-                                  size: 48,
-                                  color: Colors.grey[600],
+                                ShaderMask(
+                                  shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
+                                  child: Icon(
+                                    Icons.event_note,
+                                    size: 48,
+                                    color: Colors.white,
+                                  ),
                                 ),
                                 const SizedBox(height: 12),
                                 Text(

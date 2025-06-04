@@ -46,10 +46,13 @@ class _MemoScreenState extends State<MemoScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.note_alt_outlined,
-                    size: 64,
-                    color: Colors.grey[600],
+                  ShaderMask(
+                    shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
+                    child: Icon(
+                      Icons.note_alt_outlined,
+                      size: 64,
+                      color: Colors.white,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Text(

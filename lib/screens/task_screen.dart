@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../gradients.dart';
 
 class TaskScreen extends StatefulWidget {
   const TaskScreen({super.key});
@@ -55,10 +56,13 @@ class _TaskScreenState extends State<TaskScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          Icons.task_alt,
-                          size: 64,
-                          color: Colors.grey[600],
+                        ShaderMask(
+                          shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
+                          child: Icon(
+                            Icons.task_alt,
+                            size: 64,
+                            color: Colors.white,
+                          ),
                         ),
                         const SizedBox(height: 16),
                         Text(
