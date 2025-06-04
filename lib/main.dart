@@ -108,13 +108,16 @@ class _MainScreenState extends State<MainScreen> {
                           child: Row(
                             children: [
                               // ヘッダー左寄せのタイトル 
-                              Text(
-                                'ThisOne',
-                                style: GoogleFonts.montserrat(
-                                  color: Colors.white,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w500, // 文字の太さ
-                                  letterSpacing: 0.5,
+                              Transform.translate(
+                                offset: const Offset(0, -6), // 2px上に移動
+                                child: Text(
+                                  'ThisOne',
+                                  style: GoogleFonts.montserrat(
+                                    color: Colors.white,
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w500, // 文字の太さ
+                                    letterSpacing: 1.2,
+                                  ),
                                 ),
                               ),
                               const Spacer(), // 右側にスペースを作る
