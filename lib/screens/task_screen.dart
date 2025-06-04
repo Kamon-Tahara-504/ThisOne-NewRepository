@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../gradients.dart';
 
 class TaskScreen extends StatefulWidget {
   const TaskScreen({super.key});
@@ -94,7 +93,7 @@ class _TaskScreenState extends State<TaskScreen> {
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: task['isCompleted'] 
-                                ? const Color(0xFFE85A3B).withOpacity(0.3)
+                                ? const Color(0xFFE85A3B).withValues(alpha: 0.3)
                                 : Colors.grey[700]!,
                           ),
                         ),

@@ -22,7 +22,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               color: const Color(0xFF2B2B2B),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
@@ -94,7 +94,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // ログアウトボタン
                 Container(
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.red.withOpacity(0.3)),
+                    border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: ListTile(

@@ -15,29 +15,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   DateTime _focusedDate = DateTime.now();
   CalendarFormat _calendarFormat = CalendarFormat.month;
 
-  void _addSchedule() {
-    showDialog(
-      context: context,
-      builder: (context) => _AddScheduleDialog(
-        selectedDate: _selectedDate,
-        onAdd: (schedule) {
-          setState(() {
-            final date = DateTime(
-              schedule['date'].year,
-              schedule['date'].month,
-              schedule['date'].day,
-            );
-            if (_schedules[date] != null) {
-              _schedules[date]!.add(schedule);
-            } else {
-              _schedules[date] = [schedule];
-            }
-          });
-        },
-      ),
-    );
-  }
-
   void _deleteSchedule(Map<String, dynamic> schedule) {
     setState(() {
       final date = DateTime(
@@ -57,7 +34,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     return _schedules[normalizedDate] ?? [];
   }
 
-  void addSchedule(Map<String, dynamic> schedule) {
+  void _addSchedule(Map<String, dynamic> schedule) {
     setState(() {
       final date = DateTime(
         schedule['date'].year,
@@ -70,6 +47,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         _schedules[date] = [schedule];
       }
     });
+  }
+
+  // 外部（MainScreenなど）から呼び出すためのpublicメソッド
+  void addScheduleFromExternal() {
+    showDialog(
+      context: context,
+      builder: (context) => _AddScheduleDialog(
+        selectedDate: _selectedDate,
+        onAdd: _addSchedule,
+      ),
+    );
   }
 
   @override
@@ -113,7 +101,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 ),
                 // 今日
                 todayDecoration: BoxDecoration(
-                  color: const Color(0xFFE85A3B).withOpacity(0.3),
+                  color: const Color(0xFFE85A3B).withValues(alpha: 0.3),
                   shape: BoxShape.circle,
                 ),
                 todayTextStyle: const TextStyle(

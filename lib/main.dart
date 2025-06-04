@@ -28,7 +28,6 @@ class MyApp extends StatelessWidget {
           primary: const Color(0xFFE85A3B), // 赤みの強いオレンジ（画像の色に近い）
           secondary: const Color(0xFFE85A3B), // サブカラーも同じ色
           surface: const Color(0xFF2B2B2B), // 全体のベース色
-          background: const Color(0xFF2B2B2B), // 背景色
           onPrimary: Colors.white, // オレンジの上の文字色
           onSurface: Colors.white, // サーフェス上の文字色
         ),
@@ -157,7 +156,7 @@ class _MainScreenState extends State<MainScreen> {
           color: const Color(0xFF2B2B2B), // 黒背景
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.black.withValues(alpha: 0.2),
               blurRadius: 8,
               offset: const Offset(0, -2),
             ),
@@ -272,12 +271,12 @@ class _MainScreenState extends State<MainScreen> {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFE85A3B).withOpacity(0.4), // 影を少し濃く
+                  color: const Color(0xFFE85A3B).withValues(alpha: 0.4), // 影を少し濃く
                   blurRadius: 12, // 影を大きく
                   offset: const Offset(0, 4), // 影の位置も調整
                 ),
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.2), // 追加の影で立体感
+                  color: Colors.black.withValues(alpha: 0.2), // 追加の影で立体感
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),

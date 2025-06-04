@@ -47,7 +47,7 @@ class SupabaseService {
     final response = await supabase
         .from(tableName)
         .select('*');
-    return response as List<Map<String, dynamic>>;
+    return List<Map<String, dynamic>>.from(response);
   }
   
   /// データを挿入
