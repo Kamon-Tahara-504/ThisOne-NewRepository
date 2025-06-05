@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'gradients.dart';
 import 'supabase_config.dart';
@@ -24,6 +25,17 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'ThisOne',
+      // 日本語ロケール設定
+      locale: const Locale('ja', 'JP'),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('ja', 'JP'), // 日本語
+        Locale('en', 'US'), // 英語（フォールバック）
+      ],
       theme: ThemeData(
         colorScheme: ColorScheme.dark(
           primary: const Color(0xFFE85A3B), // 赤みの強いオレンジ（画像の色に近い）
@@ -215,7 +227,7 @@ class _MainScreenState extends State<MainScreen> {
                   child: Row(
                     children: [
                       _buildNavItem(0, Icons.task_alt, 'タスク'),
-                      _buildNavItem(1, Icons.calendar_today, 'スケジュール'),
+                      _buildNavItem(1, Icons.calendar_today, 'カレンダー'),
                       _buildCreateButton(),
                       _buildNavItem(3, Icons.note_alt, 'メモ'),
                       _buildNavItem(4, Icons.settings, '設定'),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:intl/intl.dart';
 import '../gradients.dart';
 
 class ScheduleScreen extends StatefulWidget {
@@ -84,6 +85,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               calendarFormat: _calendarFormat,
               eventLoader: _getSchedulesForDate,
               startingDayOfWeek: StartingDayOfWeek.sunday,
+              locale: 'ja_JP',
               calendarStyle: CalendarStyle(
                 // 背景色
                 outsideDaysVisible: false,
@@ -141,10 +143,27 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
+                titleTextFormatter: (date, locale) {
+                  return DateFormat.yMMMM('ja_JP').format(date);
+                },
               ),
               daysOfWeekStyle: const DaysOfWeekStyle(
                 weekendStyle: TextStyle(color: Colors.white),
                 weekdayStyle: TextStyle(color: Colors.white),
+              ),
+              calendarBuilders: CalendarBuilders(
+                dowBuilder: (context, day) {
+                  final weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+                  return Center(
+                    child: Text(
+                      weekdays[day.weekday % 7],
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  );
+                },
               ),
               onDaySelected: (selectedDay, focusedDay) {
                 setState(() {
