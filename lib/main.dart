@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'gradients.dart';
 import 'supabase_config.dart';
+import 'services/supabase_service.dart';
 import 'screens/auth_screen.dart';
 import 'screens/task_screen.dart';
 import 'screens/schedule_screen.dart';
@@ -71,24 +73,109 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
   final List<Map<String, dynamic>> _tasks = [];
+  final SupabaseService _supabaseService = SupabaseService();
+  bool _isLoading = true;
 
-  void _navigateToAuth() {
-    Navigator.push(
+  @override
+  void initState() {
+    super.initState();
+    _loadTasks();
+    // 認証状態の変更を監視
+    _supabaseService.authStateChanges.listen((AuthState data) {
+      _loadTasks();
+    });
+  }
+
+  // Supabaseからタスクを読み込み
+  Future<void> _loadTasks() async {
+    try {
+      final tasks = await _supabaseService.getUserTasks();
+      setState(() {
+        _tasks.clear();
+        // Supabaseデータを内部形式に変換
+        _tasks.addAll(tasks.map((task) => {
+          'id': task['id'],
+          'title': task['title'],
+          'isCompleted': task['is_completed'],
+          'createdAt': DateTime.parse(task['created_at']),
+          'description': task['description'],
+          'dueDate': task['due_date'] != null ? DateTime.parse(task['due_date']) : null,
+          'priority': task['priority'],
+        }));
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('タスクの読み込みに失敗しました: $e')),
+        );
+      }
+    }
+  }
+
+  void _navigateToAuth() async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const AuthScreen()),
     );
+    
+    // 認証画面から戻った時にタスクを再読み込み
+    if (result == true) {
+      _loadTasks();
+    }
   }
 
-  void _addTask(String title) {
-    if (title.trim().isNotEmpty) {
-      setState(() {
-        _tasks.add({
-          'id': DateTime.now().millisecondsSinceEpoch,
-          'title': title.trim(),
-          'isCompleted': false,
-          'createdAt': DateTime.now(),
+  // Supabaseにタスクを追加
+  Future<void> _addTask(String title) async {
+    if (title.trim().isEmpty) return;
+
+    try {
+      final newTask = await _supabaseService.addTask(title: title.trim());
+      
+      if (newTask != null) {
+        setState(() {
+          _tasks.add({
+            'id': newTask['id'],
+            'title': newTask['title'],
+            'isCompleted': newTask['is_completed'],
+            'createdAt': DateTime.parse(newTask['created_at']),
+            'description': newTask['description'],
+            'dueDate': newTask['due_date'] != null ? DateTime.parse(newTask['due_date']) : null,
+            'priority': newTask['priority'],
+          });
         });
-      });
+      } else {
+        // 認証されていない場合はローカルに保存
+        setState(() {
+          _tasks.add({
+            'id': DateTime.now().millisecondsSinceEpoch.toString(),
+            'title': title.trim(),
+            'isCompleted': false,
+            'createdAt': DateTime.now(),
+            'description': null,
+            'dueDate': null,
+            'priority': 0,
+          });
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('ログインしていないため、タスクはローカルに保存されました'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('タスクの保存に失敗しました: $e')),
+        );
+      }
     }
   }
 
@@ -97,15 +184,21 @@ class _MainScreenState extends State<MainScreen> {
     // 中央の作成ボタン（index 2）は画面を表示しないので、インデックスを調整
     Widget currentScreen;
     if (_currentIndex == 0) {
-      currentScreen = TaskScreen(
-        tasks: _tasks,
-        onTasksChanged: (updatedTasks) {
-          setState(() {
-            _tasks.clear();
-            _tasks.addAll(updatedTasks);
-          });
-        },
-      );
+      currentScreen = _isLoading 
+          ? const Center(
+              child: CircularProgressIndicator(
+                color: Color(0xFFE85A3B),
+              ),
+            )
+          : TaskScreen(
+              tasks: _tasks,
+              onTasksChanged: (updatedTasks) {
+                setState(() {
+                  _tasks.clear();
+                  _tasks.addAll(updatedTasks);
+                });
+              },
+            );
     } else if (_currentIndex == 1) {
       currentScreen = const ScheduleScreen();
     } else if (_currentIndex == 3) {
@@ -114,15 +207,21 @@ class _MainScreenState extends State<MainScreen> {
       currentScreen = const SettingsScreen();
     } else {
       // デフォルトはタスク画面
-      currentScreen = TaskScreen(
-        tasks: _tasks,
-        onTasksChanged: (updatedTasks) {
-          setState(() {
-            _tasks.clear();
-            _tasks.addAll(updatedTasks);
-          });
-        },
-      );
+      currentScreen = _isLoading 
+          ? const Center(
+              child: CircularProgressIndicator(
+                color: Color(0xFFE85A3B),
+              ),
+            )
+          : TaskScreen(
+              tasks: _tasks,
+              onTasksChanged: (updatedTasks) {
+                setState(() {
+                  _tasks.clear();
+                  _tasks.addAll(updatedTasks);
+                });
+              },
+            );
     }
 
     return Scaffold(
@@ -171,9 +270,13 @@ class _MainScreenState extends State<MainScreen> {
                                   minWidth: 32,
                                   minHeight: 32,
                                 ),
-                                icon: const Icon(
-                                  Icons.person_outline,
-                                  color: Colors.white,
+                                icon: Icon(
+                                  _supabaseService.getCurrentUser() != null 
+                                      ? Icons.person 
+                                      : Icons.person_outline,
+                                  color: _supabaseService.getCurrentUser() != null 
+                                      ? const Color(0xFFE85A3B)
+                                      : Colors.white,
                                   size: 26, // 24pxから26pxに拡大
                                 ),
                               ),
@@ -346,9 +449,26 @@ class _MainScreenState extends State<MainScreen> {
         final TextEditingController controller = TextEditingController();
         return AlertDialog(
           backgroundColor: const Color(0xFF3A3A3A),
-          title: const Text(
-            'タスク追加',
-            style: TextStyle(color: Colors.white),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'タスク追加',
+                style: TextStyle(color: Colors.white),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _supabaseService.getCurrentUser() != null 
+                    ? 'アカウントに保存されます'
+                    : 'ローカルに保存されます（ログインして同期）',
+                style: TextStyle(
+                  color: _supabaseService.getCurrentUser() != null 
+                      ? const Color(0xFFE85A3B)
+                      : Colors.grey[500],
+                  fontSize: 12,
+                ),
+              ),
+            ],
           ),
           content: TextField(
             controller: controller,

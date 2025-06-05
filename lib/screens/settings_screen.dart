@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../gradients.dart';
+import 'account_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -52,7 +53,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   icon: Icons.person,
                   title: 'アカウント',
                   subtitle: 'プロフィールとアカウント設定',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AccountScreen(),
+                      ),
+                    );
+                  },
                 ),
                 _buildSettingItem(
                   icon: Icons.notifications,
@@ -89,30 +97,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: 'アプリについて',
                   subtitle: 'バージョン情報とライセンス',
                   onTap: () {},
-                ),
-                const SizedBox(height: 32),
-                // ログアウトボタン
-                Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ListTile(
-                    leading: Icon(
-                      Icons.logout,
-                      color: Colors.red[400],
-                    ),
-                    title: Text(
-                      'ログアウト',
-                      style: TextStyle(
-                        color: Colors.red[400],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    onTap: () {
-                      _showLogoutDialog();
-                    },
-                  ),
                 ),
               ],
             ),
@@ -168,51 +152,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           color: Colors.grey[500],
         ),
         onTap: onTap,
-      ),
-    );
-  }
-
-  void _showLogoutDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF3A3A3A),
-        title: const Text(
-          'ログアウト',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: const Text(
-          'ログアウトしますか？',
-          style: TextStyle(color: Colors.white),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'キャンセル',
-              style: TextStyle(color: Colors.grey[400]),
-            ),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.red[400],
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                // ログアウト処理をここに実装
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('ログアウトしました')),
-                );
-              },
-              child: const Text(
-                'ログアウト',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

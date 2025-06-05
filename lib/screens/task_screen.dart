@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../gradients.dart';
+import '../services/supabase_service.dart';
 
 class TaskScreen extends StatefulWidget {
   final List<Map<String, dynamic>>? tasks;
@@ -14,6 +15,7 @@ class TaskScreen extends StatefulWidget {
 class _TaskScreenState extends State<TaskScreen> {
   late List<Map<String, dynamic>> _tasks;
   final TextEditingController _taskController = TextEditingController();
+  final SupabaseService _supabaseService = SupabaseService();
 
   @override
   void initState() {
@@ -39,28 +41,65 @@ class _TaskScreenState extends State<TaskScreen> {
     if (title.trim().isNotEmpty) {
       setState(() {
         _tasks.add({
-          'id': DateTime.now().millisecondsSinceEpoch,
+          'id': DateTime.now().millisecondsSinceEpoch.toString(),
           'title': title.trim(),
           'isCompleted': false,
           'createdAt': DateTime.now(),
+          'description': null,
+          'dueDate': null,
+          'priority': 0,
         });
       });
       _notifyTasksChanged();
     }
   }
 
-  void _toggleTask(int index) {
-    setState(() {
-      _tasks[index]['isCompleted'] = !_tasks[index]['isCompleted'];
-    });
-    _notifyTasksChanged();
+  Future<void> _toggleTask(int index) async {
+    final task = _tasks[index];
+    final newCompletionStatus = !task['isCompleted'];
+    
+    try {
+      // Supabaseで更新（IDがStringの場合のみ、つまりSupabaseのタスク）
+      if (task['id'] is String && task['id'].length > 10) {
+        await _supabaseService.updateTaskCompletion(
+          taskId: task['id'],
+          isCompleted: newCompletionStatus,
+        );
+      }
+      
+      setState(() {
+        _tasks[index]['isCompleted'] = newCompletionStatus;
+      });
+      _notifyTasksChanged();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('タスクの更新に失敗しました: $e')),
+        );
+      }
+    }
   }
 
-  void _deleteTask(int index) {
-    setState(() {
-      _tasks.removeAt(index);
-    });
-    _notifyTasksChanged();
+  Future<void> _deleteTask(int index) async {
+    final task = _tasks[index];
+    
+    try {
+      // Supabaseで削除（IDがStringの場合のみ、つまりSupabaseのタスク）
+      if (task['id'] is String && task['id'].length > 10) {
+        await _supabaseService.deleteTask(task['id']);
+      }
+      
+      setState(() {
+        _tasks.removeAt(index);
+      });
+      _notifyTasksChanged();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('タスクの削除に失敗しました: $e')),
+        );
+      }
+    }
   }
 
   void _notifyTasksChanged() {

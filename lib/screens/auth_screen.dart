@@ -60,7 +60,7 @@ class _AuthScreenState extends State<AuthScreen> {
             const SnackBar(content: Text('ログインしました！')),
           );
           // ログイン成功時は前の画面に戻る
-          Navigator.pop(context);
+          Navigator.pop(context, true);
         }
       }
     } on AuthException catch (error) {
