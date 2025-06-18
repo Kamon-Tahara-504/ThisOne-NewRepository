@@ -6,6 +6,7 @@ import 'gradients.dart';
 import 'supabase_config.dart';
 import 'services/supabase_service.dart';
 import 'screens/auth_screen.dart';
+import 'screens/account_screen.dart';
 import 'screens/task_screen.dart';
 import 'screens/schedule_screen.dart';
 import 'screens/memo_screen.dart';
@@ -75,6 +76,7 @@ class _MainScreenState extends State<MainScreen> {
   final List<Map<String, dynamic>> _tasks = [];
   final SupabaseService _supabaseService = SupabaseService();
   bool _isLoading = true;
+  OverlayEntry? _accountOverlay;
 
   @override
   void initState() {
@@ -116,15 +118,31 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  void _navigateToAuth() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const AuthScreen()),
-    );
+  void _navigateToAccountOrAuth() async {
+    final user = _supabaseService.getCurrentUser();
     
-    // 認証画面から戻った時にタスクを再読み込み
-    if (result == true) {
-      _loadTasks();
+    if (user != null) {
+      // ログイン済みの場合はアカウント画面に移動
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const AccountScreen()),
+      );
+      
+      // アカウント画面から戻った時にタスクを再読み込み（ログアウトした可能性）
+      if (result == true || result == null) {
+        _loadTasks();
+      }
+    } else {
+      // 未ログインの場合は認証画面に移動
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const AuthScreen()),
+      );
+      
+      // 認証画面から戻った時にタスクを再読み込み
+      if (result == true) {
+        _loadTasks();
+      }
     }
   }
 
@@ -262,24 +280,8 @@ class _MainScreenState extends State<MainScreen> {
                                 ),
                               ),
                               const Spacer(), // 右側にスペースを作る
-                              // 右側にアイコンを配置（インスタグラム風）
-                              IconButton(
-                                onPressed: _navigateToAuth,
-                                padding: const EdgeInsets.all(4), // アイコンボタンのパディングを縮小
-                                constraints: const BoxConstraints(
-                                  minWidth: 32,
-                                  minHeight: 32,
-                                ),
-                                icon: Icon(
-                                  _supabaseService.getCurrentUser() != null 
-                                      ? Icons.person 
-                                      : Icons.person_outline,
-                                  color: _supabaseService.getCurrentUser() != null 
-                                      ? const Color(0xFFE85A3B)
-                                      : Colors.white,
-                                  size: 26, // 24pxから26pxに拡大
-                                ),
-                              ),
+                              // 右側にアカウントボタンを配置
+                              _buildAccountButton(),
                             ],
                           ),
                         ),
@@ -344,6 +346,206 @@ class _MainScreenState extends State<MainScreen> {
       ),
     );
   }
+
+  Widget _buildAccountButton() {
+    final user = _supabaseService.getCurrentUser();
+    
+    return IconButton(
+      onPressed: () {
+        if (user != null) {
+          // ログイン済みの場合：アカウント情報を表示
+          if (_accountOverlay != null) {
+            // 既に表示されている場合は閉じる
+            _closeAccountOverlay();
+          } else {
+            // まだ表示されていない場合は開く
+            _showAccountInfoOverlay();
+          }
+        } else {
+          // 未ログインの場合：認証画面に移動
+          _navigateToAccountOrAuth();
+        }
+      },
+      padding: const EdgeInsets.all(4),
+      constraints: const BoxConstraints(
+        minWidth: 32,
+        minHeight: 32,
+      ),
+      icon: Icon(
+        user != null ? Icons.person : Icons.person_outline,
+        color: user != null ? const Color(0xFFE85A3B) : Colors.white,
+        size: 26,
+      ),
+    );
+  }
+
+  void _closeAccountOverlay() {
+    if (_accountOverlay != null) {
+      _accountOverlay!.remove();
+      _accountOverlay = null;
+    }
+  }
+
+  void _showAccountInfoOverlay() async {
+    final user = _supabaseService.getCurrentUser();
+    if (user == null) return;
+
+    // 既存のオーバーレイがあれば先に閉じる
+    _closeAccountOverlay();
+
+    final overlay = Overlay.of(context);
+
+    _accountOverlay = OverlayEntry(
+      builder: (context) => GestureDetector(
+        onTap: () => _closeAccountOverlay(), // タップで閉じる
+        behavior: HitTestBehavior.translucent,
+        child: Stack(
+          children: [
+            // ポップアップ本体
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 40 + 8, // ヘッダー高さ + 余白
+              right: 16, // 右端から16px
+              child: GestureDetector(
+                onTap: () {}, // ポップアップ内のタップは伝播を止める
+                child: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    width: 170,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3A3A3A),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: _buildAccountInfoContent(user),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    overlay.insert(_accountOverlay!);
+  }
+
+  Widget _buildAccountInfoContent(dynamic user) {
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: _supabaseService.getUserProfile(),
+      builder: (context, snapshot) {
+        final userProfile = snapshot.data;
+        
+        return Container(
+          width: 170,
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ログイン状態表示
+              Row(
+                children: [
+                  Icon(
+                    Icons.verified_user,
+                    color: const Color(0xFFE85A3B),
+                    size: 16,
+                  ),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'ログイン中',
+                    style: TextStyle(
+                      color: Color(0xFFE85A3B),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              
+              // ユーザー名
+              Text(
+                'ユーザー名',
+                style: TextStyle(
+                  color: Colors.grey[500],
+                  fontSize: 10,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                userProfile?['display_name']?.isNotEmpty == true
+                    ? userProfile!['display_name']
+                    : '未設定',
+                style: TextStyle(
+                  color: userProfile?['display_name']?.isNotEmpty == true
+                      ? Colors.white
+                      : Colors.grey[400],
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 12),
+              
+              // メールアドレス
+              Text(
+                'メールアドレス',
+                style: TextStyle(
+                  color: Colors.grey[500],
+                  fontSize: 10,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                user.email ?? '未設定',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 16),
+              
+                             // アカウント管理リンク
+               GestureDetector(
+                 onTap: () {
+                   _closeAccountOverlay();
+                   _navigateToAccountOrAuth();
+                 },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: const Color(0xFFE85A3B).withValues(alpha: 0.3),
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'アカウント管理',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xFFE85A3B),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+
 
   Widget _buildNavItem(int index, IconData icon, String label) {
     final isSelected = _currentIndex == index;
