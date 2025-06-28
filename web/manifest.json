@@ -1,11 +1,11 @@
 {
-    "name": "app",
-    "short_name": "app",
+    "name": "ThisOne",
+    "short_name": "ThisOne",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#2B2B2B",
+    "theme_color": "#E85A3B",
+    "description": "ThisOne - 生産性向上アプリ",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

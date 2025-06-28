@@ -49,8 +49,8 @@ class _MemoScreenState extends State<MemoScreen> {
                   ShaderMask(
                     shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
                     child: Icon(
-                      Icons.note_alt_outlined,
-                      size: 64,
+                    Icons.note_alt_outlined,
+                    size: 64,
                       color: Colors.white,
                     ),
                   ),

@@ -208,8 +208,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                 ShaderMask(
                                   shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
                                   child: Icon(
-                                    Icons.event_note,
-                                    size: 48,
+                                  Icons.event_note,
+                                  size: 48,
                                     color: Colors.white,
                                   ),
                                 ),

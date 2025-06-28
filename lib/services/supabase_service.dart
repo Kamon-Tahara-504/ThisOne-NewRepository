@@ -39,7 +39,7 @@ class SupabaseService {
   
   /// 認証状態の変更を監視
   Stream<AuthState> get authStateChanges => supabase.auth.onAuthStateChange;
-
+  
   // ユーザープロフィール関連
 
   /// ユーザープロフィールを取得

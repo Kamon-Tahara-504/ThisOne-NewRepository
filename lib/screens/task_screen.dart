@@ -67,7 +67,7 @@ class _TaskScreenState extends State<TaskScreen> {
         );
       }
       
-      setState(() {
+    setState(() {
         _tasks[index]['isCompleted'] = newCompletionStatus;
       });
       _notifyTasksChanged();
@@ -76,7 +76,7 @@ class _TaskScreenState extends State<TaskScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('タスクの更新に失敗しました: $e')),
         );
-      }
+  }
     }
   }
 
@@ -89,9 +89,9 @@ class _TaskScreenState extends State<TaskScreen> {
         await _supabaseService.deleteTask(task['id']);
       }
       
-      setState(() {
-        _tasks.removeAt(index);
-      });
+    setState(() {
+      _tasks.removeAt(index);
+    });
       _notifyTasksChanged();
     } catch (e) {
       if (mounted) {
@@ -124,8 +124,8 @@ class _TaskScreenState extends State<TaskScreen> {
                         ShaderMask(
                           shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
                           child: Icon(
-                            Icons.task_alt,
-                            size: 64,
+                          Icons.task_alt,
+                          size: 64,
                             color: Colors.white,
                           ),
                         ),
