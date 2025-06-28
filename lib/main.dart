@@ -457,12 +457,15 @@ class _MainScreenState extends State<MainScreen> {
                     size: 16,
                   ),
                   const SizedBox(width: 6),
-                  const Text(
-                    'ログイン中',
-                    style: TextStyle(
-                      color: Color(0xFFE85A3B),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                  ShaderMask(
+                    shaderCallback: (bounds) => createHorizontalOrangeYellowGradient().createShader(bounds),
+                    child: const Text(
+                      'ログイン中',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ],
@@ -513,27 +516,36 @@ class _MainScreenState extends State<MainScreen> {
               const SizedBox(height: 16),
               
                              // アカウント管理リンク
-               GestureDetector(
+                              GestureDetector(
                  onTap: () {
                    _closeAccountOverlay();
                    _navigateToAccountOrAuth();
                  },
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  padding: const EdgeInsets.all(1), // グラデーション境界線の幅
                   decoration: BoxDecoration(
-                    border: Border.all(
-                      color: const Color(0xFFE85A3B).withValues(alpha: 0.3),
-                    ),
+                    gradient: createHorizontalOrangeYellowGradient(),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Text(
-                    'アカウント管理',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Color(0xFFE85A3B),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3A3A3A), // 背景色を元に戻す
+                      borderRadius: BorderRadius.circular(7), // 少し小さくして境界線を見せる
+                    ),
+                    child: ShaderMask(
+                      shaderCallback: (bounds) => createHorizontalOrangeYellowGradient().createShader(bounds),
+                      child: const Text(
+                        'アカウント管理',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
                   ),
                 ),
