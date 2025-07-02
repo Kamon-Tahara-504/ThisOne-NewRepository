@@ -911,8 +911,8 @@ class _MainScreenState extends State<MainScreen> {
                   child: TextButton(
                     onPressed: () async {
                       if (titleController.text.trim().isNotEmpty) {
+                        Navigator.pop(context); // 先にダイアログを閉じる
                         await _createMemo(titleController.text.trim(), selectedMode);
-                        Navigator.pop(context);
                       }
                     },
                     child: const Text(
@@ -930,42 +930,45 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Future<void> _createMemo(String title, String mode) async {
+    if (!mounted) return; // 最初にmountedをチェック
+    final currentContext = context; // Contextをローカル変数で保存
+    
     try {
       final newMemo = await _supabaseService.addMemo(
         title: title,
         mode: mode,
       );
       
+      if (!mounted) return; // 非同期処理後に再度チェック
+      
       if (newMemo != null) {
         // メモリストを再読み込み
         _loadMemos();
         
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('メモ「$title」を作成しました')),
-          );
-        }
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(currentContext).showSnackBar(
+          SnackBar(content: Text('メモ「$title」を作成しました')),
+        );
       } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('ログインしていないため、メモはローカルに保存されました'),
-              duration: Duration(seconds: 3),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      print('メモ作成エラー詳細: $e'); // デバッグ用ログ
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('メモの作成に失敗しました: $e'),
-            backgroundColor: Colors.red[600],
-            duration: const Duration(seconds: 5),
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(currentContext).showSnackBar(
+          const SnackBar(
+            content: Text('ログインしていないため、メモはローカルに保存されました'),
+            duration: Duration(seconds: 3),
           ),
         );
       }
+    } catch (e) {
+      if (!mounted) return; // エラー処理でも再度チェック
+      
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(currentContext).showSnackBar(
+        SnackBar(
+          content: Text('メモの作成に失敗しました: $e'),
+          backgroundColor: Colors.red[600],
+          duration: const Duration(seconds: 5),
+        ),
+      );
     }
   }
 }

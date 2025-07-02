@@ -27,7 +27,6 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
   
   bool _hasChanges = false;
   bool _isSaving = false;
-  String _lastSaved = '';
 
   @override
   void initState() {
@@ -38,8 +37,6 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     // テキスト変更を監視
     _titleController.addListener(_onTextChanged);
     _contentController.addListener(_onTextChanged);
-    
-    _lastSaved = DateTime.now().toString();
   }
 
   @override
@@ -83,7 +80,6 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
       setState(() {
         _hasChanges = false;
         _isSaving = false;
-        _lastSaved = DateTime.now().toString();
       });
     } catch (e) {
       setState(() {
@@ -114,7 +110,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: true,
-      onPopInvoked: (didPop) async {
+      onPopInvokedWithResult: (didPop, result) async {
         if (didPop && _hasChanges) {
           await _saveChanges();
         }

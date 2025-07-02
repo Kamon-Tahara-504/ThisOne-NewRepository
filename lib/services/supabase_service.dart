@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../supabase_config.dart';
 
@@ -256,7 +257,7 @@ class SupabaseService {
       
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
-      print('メモ取得エラー: $e');
+      debugPrint('メモ取得エラー: $e');
       
       // modeカラムが存在しない場合の対処
       if (e.toString().contains('column "mode" of relation "memos" does not exist')) {
@@ -274,7 +275,7 @@ class SupabaseService {
           
           return memosWithMode;
         } catch (e2) {
-          print('modeなしでのメモ取得エラー: $e2');
+          debugPrint('modeなしでのメモ取得エラー: $e2');
           rethrow;
         }
       }
@@ -309,7 +310,7 @@ class SupabaseService {
       return response;
     } catch (e) {
       // エラーの詳細をログに出力
-      print('メモ追加エラー: $e');
+      debugPrint('メモ追加エラー: $e');
       
       // modeカラムが存在しない場合の対処
       if (e.toString().contains('column "mode" of relation "memos" does not exist')) {
@@ -328,7 +329,7 @@ class SupabaseService {
 
           return response;
         } catch (e2) {
-          print('modeなしでのメモ追加エラー: $e2');
+          debugPrint('modeなしでのメモ追加エラー: $e2');
           rethrow;
         }
       }
@@ -361,7 +362,7 @@ class SupabaseService {
           .eq('id', memoId)
           .eq('user_id', user.id);
     } catch (e) {
-      print('メモ更新エラー: $e');
+      debugPrint('メモ更新エラー: $e');
       
       // modeカラムが存在しない場合の対処
       if (e.toString().contains('column "mode" of relation "memos" does not exist')) {
@@ -378,7 +379,7 @@ class SupabaseService {
               .eq('id', memoId)
               .eq('user_id', user.id);
         } catch (e2) {
-          print('modeなしでのメモ更新エラー: $e2');
+          debugPrint('modeなしでのメモ更新エラー: $e2');
           rethrow;
         }
       } else {
