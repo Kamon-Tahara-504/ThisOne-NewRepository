@@ -74,17 +74,21 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
   final List<Map<String, dynamic>> _tasks = [];
+  final List<Map<String, dynamic>> _memos = [];
   final SupabaseService _supabaseService = SupabaseService();
   bool _isLoading = true;
+  bool _isLoadingMemos = true;
   OverlayEntry? _accountOverlay;
 
   @override
   void initState() {
     super.initState();
     _loadTasks();
+    _loadMemos();
     // 認証状態の変更を監視
     _supabaseService.authStateChanges.listen((AuthState data) {
       _loadTasks();
+      _loadMemos();
     });
   }
 
@@ -113,6 +117,35 @@ class _MainScreenState extends State<MainScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('タスクの読み込みに失敗しました: $e')),
+        );
+      }
+    }
+  }
+
+  // Supabaseからメモを読み込み
+  Future<void> _loadMemos() async {
+    try {
+      final memos = await _supabaseService.getUserMemos();
+      setState(() {
+        _memos.clear();
+        // Supabaseデータを内部形式に変換
+        _memos.addAll(memos.map((memo) => {
+          'id': memo['id'],
+          'title': memo['title'],
+          'content': memo['content'] ?? '',
+          'mode': memo['mode'] ?? 'memo',
+          'createdAt': DateTime.parse(memo['created_at']),
+          'updatedAt': DateTime.parse(memo['updated_at']),
+        }));
+        _isLoadingMemos = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingMemos = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('メモの読み込みに失敗しました: $e')),
         );
       }
     }
@@ -220,7 +253,21 @@ class _MainScreenState extends State<MainScreen> {
     } else if (_currentIndex == 1) {
       currentScreen = const ScheduleScreen();
     } else if (_currentIndex == 3) {
-      currentScreen = const MemoScreen();
+      currentScreen = _isLoadingMemos 
+          ? const Center(
+              child: CircularProgressIndicator(
+                color: Color(0xFFE85A3B),
+              ),
+            )
+          : MemoScreen(
+              memos: _memos,
+              onMemosChanged: (updatedMemos) {
+                setState(() {
+                  _memos.clear();
+                  _memos.addAll(updatedMemos);
+                });
+              },
+            );
     } else if (_currentIndex == 4) {
       currentScreen = const SettingsScreen();
     } else {
@@ -748,9 +795,177 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   void _showCreateMemoDialog() {
-    // メモ作成のシンプルな実装
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('メモ作成機能（開発中）')),
+    showDialog(
+      context: context,
+      builder: (context) {
+        final TextEditingController titleController = TextEditingController();
+        String selectedMode = 'memo';
+        
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF3A3A3A),
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'メモ作成',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _supabaseService.getCurrentUser() != null 
+                        ? 'アカウントに保存されます'
+                        : 'ローカルに保存されます（ログインして同期）',
+                    style: TextStyle(
+                      color: _supabaseService.getCurrentUser() != null 
+                          ? const Color(0xFFE85A3B)
+                          : Colors.grey[500],
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // タイトル入力
+                  TextField(
+                    controller: titleController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'タイトル',
+                      labelStyle: TextStyle(color: Colors.grey[400]),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey[600]!),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFE85A3B)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // モード選択
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'モード',
+                        style: TextStyle(
+                          color: Colors.grey[400],
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey[600]!),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: DropdownButtonFormField<String>(
+                          value: selectedMode,
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          ),
+                          dropdownColor: const Color(0xFF3A3A3A),
+                          style: const TextStyle(color: Colors.white),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'memo',
+                              child: Text('メモモード'),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() {
+                                selectedMode = value;
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    'キャンセル',
+                    style: TextStyle(color: Colors.grey[400]),
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: createOrangeYellowGradient(),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: TextButton(
+                    onPressed: () async {
+                      if (titleController.text.trim().isNotEmpty) {
+                        await _createMemo(titleController.text.trim(), selectedMode);
+                        Navigator.pop(context);
+                      }
+                    },
+                    child: const Text(
+                      '作成',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
+  }
+
+  Future<void> _createMemo(String title, String mode) async {
+    try {
+      final newMemo = await _supabaseService.addMemo(
+        title: title,
+        mode: mode,
+      );
+      
+      if (newMemo != null) {
+        // メモリストを再読み込み
+        _loadMemos();
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('メモ「$title」を作成しました')),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('ログインしていないため、メモはローカルに保存されました'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('メモ作成エラー詳細: $e'); // デバッグ用ログ
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('メモの作成に失敗しました: $e'),
+            backgroundColor: Colors.red[600],
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
   }
 }

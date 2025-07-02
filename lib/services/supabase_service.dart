@@ -239,4 +239,163 @@ class SupabaseService {
           .eq('user_id', user.id);
     }
   }
+
+  // メモ専用メソッド
+
+  /// ユーザーのメモを全て取得
+  Future<List<Map<String, dynamic>>> getUserMemos() async {
+    final user = getCurrentUser();
+    if (user == null) return [];
+
+    try {
+      final response = await supabase
+          .from('memos')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('updated_at', ascending: false);
+      
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      print('メモ取得エラー: $e');
+      
+      // modeカラムが存在しない場合の対処
+      if (e.toString().contains('column "mode" of relation "memos" does not exist')) {
+        try {
+          final response = await supabase
+              .from('memos')
+              .select('id, user_id, title, content, created_at, updated_at')
+              .eq('user_id', user.id)
+              .order('updated_at', ascending: false);
+          
+          // modeカラムがない場合はデフォルト値を追加
+          final memosWithMode = List<Map<String, dynamic>>.from(response)
+              .map((memo) => {...memo, 'mode': 'memo'})
+              .toList();
+          
+          return memosWithMode;
+        } catch (e2) {
+          print('modeなしでのメモ取得エラー: $e2');
+          rethrow;
+        }
+      }
+      
+      rethrow;
+    }
+  }
+
+  /// メモを追加
+  Future<Map<String, dynamic>?> addMemo({
+    required String title,
+    String content = '',
+    String mode = 'memo',
+  }) async {
+    final user = getCurrentUser();
+    if (user == null) return null;
+
+    try {
+      final memoData = {
+        'user_id': user.id,
+        'title': title,
+        'content': content,
+        'mode': mode,
+      };
+
+      final response = await supabase
+          .from('memos')
+          .insert(memoData)
+          .select()
+          .single();
+
+      return response;
+    } catch (e) {
+      // エラーの詳細をログに出力
+      print('メモ追加エラー: $e');
+      
+      // modeカラムが存在しない場合の対処
+      if (e.toString().contains('column "mode" of relation "memos" does not exist')) {
+        try {
+          final memoDataWithoutMode = {
+            'user_id': user.id,
+            'title': title,
+            'content': content,
+          };
+
+          final response = await supabase
+              .from('memos')
+              .insert(memoDataWithoutMode)
+              .select()
+              .single();
+
+          return response;
+        } catch (e2) {
+          print('modeなしでのメモ追加エラー: $e2');
+          rethrow;
+        }
+      }
+      
+      rethrow;
+    }
+  }
+
+  /// メモを更新
+  Future<void> updateMemo({
+    required String memoId,
+    String? title,
+    String? content,
+    String? mode,
+  }) async {
+    final user = getCurrentUser();
+    if (user == null) return;
+
+    try {
+      final updateData = <String, dynamic>{
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+      if (title != null) updateData['title'] = title;
+      if (content != null) updateData['content'] = content;
+      if (mode != null) updateData['mode'] = mode;
+
+      await supabase
+          .from('memos')
+          .update(updateData)
+          .eq('id', memoId)
+          .eq('user_id', user.id);
+    } catch (e) {
+      print('メモ更新エラー: $e');
+      
+      // modeカラムが存在しない場合の対処
+      if (e.toString().contains('column "mode" of relation "memos" does not exist')) {
+        try {
+          final updateDataWithoutMode = <String, dynamic>{
+            'updated_at': DateTime.now().toIso8601String(),
+          };
+          if (title != null) updateDataWithoutMode['title'] = title;
+          if (content != null) updateDataWithoutMode['content'] = content;
+
+          await supabase
+              .from('memos')
+              .update(updateDataWithoutMode)
+              .eq('id', memoId)
+              .eq('user_id', user.id);
+        } catch (e2) {
+          print('modeなしでのメモ更新エラー: $e2');
+          rethrow;
+        }
+      } else {
+        rethrow;
+      }
+    }
+  }
+
+  /// メモを削除
+  Future<void> deleteMemo(String memoId) async {
+    final user = getCurrentUser();
+    if (user == null) return;
+
+    await supabase
+        .from('memos')
+        .delete()
+        .eq('id', memoId)
+        .eq('user_id', user.id);
+  }
 } 
