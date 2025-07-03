@@ -58,6 +58,7 @@ class _MemoScreenState extends State<MemoScreen> {
           title: memo['title'],
           content: memo['content'],
           mode: memo['mode'],
+          richContent: memo['rich_content'],
         ),
       ),
     );

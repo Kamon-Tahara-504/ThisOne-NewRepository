@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:convert';
 import '../supabase_config.dart';
 
 class SupabaseService {
@@ -270,7 +271,11 @@ class SupabaseService {
           
           // modeカラムがない場合はデフォルト値を追加
           final memosWithMode = List<Map<String, dynamic>>.from(response)
-              .map((memo) => {...memo, 'mode': 'memo'})
+              .map((memo) => {
+                ...memo, 
+                'mode': 'memo',
+                'rich_content': null,
+              })
               .toList();
           
           return memosWithMode;
@@ -289,6 +294,7 @@ class SupabaseService {
     required String title,
     String content = '',
     String mode = 'memo',
+    Map<String, dynamic>? richContent,
   }) async {
     final user = getCurrentUser();
     if (user == null) return null;
@@ -299,6 +305,8 @@ class SupabaseService {
         'title': title,
         'content': content,
         'mode': mode,
+        // リッチコンテンツ（QuillのDelta）をJSON文字列として保存
+        'rich_content': richContent != null ? jsonEncode(richContent) : null,
       };
 
       final response = await supabase
@@ -313,7 +321,8 @@ class SupabaseService {
       debugPrint('メモ追加エラー: $e');
       
       // modeカラムが存在しない場合の対処
-      if (e.toString().contains('column "mode" of relation "memos" does not exist')) {
+      if (e.toString().contains('column "mode" of relation "memos" does not exist') ||
+          e.toString().contains('column "rich_content" of relation "memos" does not exist')) {
         try {
           final memoDataWithoutMode = {
             'user_id': user.id,
@@ -344,6 +353,7 @@ class SupabaseService {
     String? title,
     String? content,
     String? mode,
+    Map<String, dynamic>? richContent,
   }) async {
     final user = getCurrentUser();
     if (user == null) return;
@@ -355,6 +365,7 @@ class SupabaseService {
       if (title != null) updateData['title'] = title;
       if (content != null) updateData['content'] = content;
       if (mode != null) updateData['mode'] = mode;
+      if (richContent != null) updateData['rich_content'] = jsonEncode(richContent);
 
       await supabase
           .from('memos')
@@ -364,8 +375,9 @@ class SupabaseService {
     } catch (e) {
       debugPrint('メモ更新エラー: $e');
       
-      // modeカラムが存在しない場合の対処
-      if (e.toString().contains('column "mode" of relation "memos" does not exist')) {
+      // modeカラムやrich_contentカラムが存在しない場合の対処
+      if (e.toString().contains('column "mode" of relation "memos" does not exist') ||
+          e.toString().contains('column "rich_content" of relation "memos" does not exist')) {
         try {
           final updateDataWithoutMode = <String, dynamic>{
             'updated_at': DateTime.now().toIso8601String(),

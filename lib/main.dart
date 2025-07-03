@@ -134,6 +134,7 @@ class _MainScreenState extends State<MainScreen> {
           'title': memo['title'],
           'content': memo['content'] ?? '',
           'mode': memo['mode'] ?? 'memo',
+          'rich_content': memo['rich_content'],
           'createdAt': DateTime.parse(memo['created_at']),
           'updatedAt': DateTime.parse(memo['updated_at']),
         }));

@@ -46,6 +46,13 @@ dependencies:
   intl: ^0.19.0
   flutter_localizations:
     sdk: flutter
+  
+  # Rich text editor
+  flutter_quill: ^10.8.4
+  flutter_quill_extensions: ^10.8.4
+  
+  # Color picker
+
 
 dev_dependencies:
   flutter_test:
