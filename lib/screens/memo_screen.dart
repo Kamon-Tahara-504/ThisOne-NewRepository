@@ -34,6 +34,7 @@ class _MemoScreenState extends State<MemoScreen> {
         'title': memo['title'],
         'content': memo['content'] ?? '',
         'mode': memo['mode'] ?? 'memo',
+        'rich_content': memo['rich_content'],
         'createdAt': DateTime.parse(memo['created_at']),
         'updatedAt': DateTime.parse(memo['updated_at']),
       }).toList();
@@ -108,7 +109,7 @@ class _MemoScreenState extends State<MemoScreen> {
                 '削除',
                 style: TextStyle(color: Colors.white),
               ),
-            ),
+      ),
           ),
         ],
       ),
@@ -146,8 +147,8 @@ class _MemoScreenState extends State<MemoScreen> {
                   ShaderMask(
                     shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
                     child: const Icon(
-                      Icons.note_alt_outlined,
-                      size: 64,
+                    Icons.note_alt_outlined,
+                    size: 64,
                       color: Colors.white,
                     ),
                   ),
@@ -176,29 +177,29 @@ class _MemoScreenState extends State<MemoScreen> {
               backgroundColor: const Color(0xFF3A3A3A),
               onRefresh: _loadMemos,
               child: ListView.builder(
-                padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
                 itemCount: widget.memos.length,
-                itemBuilder: (context, index) {
+              itemBuilder: (context, index) {
                   final memo = widget.memos[index];
                   final updatedAt = memo['updatedAt'] as DateTime;
                   
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF3A3A3A),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[700]!),
-                    ),
-                    child: InkWell(
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3A3A3A),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[700]!),
+                  ),
+                  child: InkWell(
                       onTap: () => _openMemoDetail(index),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
                                 // モード表示
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -216,55 +217,55 @@ class _MemoScreenState extends State<MemoScreen> {
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    memo['title'],
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                              Expanded(
+                                child: Text(
+                                  memo['title'],
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                IconButton(
-                                  onPressed: () => _deleteMemo(index),
-                                  icon: Icon(
-                                    Icons.delete_outline,
-                                    color: Colors.grey[500],
-                                    size: 20,
-                                  ),
+                              ),
+                              IconButton(
+                                onPressed: () => _deleteMemo(index),
+                                icon: Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.grey[500],
+                                  size: 20,
                                 ),
-                              ],
-                            ),
-                            if (memo['content'].isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                memo['content'],
-                                style: TextStyle(
-                                  color: Colors.grey[300],
-                                  fontSize: 14,
-                                  height: 1.4,
-                                ),
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
-                            const SizedBox(height: 12),
+                          ),
+                          if (memo['content'].isNotEmpty) ...[
+                            const SizedBox(height: 8),
                             Text(
-                              '更新: ${updatedAt.year}/${updatedAt.month}/${updatedAt.day} ${updatedAt.hour.toString().padLeft(2, '0')}:${updatedAt.minute.toString().padLeft(2, '0')}',
+                              memo['content'],
                               style: TextStyle(
-                                color: Colors.grey[500],
-                                fontSize: 12,
+                                color: Colors.grey[300],
+                                fontSize: 14,
+                                height: 1.4,
                               ),
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
-                        ),
+                          const SizedBox(height: 12),
+                          Text(
+                              '更新: ${updatedAt.year}/${updatedAt.month}/${updatedAt.day} ${updatedAt.hour.toString().padLeft(2, '0')}:${updatedAt.minute.toString().padLeft(2, '0')}',
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  );
-                },
-              ),
-            ),
+                  ),
+                );
+              },
+        ),
+      ),
     );
   }
 } 

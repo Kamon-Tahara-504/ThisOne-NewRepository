@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'dart:convert';
+import 'dart:async';
 import '../gradients.dart';
 import '../services/supabase_service.dart';
 
@@ -28,11 +29,15 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
   late TextEditingController _titleController;
   late QuillController _quillController;
   final SupabaseService _supabaseService = SupabaseService();
-  final FocusNode _focusNode = FocusNode();
+  final FocusNode _titleFocusNode = FocusNode();
+  final FocusNode _memoFocusNode = FocusNode();
   
   bool _hasChanges = false;
   bool _isSaving = false;
   bool _isKeyboardVisible = false;
+  
+  // デバウンス用のタイマー
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -46,7 +51,18 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
       try {
         // リッチコンテンツが存在する場合はそれを使用
         final deltaJson = jsonDecode(widget.richContent!);
-        document = Document.fromJson(deltaJson);
+        
+        // deltaJsonが{ops: [...]}形式の場合は、opsの部分だけを取り出す
+        List<dynamic> ops;
+        if (deltaJson is Map<String, dynamic> && deltaJson.containsKey('ops')) {
+          ops = deltaJson['ops'] as List<dynamic>;
+        } else if (deltaJson is List<dynamic>) {
+          ops = deltaJson;
+        } else {
+          throw Exception('不正なDelta形式: $deltaJson');
+        }
+        
+        document = Document.fromJson(ops);
       } catch (e) {
         // リッチコンテンツの解析に失敗した場合はプレーンテキストを使用
         document = Document()..insert(0, widget.content);
@@ -69,28 +85,23 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
     _quillController.addListener(_onSelectionChanged);
     
     // フォーカス変更を監視
-    _focusNode.addListener(_onFocusChanged);
+    _titleFocusNode.addListener(_onFocusChanged);
+    _memoFocusNode.addListener(_onFocusChanged);
   }
 
   void _onFocusChanged() {
-    // フォーカスがあるかどうかでキーボード表示状態を判定
+    // メモ入力にフォーカスがある場合のみツールバーを表示
     setState(() {
-      _isKeyboardVisible = _focusNode.hasFocus;
+      _isKeyboardVisible = _memoFocusNode.hasFocus;
     });
   }
+
+
 
   @override
   void didChangeMetrics() {
     super.didChangeMetrics();
-    // キーボードの表示状態をより確実に検出
-    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
-    final newKeyboardVisible = keyboardHeight > 0;
-    
-    if (_isKeyboardVisible != newKeyboardVisible) {
-      setState(() {
-        _isKeyboardVisible = newKeyboardVisible;
-      });
-    }
+    // フォーカス状態のみでツールバー表示を制御するため、キーボード高さによる自動更新は行わない
   }
 
   void _onSelectionChanged() {
@@ -98,13 +109,17 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
     setState(() {});
   }
 
+
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _debounceTimer?.cancel();
     _closeColorPicker();
     _titleController.dispose();
     _quillController.dispose();
-    _focusNode.dispose();
+    _titleFocusNode.dispose();
+    _memoFocusNode.dispose();
     super.dispose();
   }
 
@@ -115,9 +130,12 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
       });
     }
     
-    // 1秒後に自動保存（デバウンス）
-    Future.delayed(const Duration(seconds: 1), () {
-      if (_hasChanges && !_isSaving) {
+    // 既存のタイマーをキャンセル
+    _debounceTimer?.cancel();
+    
+    // 新しいタイマーを設定（1秒後に自動保存）
+    _debounceTimer = Timer(const Duration(seconds: 1), () {
+      if (_hasChanges && !_isSaving && mounted) {
         _saveChanges();
       }
     });
@@ -210,16 +228,38 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
                             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
                             child: Row(
                               children: [
-                                // 戻るボタン
+                                // 戻るボタンとback表示
                                 Transform.translate(
                                   offset: const Offset(0, -6), // 6px上に移動してバランスを調整
-                                  child: IconButton(
-                                    onPressed: _handleBackPressed,
-                                    icon: const Icon(
-                                      Icons.arrow_back_ios,
-                                      color: Colors.white,
-                                      size: 22,
-                                    ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.center, // 縦方向の中央揃え
+                                    children: [
+                                      IconButton(
+                                        onPressed: _handleBackPressed,
+                                        padding: const EdgeInsets.only(right: 4), // 右パディングを小さく
+                                        constraints: const BoxConstraints(), // デフォルト制約を削除
+                                        icon: const Icon(
+                                          Icons.arrow_back_ios,
+                                          color: Colors.white,
+                                          size: 22,
+                                        ),
+                                      ),
+                                      Transform.translate(
+                                        offset: const Offset(-14, 0), // 左に14px移動して間隔を狭める
+                                        child: GestureDetector(
+                                          onTap: _handleBackPressed,
+                                          child: const Text(
+                                            'back',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                                 
@@ -310,6 +350,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
                               ),
                               child: TextField(
                                 controller: _titleController,
+                                focusNode: _titleFocusNode,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 24,
@@ -386,7 +427,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
                           ),
                           child: QuillEditor.basic(
                             controller: _quillController,
-                            focusNode: _focusNode,
+                            focusNode: _memoFocusNode,
                             configurations: QuillEditorConfigurations(
                               padding: const EdgeInsets.all(0),
                               placeholder: 'ここに内容を入力してください...',
@@ -398,7 +439,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
                                 paragraph: DefaultTextBlockStyle(
                                   const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 16, //メモのピクセルサイズ
+                                    fontSize: 16.0, //メモのピクセルサイズ（デフォルト）
                                   ),
                                   HorizontalSpacing.zero,
                                   VerticalSpacing.zero,
@@ -690,14 +731,24 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
       
       final style = _quillController.getSelectionStyle();
       
-      if (selection.isCollapsed) {
-        final typingStyle = _quillController.getSelectionStyle();
-        return typingStyle.containsKey(attribute.key) && 
-               typingStyle.attributes[attribute.key] != null;
-      } else {
-        return style.containsKey(attribute.key) && 
-               style.attributes[attribute.key] != null;
+      // リストの場合は特別な処理
+      if (attribute.key == 'list') {
+        final listAttribute = style.attributes['list'];
+        if (listAttribute != null) {
+          if (attribute == Attribute.ol) {
+            // 番号付きリストの場合
+            return listAttribute == Attribute.ol;
+          } else if (attribute == Attribute.ul) {
+            // 箇条書きリストの場合
+            return listAttribute == Attribute.ul;
+          }
+        }
+        return false;
       }
+      
+      // 通常のフォーマット処理
+      return style.containsKey(attribute.key) && 
+             style.attributes[attribute.key] != null;
     } catch (e) {
       return false;
     }
@@ -711,12 +762,38 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
       final isCurrentlyActive = style.containsKey(attribute.key) && 
                                style.attributes[attribute.key] != null;
       
-      if (isCurrentlyActive) {
-        _quillController.formatSelection(Attribute.clone(attribute, null));
+      // リストの場合は特別な処理
+      if (attribute.key == 'list') {
+        if (isCurrentlyActive) {
+          // 現在のリストを削除
+          _quillController.formatSelection(Attribute.clone(attribute, null));
+        } else {
+          // 他のリストタイプを先に削除してから新しいリストを適用
+          final isOlActive = style.containsKey('list') && 
+                            style.attributes['list'] == 'ordered';
+          final isUlActive = style.containsKey('list') && 
+                            style.attributes['list'] == 'bullet';
+          
+          if (isOlActive || isUlActive) {
+            // 既存のリストを削除
+            _quillController.formatSelection(Attribute.clone(Attribute.ol, null));
+            _quillController.formatSelection(Attribute.clone(Attribute.ul, null));
+          }
+          
+          // 新しいリストを適用
+          _quillController.formatSelection(attribute);
+        }
       } else {
-        _quillController.formatSelection(attribute);
+        // 通常のフォーマット処理
+        if (isCurrentlyActive) {
+          _quillController.formatSelection(Attribute.clone(attribute, null));
+        } else {
+          _quillController.formatSelection(attribute);
+        }
       }
       
+      // フォーマット変更後に変更フラグを設定
+      _onTextChanged();
       setState(() {});
     }
   }
@@ -727,15 +804,18 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
       String colorString;
       
       if (isBackgroundColor) {
-        final r = color.r;
-        final g = color.g;
-        final b = color.b;
+        final r = color.red;
+        final g = color.green;
+        final b = color.blue;
         colorString = 'rgba($r, $g, $b, 0.3)';
         _quillController.formatSelection(BackgroundAttribute(colorString));
       } else {
-        final colorHex = '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
+        final colorHex = '#${color.value.toRadixString(16).padLeft(8, '0').substring(2)}';
         _quillController.formatSelection(ColorAttribute(colorHex));
       }
+      
+      // 色変更後に変更フラグを設定
+      _onTextChanged();
     }
     
     setState(() {});
@@ -749,6 +829,9 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
       } else {
         _quillController.formatSelection(const ColorAttribute(null));
       }
+      
+      // 色リセット後に変更フラグを設定
+      _onTextChanged();
     }
     
     setState(() {});

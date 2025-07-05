@@ -169,9 +169,9 @@ class _MainScreenState extends State<MainScreen> {
     } else {
       // 未ログインの場合は認証画面に移動
       final result = await Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const AuthScreen()),
-      );
+      context,
+      MaterialPageRoute(builder: (context) => const AuthScreen()),
+    );
       
       // 認証画面から戻った時にタスクを再読み込み
       if (result == true) {
@@ -318,9 +318,9 @@ class _MainScreenState extends State<MainScreen> {
                               Transform.translate(
                                 offset: const Offset(0, -6), // 2px上に移動
                                 child: Text(
-                                  'ThisOne',
+                                'ThisOne',
                                   style: GoogleFonts.montserrat(
-                                    color: Colors.white,
+                                  color: Colors.white,
                                     fontSize: 24,
                                     fontWeight: FontWeight.w500, // 文字の太さ
                                     letterSpacing: 1.2,
@@ -715,8 +715,8 @@ class _MainScreenState extends State<MainScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'タスク追加',
-                style: TextStyle(color: Colors.white),
+            'タスク追加',
+            style: TextStyle(color: Colors.white),
               ),
               const SizedBox(height: 4),
               Text(
@@ -969,7 +969,7 @@ class _MainScreenState extends State<MainScreen> {
           backgroundColor: Colors.red[600],
           duration: const Duration(seconds: 5),
         ),
-      );
+    );
     }
   }
 }
