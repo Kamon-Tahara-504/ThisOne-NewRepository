@@ -11,6 +11,7 @@ class MemoDetailScreen extends StatefulWidget {
   final String content;
   final String mode;
   final String? richContent;
+  final DateTime? updatedAt;
 
   const MemoDetailScreen({
     super.key,
@@ -19,6 +20,7 @@ class MemoDetailScreen extends StatefulWidget {
     required this.content,
     required this.mode,
     this.richContent,
+    this.updatedAt,
   });
 
   @override
@@ -34,25 +36,33 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
   
   bool _hasChanges = false;
   bool _isSaving = false;
-  bool _isKeyboardVisible = false;
+  bool _showToolbar = false;
   
-  // デバウンス用のタイマー
   Timer? _debounceTimer;
+  
+  // 初期値を保存
+  late String _initialTitle;
+  late String _initialContent;
+  late String _initialRichContent;
+  
+  // 最後の更新時刻を管理
+  DateTime? _lastUpdated;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    
+    // 初期更新時刻を設定
+    _lastUpdated = widget.updatedAt;
+    
     _titleController = TextEditingController(text: widget.title);
     
     // QuillControllerを初期化
     Document document;
     if (widget.richContent != null && widget.richContent!.isNotEmpty) {
       try {
-        // リッチコンテンツが存在する場合はそれを使用
         final deltaJson = jsonDecode(widget.richContent!);
-        
-        // deltaJsonが{ops: [...]}形式の場合は、opsの部分だけを取り出す
         List<dynamic> ops;
         if (deltaJson is Map<String, dynamic> && deltaJson.containsKey('ops')) {
           ops = deltaJson['ops'] as List<dynamic>;
@@ -61,14 +71,11 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
         } else {
           throw Exception('不正なDelta形式: $deltaJson');
         }
-        
         document = Document.fromJson(ops);
       } catch (e) {
-        // リッチコンテンツの解析に失敗した場合はプレーンテキストを使用
         document = Document()..insert(0, widget.content);
       }
     } else {
-      // リッチコンテンツがない場合はプレーンテキストを使用
       document = Document()..insert(0, widget.content);
     }
     
@@ -77,12 +84,17 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
       selection: const TextSelection.collapsed(offset: 0),
     );
     
-    // テキスト変更を監視
-    _titleController.addListener(_onTextChanged);
-    _quillController.addListener(_onTextChanged);
-    
-    // 選択状態の変更を監視してUIを更新
-    _quillController.addListener(_onSelectionChanged);
+    // リスナーを追加（初期化後に追加することで、初期化時の不要な呼び出しを防ぐ）
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // 実際のコントローラーの内容を初期値として設定
+      _initialTitle = _titleController.text.trim();
+      _initialContent = _quillController.document.toPlainText();
+      _initialRichContent = jsonEncode({'ops': _quillController.document.toDelta().toJson()});
+      
+      // リスナーを追加
+      _titleController.addListener(_onTextChanged);
+      _quillController.addListener(_onTextChanged);
+    });
     
     // フォーカス変更を監視
     _titleFocusNode.addListener(_onFocusChanged);
@@ -90,32 +102,24 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
   }
 
   void _onFocusChanged() {
-    // メモ入力にフォーカスがある場合のみツールバーを表示
     setState(() {
-      _isKeyboardVisible = _memoFocusNode.hasFocus;
+      _showToolbar = _memoFocusNode.hasFocus;
     });
   }
-
-
 
   @override
   void didChangeMetrics() {
     super.didChangeMetrics();
-    // フォーカス状態のみでツールバー表示を制御するため、キーボード高さによる自動更新は行わない
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    setState(() {
+      _showToolbar = keyboardHeight > 0 && _memoFocusNode.hasFocus;
+    });
   }
-
-  void _onSelectionChanged() {
-    // 選択位置が変わった時にツールバーの状態を更新
-    setState(() {});
-  }
-
-
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _debounceTimer?.cancel();
-    _closeColorPicker();
     _titleController.dispose();
     _quillController.dispose();
     _titleFocusNode.dispose();
@@ -124,21 +128,30 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
   }
 
   void _onTextChanged() {
-    if (!_hasChanges) {
+    // 現在の内容を取得
+    final currentTitle = _titleController.text.trim();
+    final currentContent = _quillController.document.toPlainText();
+    final currentRichContent = jsonEncode({'ops': _quillController.document.toDelta().toJson()});
+    
+    // 初期値と比較して実際に変更があったかチェック
+    final hasActualChanges = currentTitle != _initialTitle || 
+                            currentContent != _initialContent ||
+                            currentRichContent != _initialRichContent;
+    
+    if (hasActualChanges != _hasChanges) {
       setState(() {
-        _hasChanges = true;
+        _hasChanges = hasActualChanges;
       });
     }
     
-    // 既存のタイマーをキャンセル
-    _debounceTimer?.cancel();
-    
-    // 新しいタイマーを設定（1秒後に自動保存）
-    _debounceTimer = Timer(const Duration(seconds: 1), () {
-      if (_hasChanges && !_isSaving && mounted) {
-        _saveChanges();
-      }
-    });
+    if (_hasChanges) {
+      _debounceTimer?.cancel();
+      _debounceTimer = Timer(const Duration(seconds: 1), () {
+        if (_hasChanges && !_isSaving && mounted) {
+          _saveChanges();
+        }
+      });
+    }
   }
 
   Future<void> _saveChanges() async {
@@ -149,7 +162,6 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
     });
     
     try {
-      // プレーンテキスト版とリッチテキスト版の両方を保存
       final plainText = _quillController.document.toPlainText();
       final richContentMap = {'ops': _quillController.document.toDelta().toJson()};
       
@@ -162,9 +174,16 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
         richContent: richContentMap,
       );
       
+      // 保存成功時に更新時刻を記録し、初期値を更新
       setState(() {
         _hasChanges = false;
         _isSaving = false;
+        _lastUpdated = DateTime.now();
+        
+        // 初期値を現在の値に更新
+        _initialTitle = _titleController.text.trim().isEmpty ? '無題' : _titleController.text.trim();
+        _initialContent = plainText;
+        _initialRichContent = jsonEncode(richContentMap);
       });
     } catch (e) {
       setState(() {
@@ -187,138 +206,189 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
       await _saveChanges();
     }
     if (mounted) {
-      Navigator.pop(context, true); // 変更があったことを通知
+      Navigator.pop(context, true);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
-
-    return PopScope(
-      canPop: true,
-      onPopInvokedWithResult: (didPop, result) async {
-        if (didPop && _hasChanges) {
-          await _saveChanges();
-        }
-      },
-      child: Scaffold(
-        backgroundColor: const Color(0xFF2B2B2B),
-        resizeToAvoidBottomInset: false,
-        appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(40.0), // ガイドラインの高さ
-          child: Container(
-            color: const Color(0xFF2B2B2B),
-            child: Column(
+    return Hero(
+      tag: 'memo-${widget.memoId}',
+      child: Material(
+        color: const Color(0xFF2B2B2B),
+        child: GestureDetector(
+          onTap: () {
+            // 入力欄以外をタップしたときにキーボードを隠す
+            FocusScope.of(context).unfocus();
+          },
+          child: Scaffold(
+            backgroundColor: const Color(0xFF2B2B2B),
+            appBar: AppBar(
+              backgroundColor: const Color(0xFF2B2B2B),
+              elevation: 0,
+              automaticallyImplyLeading: false,
+              leading: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: _handleBackPressed,
+                  ),
+                  Transform.translate(
+                    offset: const Offset(-6, 0), // 左に6px移動して近づける
+                    child: const Text(
+                      'Back',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              leadingWidth: 100,
+              actions: [
+                if (_isSaving) ...[
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.0),
+                    child: SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Color(0xFFE85A3B),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            body: Column(
               children: [
-                // ステータスバー部分
+                // タイトル編集エリア（コンパクト化）
                 Container(
-                  height: MediaQuery.of(context).padding.top,
-                  width: double.infinity,
-                  color: const Color(0xFF2B2B2B),
-                ),
-                // AppBar部分
-                Expanded(
-                  child: Container(
-                    color: const Color(0xFF2B2B2B),
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-                            child: Row(
-                              children: [
-                                // 戻るボタンとback表示
-                                Transform.translate(
-                                  offset: const Offset(0, -6), // 6px上に移動してバランスを調整
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.center, // 縦方向の中央揃え
-                                    children: [
-                                      IconButton(
-                                        onPressed: _handleBackPressed,
-                                        padding: const EdgeInsets.only(right: 4), // 右パディングを小さく
-                                        constraints: const BoxConstraints(), // デフォルト制約を削除
-                                        icon: const Icon(
-                                          Icons.arrow_back_ios,
-                                          color: Colors.white,
-                                          size: 22,
-                                        ),
-                                      ),
-                                      Transform.translate(
-                                        offset: const Offset(-14, 0), // 左に14px移動して間隔を狭める
-                                        child: GestureDetector(
-                                          onTap: _handleBackPressed,
-                                          child: const Text(
-                                            'back',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                
-                                // 保存状態表示
-                                Expanded(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      if (_isSaving) ...[
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            SizedBox(
-                                              width: 12,
-                                              height: 12,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                                color: const Color(0xFFE85A3B),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              '保存中...',
-                                              style: TextStyle(
-                                                color: Colors.grey[400],
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ] else if (_hasChanges) ...[
-                                        Text(
-                                          '未保存の変更があります',
-                                          style: TextStyle(
-                                            color: Colors.orange[400],
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ] else ...[
-                                        Text(
-                                          '保存済み',
-                                          style: TextStyle(
-                                            color: Colors.grey[500],
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8), // 上下パディングを減らす
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // パディングを元に戻す
+                        decoration: BoxDecoration(
+                          gradient: createOrangeYellowGradient(),
+                          borderRadius: BorderRadius.circular(16), // 角丸をさらに大きく
+                        ),
+                        child: Text(
+                          widget.mode == 'memo' ? 'メモ' : widget.mode,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12, // フォントサイズを元に戻す
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                        // グラデーションガイドライン
-                        Container(
-                          height: 2,
-                          decoration: BoxDecoration(
-                            gradient: createHorizontalOrangeYellowGradient(),
+                      ),
+                      const SizedBox(width: 8), // 間隔を狭める
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  TextField(
+                                    controller: _titleController,
+                                    focusNode: _titleFocusNode,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16, // フォントサイズを少し小さく
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    decoration: const InputDecoration(
+                                      hintText: 'タイトルを入力...',
+                                      hintStyle: TextStyle(color: Colors.grey, fontSize: 16),
+                                      border: InputBorder.none,
+                                      contentPadding: EdgeInsets.symmetric(vertical: 4), // パディングを減らす
+                                      isDense: true, // 密度を高める
+                                    ),
+                                  ),
+                                  Text(
+                                    _getLastUpdatedText(),
+                                    style: TextStyle(
+                                      color: Colors.grey[500],
+                                      fontSize: 11, // フォントサイズを小さく
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // メモ編集エリア（拡大）
+                Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(16, 0, 16, 16), // 上マージンを削除
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3A3A3A),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        // ツールバー
+                        if (_showToolbar)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6), // パディングを減らす
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF4A4A4A),
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(12),
+                                topRight: Radius.circular(12),
+                              ),
+                            ),
+                            child: _buildToolbar(),
+                          ),
+                        
+                        // エディタ
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF3A3A3A),
+                              borderRadius: _showToolbar 
+                                  ? const BorderRadius.only(
+                                      bottomLeft: Radius.circular(12),
+                                      bottomRight: Radius.circular(12),
+                                    )
+                                  : BorderRadius.circular(12),
+                            ),
+                            child: QuillEditor.basic(
+                              controller: _quillController,
+                              focusNode: _memoFocusNode,
+                              configurations: QuillEditorConfigurations(
+                                padding: const EdgeInsets.all(16),
+                                placeholder: 'メモを入力してください...',
+                                autoFocus: false,
+                                expands: true,
+                                scrollable: true,
+                                keyboardAppearance: Brightness.dark,
+                                customStyles: DefaultStyles(
+                                  paragraph: DefaultTextBlockStyle(
+                                    const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16.0,
+                                    ),
+                                    HorizontalSpacing.zero,
+                                    VerticalSpacing.zero,
+                                    VerticalSpacing.zero,
+                                    BoxDecoration(
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -329,395 +399,149 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
             ),
           ),
         ),
-        body: Stack(
-          children: [
-            // メインコンテンツ
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    // タイトル入力とモード・日付表示
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // タイトル入力（可変幅、制限あり）
-                        Flexible(
-                          child: IntrinsicWidth(
-                            child: ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxWidth: MediaQuery.of(context).size.width - 200,
-                              ),
-                              child: TextField(
-                                controller: _titleController,
-                                focusNode: _titleFocusNode,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                decoration: const InputDecoration(
-                                  hintText: 'タイトル',
-                                  hintStyle: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.symmetric(vertical: 8),
-                                  isDense: true,
-                                ),
-                                maxLines: 1,
-                              ),
-                            ),
-                          ),
-                        ),
-                        
-                        const SizedBox(width: 8),
-                        
-                        // モード・日付表示（固定幅確保）
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // モード表示
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                gradient: createOrangeYellowGradient(),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Text(
-                                widget.mode == 'memo' ? 'メモモード' : widget.mode,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                            
-                            const SizedBox(width: 16),
-                            
-                            // 日付表示
-                            Text(
-                              '${DateTime.now().year}/${DateTime.now().month}/${DateTime.now().day}',
-                              style: TextStyle(
-                                color: Colors.grey[500],
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // 内容入力（Quillエディタ）
-                    Expanded(
-                      child: Container(
-                        margin: EdgeInsets.only(
-                          bottom: _isKeyboardVisible ? 70 : 0, // ボタンサイズ増加に合わせて調整
-                        ),
-                        child: Theme(
-                          data: Theme.of(context).copyWith(
-                            textTheme: Theme.of(context).textTheme.copyWith(
-                              bodyMedium: const TextStyle(color: Colors.white),
-                            ),
-                          ),
-                          child: QuillEditor.basic(
-                            controller: _quillController,
-                            focusNode: _memoFocusNode,
-                            configurations: QuillEditorConfigurations(
-                              padding: const EdgeInsets.all(0),
-                              placeholder: 'ここに内容を入力してください...',
-                              autoFocus: false,
-                              expands: true,
-                              scrollable: true,
-                              keyboardAppearance: Brightness.dark, // ダークモードキーボードを設定 
-                              customStyles: DefaultStyles(
-                                paragraph: DefaultTextBlockStyle(
-                                  const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16.0, //メモのピクセルサイズ（デフォルト）
-                                  ),
-                                  HorizontalSpacing.zero,
-                                  VerticalSpacing.zero,
-                                  VerticalSpacing.zero,
-                                  BoxDecoration(
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            
-            // キーボード表示時のツールバー
-            if (_isKeyboardVisible) ...[
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: keyboardHeight,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2B2B2B),
-                    border: Border(
-                      top: BorderSide(color: Colors.grey[700]!),
-                    ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        return Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _buildToolbarButton(
-                              icon: Icons.format_bold,
-                              isActive: _isFormatActive(Attribute.bold),
-                              onPressed: () => _toggleFormat(Attribute.bold),
-                            ),
-                            const Spacer(),
-                            _buildToolbarButton(
-                              icon: Icons.format_italic,
-                              isActive: _isFormatActive(Attribute.italic),
-                              onPressed: () => _toggleFormat(Attribute.italic),
-                            ),
-                            const Spacer(),
-                            _buildToolbarButton(
-                              icon: Icons.format_underlined,
-                              isActive: _isFormatActive(Attribute.underline),
-                              onPressed: () => _toggleFormat(Attribute.underline),
-                            ),
-                            const Spacer(),
-                            _buildToolbarButton(
-                              icon: Icons.format_strikethrough,
-                              isActive: _isFormatActive(Attribute.strikeThrough),
-                              onPressed: () => _toggleFormat(Attribute.strikeThrough),
-                            ),
-                            const Spacer(),
-                            _buildToolbarButton(
-                              icon: Icons.format_list_numbered,
-                              isActive: _isFormatActive(Attribute.ol),
-                              onPressed: () => _toggleFormat(Attribute.ol),
-                            ),
-                            const Spacer(),
-                            _buildToolbarButton(
-                              icon: Icons.format_list_bulleted,
-                              isActive: _isFormatActive(Attribute.ul),
-                              onPressed: () => _toggleFormat(Attribute.ul),
-                            ),
-                            const Spacer(),
-                            _buildToolbarButton(
-                              icon: Icons.text_format,
-                              isActive: false,
-                              onPressed: () => _showColorPicker(false),
-                            ),
-                            const Spacer(),
-                            _buildToolbarButton(
-                              icon: Icons.format_color_fill,
-                              isActive: false,
-                              onPressed: () => _showColorPicker(true),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
       ),
     );
   }
 
-  OverlayEntry? _colorPickerOverlay;
-
-  void _showColorPicker(bool isBackgroundColor) {
-    _closeColorPicker();
-
-    final overlay = Overlay.of(context);
-
-    _colorPickerOverlay = OverlayEntry(
-      builder: (context) => GestureDetector(
-        onTap: () => _closeColorPicker(),
-        behavior: HitTestBehavior.translucent,
-        child: Stack(
-          children: [
-            Positioned(
-              right: 16,
-              top: MediaQuery.of(context).padding.top + 200,
-              child: GestureDetector(
-                onTap: () {},
-                child: Material(
-                  color: Colors.transparent,
-                  child: Container(
-                    width: 200,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF3A3A3A),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[700]!),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          isBackgroundColor ? '背景色を選択' : '文字色を選択',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          runSpacing: 8,
-                          spacing: 8,
-                          children: [
-                            const Color(0xFFE74C3C),
-                            const Color(0xFFE91E63),
-                            const Color(0xFF9B59B6),
-                            const Color(0xFF3498DB),
-                            const Color(0xFF27AE60),
-                            const Color(0xFFF1C40F),
-                            const Color(0xFFE67E22),
-                            const Color(0xFF8D6E63),
-                            const Color(0xFF95A5A6),
-                            const Color(0xFFECF0F1),
-                          ].map((color) {
-                            return GestureDetector(
-                              onTap: () {
-                                _closeColorPicker();
-                                _setTypingColor(color, isBackgroundColor);
-                              },
-                              child: Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color: color,
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color: Colors.grey[600]!,
-                                    width: 1,
-                                  ),
-                                ),
-                                child: color == const Color(0xFFECF0F1)
-                                    ? const Icon(
-                                        Icons.circle,
-                                        color: Colors.grey,
-                                        size: 16,
-                                      )
-                                    : null,
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                        const SizedBox(height: 12),
-                        GestureDetector(
-                          onTap: () {
-                            _closeColorPicker();
-                            _removeTypingColor(isBackgroundColor);
-                          },
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF2B2B2B),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: Colors.grey[600]!),
-                            ),
-                            child: const Text(
-                              '色をリセット',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.orange,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+  // ツールバーボタン一覧
+  Widget _buildToolbar() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 利用可能な幅からパディングを引く
+        double availableWidth = constraints.maxWidth - 16; // 左右のパディング分
+        
+        // 画面サイズに応じてボタン間の間隔を設定
+        double buttonMargin;
+        if (availableWidth < 400) {
+          buttonMargin = 2; // 小さい画面：2px
+        } else if (availableWidth < 800) {
+          buttonMargin = 4; // 中画面：4px
+        } else {
+          buttonMargin = 6; // 大画面（タブレット）：6px
+        }
+        
+        // 8つのボタンとマージンを考慮してボタンサイズを計算
+        int buttonCount = 8;
+        double totalMargin = (buttonCount - 1) * buttonMargin; // 各ボタン間のマージン
+        double buttonSize = (availableWidth - totalMargin) / buttonCount;
+        
+        // 画面サイズに応じてボタンサイズの制限を動的に設定
+        double minButtonSize, maxButtonSize;
+        if (availableWidth < 400) {
+          // 小画面（スマートフォン）
+          minButtonSize = 24.0;
+          maxButtonSize = 40.0;
+        } else if (availableWidth < 800) {
+          // 中画面（大きいスマートフォン）
+          minButtonSize = 36.0;
+          maxButtonSize = 56.0;
+        } else {
+          // 大画面（タブレット）
+          minButtonSize = 48.0;
+          maxButtonSize = 80.0;
+        }
+        
+        buttonSize = buttonSize.clamp(minButtonSize, maxButtonSize);
+        
+        // ツールバーボタンのリスト
+        List<Widget> toolbarButtons = [
+          _buildToolbarButton(
+            icon: Icons.format_bold,
+            isActive: _isFormatActive(Attribute.bold),
+            onPressed: () => _toggleFormat(Attribute.bold),
+            buttonSize: buttonSize,
+            margin: buttonMargin,
+          ),
+          _buildToolbarButton(
+            icon: Icons.format_italic,
+            isActive: _isFormatActive(Attribute.italic),
+            onPressed: () => _toggleFormat(Attribute.italic),
+            buttonSize: buttonSize,
+            margin: buttonMargin,
+          ),
+          _buildToolbarButton(
+            icon: Icons.format_underlined,
+            isActive: _isFormatActive(Attribute.underline),
+            onPressed: () => _toggleFormat(Attribute.underline),
+            buttonSize: buttonSize,
+            margin: buttonMargin,
+          ),
+          _buildToolbarButton(
+            icon: Icons.format_strikethrough,
+            isActive: _isFormatActive(Attribute.strikeThrough),
+            onPressed: () => _toggleFormat(Attribute.strikeThrough),
+            buttonSize: buttonSize,
+            margin: buttonMargin,
+          ),
+          _buildToolbarButton(
+            icon: Icons.format_list_numbered,
+            isActive: _isFormatActive(Attribute.ol),
+            onPressed: () => _toggleFormat(Attribute.ol),
+            buttonSize: buttonSize,
+            margin: buttonMargin,
+          ),
+          _buildToolbarButton(
+            icon: Icons.format_list_bulleted,
+            isActive: _isFormatActive(Attribute.ul),
+            onPressed: () => _toggleFormat(Attribute.ul),
+            buttonSize: buttonSize,
+            margin: buttonMargin,
+          ),
+          _buildToolbarButton(
+            icon: Icons.text_format,
+            isActive: false,
+            onPressed: () => _showColorPicker(false),
+            buttonSize: buttonSize,
+            margin: buttonMargin,
+          ),
+          _buildToolbarButton(
+            icon: Icons.format_color_fill,
+            isActive: false,
+            onPressed: () => _showColorPicker(true),
+            buttonSize: buttonSize,
+            margin: buttonMargin,
+          ),
+        ];
+        
+        // 固定サイズのボタンを等間隔で配置
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: toolbarButtons,
+        );
+      },
     );
-
-    overlay.insert(_colorPickerOverlay!);
-  }
-
-  void _closeColorPicker() {
-    if (_colorPickerOverlay != null) {
-      _colorPickerOverlay!.remove();
-      _colorPickerOverlay = null;
-    }
   }
 
   Widget _buildToolbarButton({
     required IconData icon,
     required bool isActive,
     required VoidCallback onPressed,
+    required double buttonSize,
+    required double margin,
   }) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        width: 35, // 32の110% (10%増)
-        height: 35, // 32の110% (10%増)
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8), // 7の約114%
-          // グラデーション境界線のため、外側にパディングを追加
-          gradient: isActive 
-              ? null
-              : createHorizontalOrangeYellowGradient(), // 非アクティブ時に境界線グラデーション
-        ),
-        child: Container(
-          margin: isActive ? EdgeInsets.zero : const EdgeInsets.all(1), // 非アクティブ時のみマージン
-          decoration: BoxDecoration(
-            gradient: isActive 
-                ? createOrangeYellowGradient() 
-                : LinearGradient(
-                    colors: [
-                      const Color(0xFF3A3A3A),
-                      const Color(0xFF2F2F2F),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-            borderRadius: BorderRadius.circular(7), // 6の約117%
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
-                blurRadius: 2,
-                offset: const Offset(0, 1),
-              ),
-            ],
-          ),
-          child: Icon(
-            icon,
-            color: isActive ? Colors.white : Colors.grey[300],
-            size: icon == Icons.format_color_fill ? 18 : 21, // 背景色ボタンのみ18、他は21 (10%増)
+    // アイコンサイズはボタンサイズの50%に設定
+    double iconSize = buttonSize * 0.5;
+    
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: margin / 2),
+      width: buttonSize,
+      height: buttonSize,
+      decoration: BoxDecoration(
+        gradient: isActive ? createOrangeYellowGradient() : null,
+        color: isActive ? null : Colors.transparent,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(6),
+          child: Center(
+            child: Icon(
+              icon,
+              color: isActive ? Colors.white : Colors.grey[400],
+              size: iconSize,
+            ),
           ),
         ),
       ),
@@ -731,22 +555,18 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
       
       final style = _quillController.getSelectionStyle();
       
-      // リストの場合は特別な処理
       if (attribute.key == 'list') {
         final listAttribute = style.attributes['list'];
         if (listAttribute != null) {
           if (attribute == Attribute.ol) {
-            // 番号付きリストの場合
             return listAttribute == Attribute.ol;
           } else if (attribute == Attribute.ul) {
-            // 箇条書きリストの場合
             return listAttribute == Attribute.ul;
           }
         }
         return false;
       }
       
-      // 通常のフォーマット処理
       return style.containsKey(attribute.key) && 
              style.attributes[attribute.key] != null;
     } catch (e) {
@@ -762,29 +582,23 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
       final isCurrentlyActive = style.containsKey(attribute.key) && 
                                style.attributes[attribute.key] != null;
       
-      // リストの場合は特別な処理
       if (attribute.key == 'list') {
         if (isCurrentlyActive) {
-          // 現在のリストを削除
           _quillController.formatSelection(Attribute.clone(attribute, null));
         } else {
-          // 他のリストタイプを先に削除してから新しいリストを適用
           final isOlActive = style.containsKey('list') && 
-                            style.attributes['list'] == 'ordered';
+                            style.attributes['list'] == Attribute.ol;
           final isUlActive = style.containsKey('list') && 
-                            style.attributes['list'] == 'bullet';
+                            style.attributes['list'] == Attribute.ul;
           
           if (isOlActive || isUlActive) {
-            // 既存のリストを削除
             _quillController.formatSelection(Attribute.clone(Attribute.ol, null));
             _quillController.formatSelection(Attribute.clone(Attribute.ul, null));
           }
           
-          // 新しいリストを適用
           _quillController.formatSelection(attribute);
         }
       } else {
-        // 通常のフォーマット処理
         if (isCurrentlyActive) {
           _quillController.formatSelection(Attribute.clone(attribute, null));
         } else {
@@ -792,48 +606,131 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
         }
       }
       
-      // フォーマット変更後に変更フラグを設定
       _onTextChanged();
       setState(() {});
     }
   }
 
-  void _setTypingColor(Color color, bool isBackgroundColor) {
+  void _showColorPicker(bool isBackground) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF3A3A3A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                isBackground ? '背景色を選択' : '文字色を選択',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _buildColorButton(Colors.red, isBackground),
+                  _buildColorButton(Colors.orange, isBackground),
+                  _buildColorButton(Colors.yellow, isBackground),
+                  _buildColorButton(Colors.green, isBackground),
+                  _buildColorButton(Colors.blue, isBackground),
+                  _buildColorButton(Colors.purple, isBackground),
+                  _buildColorButton(Colors.pink, isBackground),
+                  _buildColorButton(Colors.brown, isBackground),
+                  _buildColorButton(Colors.grey, isBackground),
+                  _buildColorButton(Colors.black, isBackground),
+                  _buildColorButton(null, isBackground),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildColorButton(Color? color, bool isBackground) {
+    return GestureDetector(
+      onTap: () {
+        if (color != null) {
+          _setTypingColor(color, isBackground);
+        } else {
+          _removeTypingColor(isBackground);
+        }
+        Navigator.pop(context);
+      },
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: color ?? Colors.transparent,
+          border: Border.all(color: Colors.grey[400]!),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: color == null
+            ? const Icon(Icons.clear, color: Colors.white, size: 20)
+            : null,
+      ),
+    );
+  }
+
+  void _setTypingColor(Color color, bool isBackground) {
     final selection = _quillController.selection;
     if (selection.isValid) {
       String colorString;
       
-      if (isBackgroundColor) {
-        final r = color.red;
-        final g = color.green;
-        final b = color.blue;
+      if (isBackground) {
+        final r = (color.r * 255).round();
+        final g = (color.g * 255).round();
+        final b = (color.b * 255).round();
         colorString = 'rgba($r, $g, $b, 0.3)';
         _quillController.formatSelection(BackgroundAttribute(colorString));
       } else {
-        final colorHex = '#${color.value.toRadixString(16).padLeft(8, '0').substring(2)}';
+        final colorHex = '#${(color.r * 255).round().toRadixString(16).padLeft(2, '0')}${(color.g * 255).round().toRadixString(16).padLeft(2, '0')}${(color.b * 255).round().toRadixString(16).padLeft(2, '0')}';
         _quillController.formatSelection(ColorAttribute(colorHex));
       }
       
-      // 色変更後に変更フラグを設定
       _onTextChanged();
     }
     
     setState(() {});
   }
 
-  void _removeTypingColor(bool isBackgroundColor) {
+  void _removeTypingColor(bool isBackground) {
     final selection = _quillController.selection;
     if (selection.isValid) {
-      if (isBackgroundColor) {
+      if (isBackground) {
         _quillController.formatSelection(const BackgroundAttribute(null));
       } else {
         _quillController.formatSelection(const ColorAttribute(null));
       }
       
-      // 色リセット後に変更フラグを設定
       _onTextChanged();
     }
     
     setState(() {});
+  }
+
+  String _getLastUpdatedText() {
+    if (_lastUpdated == null) {
+      return '更新: 未更新';
+    }
+    
+    final year = _lastUpdated!.year;
+    final month = _lastUpdated!.month;
+    final day = _lastUpdated!.day;
+    final hour = _lastUpdated!.hour.toString().padLeft(2, '0');
+    final minute = _lastUpdated!.minute.toString().padLeft(2, '0');
+    
+    return '更新: $year/$month/$day $hour:$minute';
   }
 } 
