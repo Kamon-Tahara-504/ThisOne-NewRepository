@@ -37,8 +37,10 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
   bool _hasChanges = false;
   bool _isSaving = false;
   bool _showToolbar = false;
+  bool _isBackgroundColorMode = false;
   
   Timer? _debounceTimer;
+  OverlayEntry? _colorPanelOverlay;
   
   // 初期値を保存
   late String _initialTitle;
@@ -103,7 +105,12 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
 
   void _onFocusChanged() {
     setState(() {
-      _showToolbar = _memoFocusNode.hasFocus;
+      final newShowToolbar = _memoFocusNode.hasFocus;
+      // ツールバーが隠れる場合はカラーパネルも閉じる
+      if (_showToolbar && !newShowToolbar && _colorPanelOverlay != null) {
+        _hideColorPanel();
+      }
+      _showToolbar = newShowToolbar;
     });
   }
 
@@ -112,7 +119,12 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
     super.didChangeMetrics();
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     setState(() {
-      _showToolbar = keyboardHeight > 0 && _memoFocusNode.hasFocus;
+      final newShowToolbar = keyboardHeight > 0 && _memoFocusNode.hasFocus;
+      // ツールバーが隠れる場合はカラーパネルも閉じる
+      if (_showToolbar && !newShowToolbar && _colorPanelOverlay != null) {
+        _hideColorPanel();
+      }
+      _showToolbar = newShowToolbar;
     });
   }
 
@@ -120,6 +132,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _debounceTimer?.cancel();
+    _colorPanelOverlay?.remove();
     _titleController.dispose();
     _quillController.dispose();
     _titleFocusNode.dispose();
@@ -217,10 +230,14 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
       child: Material(
         color: const Color(0xFF2B2B2B),
         child: GestureDetector(
-          onTap: () {
-            // 入力欄以外をタップしたときにキーボードを隠す
-            FocusScope.of(context).unfocus();
-          },
+                        onTap: () {
+                // 入力欄以外をタップしたときにキーボードを隠す
+                FocusScope.of(context).unfocus();
+                // カラーパネルも閉じる
+                if (_colorPanelOverlay != null) {
+                  _hideColorPanel();
+                }
+              },
           child: Scaffold(
             backgroundColor: const Color(0xFF2B2B2B),
             appBar: AppBar(
@@ -490,14 +507,14 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
           _buildToolbarButton(
             icon: Icons.text_format,
             isActive: false,
-            onPressed: () => _showColorPicker(false),
+            onPressed: () => _toggleColorPanel(false),
             buttonSize: buttonSize,
             margin: buttonMargin,
           ),
           _buildToolbarButton(
             icon: Icons.format_color_fill,
             isActive: false,
-            onPressed: () => _showColorPicker(true),
+            onPressed: () => _toggleColorPanel(true),
             buttonSize: buttonSize,
             margin: buttonMargin,
           ),
@@ -611,54 +628,161 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
     }
   }
 
-  void _showColorPicker(bool isBackground) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF3A3A3A),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(16),
+  void _toggleColorPanel(bool isBackground) {
+    if (_colorPanelOverlay != null) {
+      _hideColorPanel();
+    } else {
+      _showColorPanelOverlay(isBackground);
+    }
+  }
+
+  void _showColorPanelOverlay(bool isBackground) {
+    setState(() {
+      _isBackgroundColorMode = isBackground;
+    });
+
+    _colorPanelOverlay = OverlayEntry(
+      builder: (context) => _buildOverlayColorPanel(),
+    );
+
+    Overlay.of(context).insert(_colorPanelOverlay!);
+  }
+
+  void _hideColorPanel() {
+    _colorPanelOverlay?.remove();
+    _colorPanelOverlay = null;
+  }
+
+  Widget _buildOverlayColorPanel() {
+    // 色のリストを定義
+    final List<Color?> firstRowColors = [
+      Colors.red,
+      Colors.orange,
+      Colors.yellow,
+      Colors.green,
+      Colors.blue,
+    ];
+    
+    final List<Color?> secondRowColors = [
+      Colors.purple,
+      Colors.pink,
+      Colors.brown,
+      Colors.black,
+      null, // リセットボタン（白色）
+    ];
+
+    // 動的に横幅を計算
+    const double buttonSize = 24.0; // ボタンサイズ
+    const double buttonSpacing = 12.0; // ボタン間の間隔
+    const double sidePadding = 8.0; // 左右パディング
+    const int buttonCount = 5; // ボタン数
+    
+    final double panelWidth = (buttonCount * buttonSize) + ((buttonCount - 1) * buttonSpacing) + (sidePadding * 2);
+
+    return Positioned(
+      top: 60, // モードレスにの縦位置
+      right: 16, // モードレスにの横位置
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          padding: EdgeInsets.fromLTRB(sidePadding, 8, sidePadding, 8), // 動的パディング
+          decoration: BoxDecoration(
+            color: const Color(0xFF3A3A3A),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[600]!, width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                isBackground ? '背景色を選択' : '文字色を選択',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+              // タイトルと閉じるボタンの行
+              SizedBox(
+                width: panelWidth - (sidePadding * 2), // 動的に計算された幅
+                height: 22, // ボタンサイズに合わせて高さも2px増やす
+                child: Stack(
+                  children: [
+                    // 中央に配置されたタイトル
+                    Center(
+                      child: Text(
+                        _isBackgroundColorMode ? '背景色' : '文字色',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12, // 元のサイズに戻す
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    // 右端に配置された閉じるボタン
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: GestureDetector(
+                        onTap: _hideColorPanel,
+                        child: Container(
+                          width: 22, // 2px大きく
+                          height: 22, // 2px大きく
+                          decoration: BoxDecoration(
+                            color: Colors.grey[700],
+                            borderRadius: BorderRadius.circular(11), // 角丸も調整
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 16, // アイコンも少し大きく
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _buildColorButton(Colors.red, isBackground),
-                  _buildColorButton(Colors.orange, isBackground),
-                  _buildColorButton(Colors.yellow, isBackground),
-                  _buildColorButton(Colors.green, isBackground),
-                  _buildColorButton(Colors.blue, isBackground),
-                  _buildColorButton(Colors.purple, isBackground),
-                  _buildColorButton(Colors.pink, isBackground),
-                  _buildColorButton(Colors.brown, isBackground),
-                  _buildColorButton(Colors.grey, isBackground),
-                  _buildColorButton(Colors.black, isBackground),
-                  _buildColorButton(null, isBackground),
-                ],
+              const SizedBox(height: 10), // 2px増やす
+              
+              // 最初の行（5色）
+              Row(
+                children: firstRowColors.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final color = entry.value;
+                  return Padding(
+                    padding: EdgeInsets.only(
+                      right: index < firstRowColors.length - 1 ? buttonSpacing : 0
+                    ),
+                    child: _buildSmallColorButton(color, _isBackgroundColorMode),
+                  );
+                }).toList(),
               ),
-              const SizedBox(height: 16),
+              
+              const SizedBox(height: 10), // 上下ボタンの間隔を広げる
+              
+              // 2番目の行（5色、リセットボタン含む）
+              Row(
+                children: secondRowColors.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final color = entry.value;
+                  return Padding(
+                    padding: EdgeInsets.only(
+                      right: index < secondRowColors.length - 1 ? buttonSpacing : 0
+                    ),
+                    child: _buildSmallColorButton(color, _isBackgroundColorMode),
+                  );
+                }).toList(),
+              ),
             ],
           ),
+        ),
+      ),
         );
-      },
-    );
   }
 
-  Widget _buildColorButton(Color? color, bool isBackground) {
+  Widget _buildSmallColorButton(Color? color, bool isBackground) {
+    const double buttonSize = 24.0; // 定数として定義
+    
     return GestureDetector(
       onTap: () {
         if (color != null) {
@@ -666,22 +790,43 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
         } else {
           _removeTypingColor(isBackground);
         }
-        Navigator.pop(context);
+        // 色選択後はOverlayを閉じる
+        _hideColorPanel();
       },
       child: Container(
-        width: 40,
-        height: 40,
+        width: buttonSize,
+        height: buttonSize,
         decoration: BoxDecoration(
-          color: color ?? Colors.transparent,
-          border: Border.all(color: Colors.grey[400]!),
-          borderRadius: BorderRadius.circular(8),
+          color: isBackground
+              ? (color != null 
+                  ? Color.fromRGBO(
+                      (color.r * 255).round(),
+                      (color.g * 255).round(),
+                      (color.b * 255).round(),
+                      0.3, // 背景色の透明度
+                    )
+                  : Colors.white) // リセットボタンは白色
+              : const Color(0xFF4A4A4A), // 文字色ボタンの背景
+          border: Border.all(color: Colors.grey[400]!, width: 0.5),
+          borderRadius: BorderRadius.circular(4),
         ),
-        child: color == null
-            ? const Icon(Icons.clear, color: Colors.white, size: 20)
-            : null,
+        child: isBackground
+            ? null // 背景色は色そのものを表示
+            : Center(
+                child: Text(
+                  'A',
+                  style: TextStyle(
+                    color: color ?? Colors.white, // 文字色またはリセット時は白
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
       ),
     );
   }
+
+
 
   void _setTypingColor(Color color, bool isBackground) {
     final selection = _quillController.selection;
