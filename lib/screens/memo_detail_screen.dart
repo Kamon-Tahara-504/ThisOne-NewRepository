@@ -243,6 +243,8 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
             appBar: AppBar(
               backgroundColor: const Color(0xFF2B2B2B),
               elevation: 0,
+              surfaceTintColor: Colors.transparent,
+              scrolledUnderElevation: 0,
               automaticallyImplyLeading: false,
               leading: Row(
                 mainAxisSize: MainAxisSize.min,
