@@ -40,6 +40,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
   bool _isBackgroundColorMode = false;
   
   Timer? _debounceTimer;
+  Timer? _selectionTimer;
   OverlayEntry? _colorPanelOverlay;
   
   // 初期値を保存
@@ -96,6 +97,9 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
       // リスナーを追加
       _titleController.addListener(_onTextChanged);
       _quillController.addListener(_onTextChanged);
+      
+      // 選択範囲変更を監視（定期的にチェック）
+      _startSelectionMonitor();
     });
     
     // フォーカス変更を監視
@@ -111,6 +115,41 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
         _hideColorPanel();
       }
       _showToolbar = newShowToolbar;
+    });
+    
+    // フォーカス変更時にツールバーの状態を更新
+    if (_showToolbar && mounted) {
+      // 短い遅延を追加して、フォーカスが完全に設定されるまで待つ
+      Future.delayed(const Duration(milliseconds: 50), () {
+        if (mounted) {
+          setState(() {});
+        }
+      });
+    }
+  }
+
+  void _startSelectionMonitor() {
+    // 前の選択範囲を保存
+    TextSelection? previousSelection = _quillController.selection;
+    
+    // 定期的に選択範囲をチェック
+    _selectionTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      
+      final currentSelection = _quillController.selection;
+      
+      // 選択範囲が変更された場合
+      if (currentSelection != previousSelection) {
+        previousSelection = currentSelection;
+        
+        // ツールバーが表示されている場合のみ更新
+        if (_showToolbar) {
+          setState(() {});
+        }
+      }
     });
   }
 
@@ -132,6 +171,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _debounceTimer?.cancel();
+    _selectionTimer?.cancel();
     _colorPanelOverlay?.remove();
     _titleController.dispose();
     _quillController.dispose();
@@ -166,6 +206,8 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
       });
     }
   }
+
+
 
   Future<void> _saveChanges() async {
     if (!_hasChanges || _isSaving) return;
@@ -424,8 +466,13 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
 
   // ツールバーボタン一覧
   Widget _buildToolbar() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
+    return GestureDetector(
+      onTap: () {
+        // ツールバーエリアをタップしたときに状態を更新
+        setState(() {});
+      },
+      child: LayoutBuilder(
+        builder: (context, constraints) {
         // 利用可能な幅からパディングを引く
         double availableWidth = constraints.maxWidth - 16; // 左右のパディング分
         
@@ -528,6 +575,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
           children: toolbarButtons,
         );
       },
+      ),
     );
   }
 
@@ -572,6 +620,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
       final selection = _quillController.selection;
       if (!selection.isValid) return false;
       
+      // 選択範囲がない場合（カーソルのみ）は、現在の位置のスタイルを取得
       final style = _quillController.getSelectionStyle();
       
       if (attribute.key == 'list') {
@@ -586,8 +635,20 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
         return false;
       }
       
-      return style.containsKey(attribute.key) && 
-             style.attributes[attribute.key] != null;
+      // 各属性の値をチェック
+      final attributeValue = style.attributes[attribute.key];
+      
+      // 太文字、イタリック、アンダーライン、取り消し線の場合
+      if (attribute.key == 'bold' || 
+          attribute.key == 'italic' || 
+          attribute.key == 'underline' || 
+          attribute.key == 'strike') {
+        // 属性が存在する場合はアクティブ（キーの一致は前提条件として成立）
+        return attributeValue != null;
+      }
+      
+      // その他の属性
+      return attributeValue == attribute;
     } catch (e) {
       return false;
     }
