@@ -994,13 +994,13 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
                       (color.b * 255).round(),
                       0.3, // 背景色の透明度
                     )
-                  : Colors.white) // リセットボタンは白色
+                  : const Color(0xFF3A3A3A)) // リセットボタンはエディタの背景色
               : const Color(0xFF4A4A4A), // 文字色ボタンの背景
           border: Border.all(color: Colors.grey[400]!, width: 0.5),
           borderRadius: BorderRadius.circular(4),
         ),
         child: isBackground
-            ? null // 背景色は色そのものを表示
+            ? null // 背景色は色そのものを表示（nullの場合は通常の背景色）
             : Center(
                 child: Text(
                   'A',
