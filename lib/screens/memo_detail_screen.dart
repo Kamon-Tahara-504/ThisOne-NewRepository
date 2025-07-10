@@ -553,16 +553,16 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
             buttonSize: buttonSize,
             margin: buttonMargin,
           ),
-          _buildToolbarButton(
+          _buildColorButton(
             icon: Icons.text_format,
-            isActive: false,
+            isTextColor: true,
             onPressed: () => _toggleColorPanel(false),
             buttonSize: buttonSize,
             margin: buttonMargin,
           ),
-          _buildToolbarButton(
+          _buildColorButton(
             icon: Icons.format_color_fill,
-            isActive: false,
+            isTextColor: false,
             onPressed: () => _toggleColorPanel(true),
             buttonSize: buttonSize,
             margin: buttonMargin,
@@ -593,21 +593,93 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
       margin: EdgeInsets.symmetric(horizontal: margin / 2),
       width: buttonSize,
       height: buttonSize,
-      decoration: BoxDecoration(
-        gradient: isActive ? createOrangeYellowGradient() : null,
-        color: isActive ? null : Colors.transparent,
-        borderRadius: BorderRadius.circular(6),
+      decoration: isActive
+          ? BoxDecoration(
+              gradient: createOrangeYellowGradient(),
+              borderRadius: BorderRadius.circular(6),
+            )
+          : null,
+      child: Container(
+        width: buttonSize,
+        height: buttonSize,
+        margin: isActive ? const EdgeInsets.all(1.5) : EdgeInsets.zero,
+        decoration: BoxDecoration(
+          color: const Color(0xFF4A4A4A),
+          borderRadius: BorderRadius.circular(isActive ? 4.5 : 6),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onPressed,
+            borderRadius: BorderRadius.circular(isActive ? 4.5 : 6),
+            child: Center(
+              child: Icon(
+                icon,
+                color: isActive ? Colors.white : Colors.grey[400],
+                size: iconSize,
+              ),
+            ),
+          ),
+        ),
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(6),
-          child: Center(
-            child: Icon(
-              icon,
-              color: isActive ? Colors.white : Colors.grey[400],
-              size: iconSize,
+    );
+  }
+
+  Widget _buildColorButton({
+    required IconData icon,
+    required bool isTextColor,
+    required VoidCallback onPressed,
+    required double buttonSize,
+    required double margin,
+  }) {
+    // アイコンサイズを設定（文字色ボタンは少し大きく）
+    double iconSize = isTextColor ? buttonSize * 0.7 : buttonSize * 0.5;
+    
+    // 現在の色を取得
+    Color? currentColor;
+    if (isTextColor) {
+      currentColor = _getCurrentTextColor();
+    } else {
+      currentColor = _getCurrentBackgroundColor();
+    }
+    
+    // アイコンの色を決定
+    Color iconColor;
+    if (currentColor != null) {
+      iconColor = currentColor;
+    } else {
+      iconColor = Colors.grey[400]!;
+    }
+    
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: margin / 2),
+      width: buttonSize,
+      height: buttonSize,
+      decoration: currentColor != null
+          ? BoxDecoration(
+              gradient: createOrangeYellowGradient(),
+              borderRadius: BorderRadius.circular(6),
+            )
+          : null,
+      child: Container(
+        width: buttonSize,
+        height: buttonSize,
+        margin: currentColor != null ? const EdgeInsets.all(1.5) : EdgeInsets.zero,
+        decoration: BoxDecoration(
+          color: const Color(0xFF4A4A4A),
+          borderRadius: BorderRadius.circular(currentColor != null ? 4.5 : 6),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onPressed,
+            borderRadius: BorderRadius.circular(currentColor != null ? 4.5 : 6),
+            child: Center(
+              child: Icon(
+                icon,
+                color: iconColor,
+                size: iconSize,
+              ),
             ),
           ),
         ),
@@ -651,6 +723,60 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
       return attributeValue == attribute;
     } catch (e) {
       return false;
+    }
+  }
+
+  // 現在のカーソル位置の文字色を取得
+  Color? _getCurrentTextColor() {
+    try {
+      final selection = _quillController.selection;
+      if (!selection.isValid) return null;
+      
+      final style = _quillController.getSelectionStyle();
+      final colorAttribute = style.attributes['color'];
+      
+      if (colorAttribute != null && colorAttribute.value != null) {
+        final colorString = colorAttribute.value as String;
+        // #で始まる16進数カラーコードをパース
+        if (colorString.startsWith('#') && colorString.length == 7) {
+          final hexColor = colorString.substring(1);
+          final intColor = int.parse(hexColor, radix: 16);
+          return Color(intColor + 0xFF000000);
+        }
+      }
+      
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // 現在のカーソル位置の背景色を取得
+  Color? _getCurrentBackgroundColor() {
+    try {
+      final selection = _quillController.selection;
+      if (!selection.isValid) return null;
+      
+      final style = _quillController.getSelectionStyle();
+      final backgroundAttribute = style.attributes['background'];
+      
+      if (backgroundAttribute != null && backgroundAttribute.value != null) {
+        final colorString = backgroundAttribute.value as String;
+        // rgba形式の背景色をパース
+        if (colorString.startsWith('rgba(')) {
+          final rgbaMatch = RegExp(r'rgba\((\d+),\s*(\d+),\s*(\d+),\s*[\d.]+\)').firstMatch(colorString);
+          if (rgbaMatch != null) {
+            final r = int.parse(rgbaMatch.group(1)!);
+            final g = int.parse(rgbaMatch.group(2)!);
+            final b = int.parse(rgbaMatch.group(3)!);
+            return Color.fromARGB(255, r, g, b);
+          }
+        }
+      }
+      
+      return null;
+    } catch (e) {
+      return null;
     }
   }
 
