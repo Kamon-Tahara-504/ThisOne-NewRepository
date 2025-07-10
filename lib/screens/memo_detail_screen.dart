@@ -427,7 +427,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
                             child: QuillEditor.basic(
                               controller: _quillController,
                               focusNode: _memoFocusNode,
-                              configurations: QuillEditorConfigurations(
+                              config: QuillEditorConfig(
                                 padding: const EdgeInsets.all(16),
                                 placeholder: 'メモを入力してください...',
                                 autoFocus: false,

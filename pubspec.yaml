@@ -43,13 +43,12 @@ dependencies:
   google_fonts: ^6.1.0
   
   # Internationalization support
-  intl: ^0.19.0
   flutter_localizations:
     sdk: flutter
   
   # Rich text editor
-  flutter_quill: ^10.8.4
-  flutter_quill_extensions: ^10.8.4
+  flutter_quill: ^11.4.1
+  flutter_quill_extensions: ^11.0.0
   
   # Color picker
 
@@ -63,10 +62,10 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
   
   # App icon generation
-  flutter_launcher_icons: ^0.13.1
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
