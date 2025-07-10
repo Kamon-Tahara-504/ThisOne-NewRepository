@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import '../utils/color_utils.dart';
 
 class QuillColorPanel extends StatelessWidget {
   final QuillController controller;
@@ -191,36 +192,13 @@ class QuillColorPanel extends StatelessWidget {
   }
 
   void _setTypingColor(Color color) {
-    final selection = controller.selection;
-    if (selection.isValid) {
-      String colorString;
-      
-      if (isBackgroundColorMode) {
-        final r = (color.r * 255).round();
-        final g = (color.g * 255).round();
-        final b = (color.b * 255).round();
-        colorString = 'rgba($r, $g, $b, 0.3)';
-        controller.formatSelection(BackgroundAttribute(colorString));
-      } else {
-        final colorHex = '#${(color.r * 255).round().toRadixString(16).padLeft(2, '0')}${(color.g * 255).round().toRadixString(16).padLeft(2, '0')}${(color.b * 255).round().toRadixString(16).padLeft(2, '0')}';
-        controller.formatSelection(ColorAttribute(colorHex));
-      }
-      
-      onColorChanged();
-    }
+    ColorUtils.setColor(controller, color, isBackgroundColorMode);
+    onColorChanged();
   }
 
   void _removeTypingColor() {
-    final selection = controller.selection;
-    if (selection.isValid) {
-      if (isBackgroundColorMode) {
-        controller.formatSelection(const BackgroundAttribute(null));
-      } else {
-        controller.formatSelection(const ColorAttribute(null));
-      }
-      
-      onColorChanged();
-    }
+    ColorUtils.removeColor(controller, isBackgroundColorMode);
+    onColorChanged();
   }
 
   /// カラーパネルを表示するためのヘルパーメソッド

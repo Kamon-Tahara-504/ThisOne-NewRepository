@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import '../gradients.dart';
+import '../utils/color_utils.dart';
 
 class QuillToolbar extends StatelessWidget {
   final QuillController controller;
@@ -191,9 +192,9 @@ class QuillToolbar extends StatelessWidget {
     // 現在の色を取得
     Color? currentColor;
     if (isTextColor) {
-      currentColor = _getCurrentTextColor();
+      currentColor = ColorUtils.getCurrentTextColor(controller);
     } else {
-      currentColor = _getCurrentBackgroundColor();
+      currentColor = ColorUtils.getCurrentBackgroundColor(controller);
     }
     
     // アイコンの色を決定
@@ -310,53 +311,5 @@ class QuillToolbar extends StatelessWidget {
     }
   }
 
-  Color? _getCurrentTextColor() {
-    try {
-      final selection = controller.selection;
-      if (!selection.isValid) return null;
-      
-      final style = controller.getSelectionStyle();
-      final colorAttribute = style.attributes['color'];
-      
-      if (colorAttribute != null && colorAttribute.value != null) {
-        final colorString = colorAttribute.value as String;
-        if (colorString.startsWith('#') && colorString.length == 7) {
-          final hexColor = colorString.substring(1);
-          final intColor = int.parse(hexColor, radix: 16);
-          return Color(intColor + 0xFF000000);
-        }
-      }
-      
-      return null;
-    } catch (e) {
-      return null;
-    }
-  }
 
-  Color? _getCurrentBackgroundColor() {
-    try {
-      final selection = controller.selection;
-      if (!selection.isValid) return null;
-      
-      final style = controller.getSelectionStyle();
-      final backgroundAttribute = style.attributes['background'];
-      
-      if (backgroundAttribute != null && backgroundAttribute.value != null) {
-        final colorString = backgroundAttribute.value as String;
-        if (colorString.startsWith('rgba(')) {
-          final rgbaMatch = RegExp(r'rgba\((\d+),\s*(\d+),\s*(\d+),\s*[\d.]+\)').firstMatch(colorString);
-          if (rgbaMatch != null) {
-            final r = int.parse(rgbaMatch.group(1)!);
-            final g = int.parse(rgbaMatch.group(2)!);
-            final b = int.parse(rgbaMatch.group(3)!);
-            return Color.fromARGB(255, r, g, b);
-          }
-        }
-      }
-      
-      return null;
-    } catch (e) {
-      return null;
-    }
-  }
 } 
