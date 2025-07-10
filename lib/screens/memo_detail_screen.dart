@@ -6,6 +6,7 @@ import '../gradients.dart';
 import '../services/supabase_service.dart';
 import '../widgets/quill_toolbar.dart';
 import '../widgets/quill_color_panel.dart';
+import '../widgets/memo_back_header.dart';
 
 class MemoDetailScreen extends StatefulWidget {
   final String memoId;
@@ -284,110 +285,16 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
               },
           child: Scaffold(
             backgroundColor: const Color(0xFF2B2B2B),
-            appBar: AppBar(
-              backgroundColor: const Color(0xFF2B2B2B),
-              elevation: 0,
-              surfaceTintColor: Colors.transparent,
-              scrolledUnderElevation: 0,
-              automaticallyImplyLeading: false,
-              leading: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: _handleBackPressed,
-                  ),
-                  Transform.translate(
-                    offset: const Offset(-6, 0), // 左に6px移動して近づける
-                    child: const Text(
-                      'Back',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              leadingWidth: 100,
-              actions: [
-                if (_isSaving) ...[
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.0),
-                    child: SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Color(0xFFE85A3B),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
             body: Column(
               children: [
-                // タイトル編集エリア（コンパクト化）
-                Container(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8), // 上下パディングを減らす
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // パディングを元に戻す
-                        decoration: BoxDecoration(
-                          gradient: createOrangeYellowGradient(),
-                          borderRadius: BorderRadius.circular(16), // 角丸をさらに大きく
-                        ),
-                        child: Text(
-                          widget.mode == 'memo' ? 'メモ' : widget.mode,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12, // フォントサイズを元に戻す
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8), // 間隔を狭める
-                      Expanded(
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  TextField(
-                                    controller: _titleController,
-                                    focusNode: _titleFocusNode,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16, // フォントサイズを少し小さく
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    decoration: const InputDecoration(
-                                      hintText: 'タイトルを入力...',
-                                      hintStyle: TextStyle(color: Colors.grey, fontSize: 16),
-                                      border: InputBorder.none,
-                                      contentPadding: EdgeInsets.symmetric(vertical: 4), // パディングを減らす
-                                      isDense: true, // 密度を高める
-                                    ),
-                                  ),
-                                  Text(
-                                    _getLastUpdatedText(),
-                                    style: TextStyle(
-                                      color: Colors.grey[500],
-                                      fontSize: 11, // フォントサイズを小さく
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                // メモバックヘッダー
+                MemoBackHeader(
+                  titleController: _titleController,
+                  titleFocusNode: _titleFocusNode,
+                  mode: widget.mode,
+                  lastUpdated: _lastUpdated,
+                  isSaving: _isSaving,
+                  onBackPressed: _handleBackPressed,
                 ),
                 
                 // メモ編集エリア（拡大）
@@ -502,17 +409,5 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
 
 
 
-  String _getLastUpdatedText() {
-    if (_lastUpdated == null) {
-      return '更新: 未更新';
-    }
-    
-    final year = _lastUpdated!.year;
-    final month = _lastUpdated!.month;
-    final day = _lastUpdated!.day;
-    final hour = _lastUpdated!.hour.toString().padLeft(2, '0');
-    final minute = _lastUpdated!.minute.toString().padLeft(2, '0');
-    
-    return '更新: $year/$month/$day $hour:$minute';
-  }
+
 } 
