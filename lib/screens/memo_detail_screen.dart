@@ -5,6 +5,7 @@ import 'dart:async';
 import '../gradients.dart';
 import '../services/supabase_service.dart';
 import '../widgets/quill_toolbar.dart';
+import '../widgets/quill_color_panel.dart';
 
 class MemoDetailScreen extends StatefulWidget {
   final String memoId;
@@ -480,8 +481,15 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
       _isBackgroundColorMode = isBackground;
     });
 
-    _colorPanelOverlay = OverlayEntry(
-      builder: (context) => _buildOverlayColorPanel(),
+    _colorPanelOverlay = QuillColorPanel.createOverlay(
+      context: context,
+      controller: _quillController,
+      isBackgroundColorMode: isBackground,
+      onClose: _hideColorPanel,
+      onColorChanged: () {
+        _onTextChanged();
+        setState(() {});
+      },
     );
 
     Overlay.of(context).insert(_colorPanelOverlay!);
@@ -492,217 +500,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
     _colorPanelOverlay = null;
   }
 
-  Widget _buildOverlayColorPanel() {
-    // 色のリストを定義
-    final List<Color?> firstRowColors = [
-      Colors.red,
-      Colors.orange,
-      Colors.yellow,
-      Colors.green,
-      Colors.blue,
-    ];
-    
-    final List<Color?> secondRowColors = [
-      Colors.purple,
-      Colors.pink,
-      Colors.brown,
-      Colors.black,
-      null, // リセットボタン（白色）
-    ];
 
-    // 動的に横幅を計算
-    const double buttonSize = 24.0; // ボタンサイズ
-    const double buttonSpacing = 12.0; // ボタン間の間隔
-    const double sidePadding = 8.0; // 左右パディング
-    const int buttonCount = 5; // ボタン数
-    
-    final double panelWidth = (buttonCount * buttonSize) + ((buttonCount - 1) * buttonSpacing) + (sidePadding * 2);
-
-    return Positioned(
-      top: 60, // モードレスにの縦位置
-      right: 16, // モードレスにの横位置
-      child: Material(
-        color: Colors.transparent,
-        child: Container(
-          padding: EdgeInsets.fromLTRB(sidePadding, 8, sidePadding, 8), // 動的パディング
-          decoration: BoxDecoration(
-            color: const Color(0xFF3A3A3A),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[600]!, width: 1),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // タイトルと閉じるボタンの行
-              SizedBox(
-                width: panelWidth - (sidePadding * 2), // 動的に計算された幅
-                height: 22, // ボタンサイズに合わせて高さも2px増やす
-                child: Stack(
-                  children: [
-                    // 中央に配置されたタイトル
-                    Center(
-                      child: Text(
-                        _isBackgroundColorMode ? '背景色' : '文字色',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12, // 元のサイズに戻す
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    // 右端に配置された閉じるボタン
-                    Positioned(
-                      right: 0,
-                      top: 0,
-                      child: GestureDetector(
-                        onTap: _hideColorPanel,
-                        child: Container(
-                          width: 22, // 2px大きく
-                          height: 22, // 2px大きく
-                          decoration: BoxDecoration(
-                            color: Colors.grey[700],
-                            borderRadius: BorderRadius.circular(11), // 角丸も調整
-                          ),
-                          child: const Icon(
-                            Icons.close,
-                            color: Colors.white,
-                            size: 16, // アイコンも少し大きく
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10), // 2px増やす
-              
-              // 最初の行（5色）
-              Row(
-                children: firstRowColors.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final color = entry.value;
-                  return Padding(
-                    padding: EdgeInsets.only(
-                      right: index < firstRowColors.length - 1 ? buttonSpacing : 0
-                    ),
-                    child: _buildSmallColorButton(color, _isBackgroundColorMode),
-                  );
-                }).toList(),
-              ),
-              
-              const SizedBox(height: 10), // 上下ボタンの間隔を広げる
-              
-              // 2番目の行（5色、リセットボタン含む）
-              Row(
-                children: secondRowColors.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final color = entry.value;
-                  return Padding(
-                    padding: EdgeInsets.only(
-                      right: index < secondRowColors.length - 1 ? buttonSpacing : 0
-                    ),
-                    child: _buildSmallColorButton(color, _isBackgroundColorMode),
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
-        ),
-      ),
-        );
-  }
-
-  Widget _buildSmallColorButton(Color? color, bool isBackground) {
-    const double buttonSize = 24.0; // 定数として定義
-    
-    return GestureDetector(
-      onTap: () {
-        if (color != null) {
-          _setTypingColor(color, isBackground);
-        } else {
-          _removeTypingColor(isBackground);
-        }
-        // 色選択後はOverlayを閉じる
-        _hideColorPanel();
-      },
-      child: Container(
-        width: buttonSize,
-        height: buttonSize,
-        decoration: BoxDecoration(
-          color: isBackground
-              ? (color != null 
-                  ? Color.fromRGBO(
-                      (color.r * 255).round(),
-                      (color.g * 255).round(),
-                      (color.b * 255).round(),
-                      0.3, // 背景色の透明度
-                    )
-                  : const Color(0xFF3A3A3A)) // リセットボタンはエディタの背景色
-              : const Color(0xFF4A4A4A), // 文字色ボタンの背景
-          border: Border.all(color: Colors.grey[400]!, width: 0.5),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: isBackground
-            ? null // 背景色は色そのものを表示（nullの場合は通常の背景色）
-            : Center(
-                child: Text(
-                  'A',
-                  style: TextStyle(
-                    color: color ?? Colors.white, // 文字色またはリセット時は白
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-      ),
-    );
-  }
-
-
-
-  void _setTypingColor(Color color, bool isBackground) {
-    final selection = _quillController.selection;
-    if (selection.isValid) {
-      String colorString;
-      
-      if (isBackground) {
-        final r = (color.r * 255).round();
-        final g = (color.g * 255).round();
-        final b = (color.b * 255).round();
-        colorString = 'rgba($r, $g, $b, 0.3)';
-        _quillController.formatSelection(BackgroundAttribute(colorString));
-      } else {
-        final colorHex = '#${(color.r * 255).round().toRadixString(16).padLeft(2, '0')}${(color.g * 255).round().toRadixString(16).padLeft(2, '0')}${(color.b * 255).round().toRadixString(16).padLeft(2, '0')}';
-        _quillController.formatSelection(ColorAttribute(colorHex));
-      }
-      
-      _onTextChanged();
-    }
-    
-    setState(() {});
-  }
-
-  void _removeTypingColor(bool isBackground) {
-    final selection = _quillController.selection;
-    if (selection.isValid) {
-      if (isBackground) {
-        _quillController.formatSelection(const BackgroundAttribute(null));
-      } else {
-        _quillController.formatSelection(const ColorAttribute(null));
-      }
-      
-      _onTextChanged();
-    }
-    
-    setState(() {});
-  }
 
   String _getLastUpdatedText() {
     if (_lastUpdated == null) {
