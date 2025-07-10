@@ -4,9 +4,8 @@ import 'dart:convert';
 import 'dart:async';
 import '../gradients.dart';
 import '../services/supabase_service.dart';
-import '../widgets/quill_toolbar.dart';
-import '../widgets/quill_color_panel.dart';
 import '../widgets/memo_back_header.dart';
+import '../widgets/quill_rich_editor.dart';
 
 class MemoDetailScreen extends StatefulWidget {
   final String memoId;
@@ -30,21 +29,16 @@ class MemoDetailScreen extends StatefulWidget {
   State<MemoDetailScreen> createState() => _MemoDetailScreenState();
 }
 
-class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBindingObserver {
+class _MemoDetailScreenState extends State<MemoDetailScreen> {
   late TextEditingController _titleController;
   late QuillController _quillController;
   final SupabaseService _supabaseService = SupabaseService();
   final FocusNode _titleFocusNode = FocusNode();
-  final FocusNode _memoFocusNode = FocusNode();
   
   bool _hasChanges = false;
   bool _isSaving = false;
-  bool _showToolbar = false;
-  bool _isBackgroundColorMode = false;
   
   Timer? _debounceTimer;
-  Timer? _selectionTimer;
-  OverlayEntry? _colorPanelOverlay;
   
   // 初期値を保存
   late String _initialTitle;
@@ -57,7 +51,6 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     
     // 初期更新時刻を設定
     _lastUpdated = widget.updatedAt;
@@ -100,86 +93,15 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
       // リスナーを追加
       _titleController.addListener(_onTextChanged);
       _quillController.addListener(_onTextChanged);
-      
-      // 選択範囲変更を監視（定期的にチェック）
-      _startSelectionMonitor();
-    });
-    
-    // フォーカス変更を監視
-    _titleFocusNode.addListener(_onFocusChanged);
-    _memoFocusNode.addListener(_onFocusChanged);
-  }
-
-  void _onFocusChanged() {
-    setState(() {
-      final newShowToolbar = _memoFocusNode.hasFocus;
-      // ツールバーが隠れる場合はカラーパネルも閉じる
-      if (_showToolbar && !newShowToolbar && _colorPanelOverlay != null) {
-        _hideColorPanel();
-      }
-      _showToolbar = newShowToolbar;
-    });
-    
-    // フォーカス変更時にツールバーの状態を更新
-    if (_showToolbar && mounted) {
-      // 短い遅延を追加して、フォーカスが完全に設定されるまで待つ
-      Future.delayed(const Duration(milliseconds: 50), () {
-        if (mounted) {
-          setState(() {});
-        }
-      });
-    }
-  }
-
-  void _startSelectionMonitor() {
-    // 前の選択範囲を保存
-    TextSelection? previousSelection = _quillController.selection;
-    
-    // 定期的に選択範囲をチェック
-    _selectionTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      
-      final currentSelection = _quillController.selection;
-      
-      // 選択範囲が変更された場合
-      if (currentSelection != previousSelection) {
-        previousSelection = currentSelection;
-        
-        // ツールバーが表示されている場合のみ更新
-        if (_showToolbar) {
-          setState(() {});
-        }
-      }
-    });
-  }
-
-  @override
-  void didChangeMetrics() {
-    super.didChangeMetrics();
-    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
-    setState(() {
-      final newShowToolbar = keyboardHeight > 0 && _memoFocusNode.hasFocus;
-      // ツールバーが隠れる場合はカラーパネルも閉じる
-      if (_showToolbar && !newShowToolbar && _colorPanelOverlay != null) {
-        _hideColorPanel();
-      }
-      _showToolbar = newShowToolbar;
     });
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _debounceTimer?.cancel();
-    _selectionTimer?.cancel();
-    _colorPanelOverlay?.remove();
     _titleController.dispose();
     _quillController.dispose();
     _titleFocusNode.dispose();
-    _memoFocusNode.dispose();
     super.dispose();
   }
 
@@ -278,10 +200,6 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
                         onTap: () {
                 // 入力欄以外をタップしたときにキーボードを隠す
                 FocusScope.of(context).unfocus();
-                // カラーパネルも閉じる
-                if (_colorPanelOverlay != null) {
-                  _hideColorPanel();
-                }
               },
           child: Scaffold(
             backgroundColor: const Color(0xFF2B2B2B),
@@ -299,68 +217,9 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
                 
                 // メモ編集エリア（拡大）
                 Expanded(
-                  child: Container(
-                    margin: const EdgeInsets.fromLTRB(16, 0, 16, 16), // 上マージンを削除
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF3A3A3A),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      children: [
-                        // ツールバー
-                        if (_showToolbar)
-                          QuillToolbar(
-                            controller: _quillController,
-                            onTextColorPressed: () => _toggleColorPanel(false),
-                            onBackgroundColorPressed: () => _toggleColorPanel(true),
-                            onStateChanged: () {
-                              _onTextChanged();
-                              setState(() {});
-                            },
-                          ),
-                        
-                        // エディタ
-                        Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF3A3A3A),
-                              borderRadius: _showToolbar 
-                                  ? const BorderRadius.only(
-                                      bottomLeft: Radius.circular(12),
-                                      bottomRight: Radius.circular(12),
-                                    )
-                                  : BorderRadius.circular(12),
-                            ),
-                            child: QuillEditor.basic(
-                              controller: _quillController,
-                              focusNode: _memoFocusNode,
-                              config: QuillEditorConfig(
-                                padding: const EdgeInsets.all(16),
-                                placeholder: 'メモを入力してください...',
-                                autoFocus: false,
-                                expands: true,
-                                scrollable: true,
-                                keyboardAppearance: Brightness.dark,
-                                customStyles: DefaultStyles(
-                                  paragraph: DefaultTextBlockStyle(
-                                    const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16.0,
-                                    ),
-                                    HorizontalSpacing.zero,
-                                    VerticalSpacing.zero,
-                                    VerticalSpacing.zero,
-                                    BoxDecoration(
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  child: QuillRichEditor(
+                    controller: _quillController,
+                    onContentChanged: _onTextChanged,
                   ),
                 ),
               ],
@@ -370,44 +229,5 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
       ),
     );
   }
-
-
-
-
-
-  void _toggleColorPanel(bool isBackground) {
-    if (_colorPanelOverlay != null) {
-      _hideColorPanel();
-    } else {
-      _showColorPanelOverlay(isBackground);
-    }
-  }
-
-  void _showColorPanelOverlay(bool isBackground) {
-    setState(() {
-      _isBackgroundColorMode = isBackground;
-    });
-
-    _colorPanelOverlay = QuillColorPanel.createOverlay(
-      context: context,
-      controller: _quillController,
-      isBackgroundColorMode: isBackground,
-      onClose: _hideColorPanel,
-      onColorChanged: () {
-        _onTextChanged();
-        setState(() {});
-      },
-    );
-
-    Overlay.of(context).insert(_colorPanelOverlay!);
-  }
-
-  void _hideColorPanel() {
-    _colorPanelOverlay?.remove();
-    _colorPanelOverlay = null;
-  }
-
-
-
 
 } 
