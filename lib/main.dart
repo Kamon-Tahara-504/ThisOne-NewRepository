@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -11,6 +12,31 @@ import 'screens/task_screen.dart';
 import 'screens/schedule_screen.dart';
 import 'screens/memo_screen.dart';
 import 'screens/settings_screen.dart';
+
+// カスタムScrollPhysics for スワイプアニメーション速度調整
+class CustomPageScrollPhysics extends ScrollPhysics {
+  final double speedMultiplier;
+  
+  const CustomPageScrollPhysics({
+    super.parent,
+    this.speedMultiplier = 1.0, // 1.0が標準速度、大きいほど速い、小さいほど遅い
+  });
+
+  @override
+  CustomPageScrollPhysics applyTo(ScrollPhysics? ancestor) {
+    return CustomPageScrollPhysics(
+      parent: buildParent(ancestor),
+      speedMultiplier: speedMultiplier,
+    );
+  }
+
+  @override
+  SpringDescription get spring => SpringDescription(
+        mass: 80.0 / speedMultiplier,        // 質量を調整（小さいほど軽快）
+        stiffness: 100.0 * speedMultiplier,  // 剛性を調整（大きいほど速い）
+        damping: 1.2,                        // 減衰を調整（大きいほど振動が少ない）
+      );
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -79,10 +105,15 @@ class _MainScreenState extends State<MainScreen> {
   bool _isLoading = true;
   bool _isLoadingMemos = true;
   OverlayEntry? _accountOverlay;
+  
+  // PageViewController を追加
+  late PageController _pageController;
 
   @override
   void initState() {
     super.initState();
+    // PageControllerを初期化
+    _pageController = PageController(initialPage: 0);
     _loadTasks();
     _loadMemos();
     // 認証状態の変更を監視
@@ -90,6 +121,12 @@ class _MainScreenState extends State<MainScreen> {
       _loadTasks();
       _loadMemos();
     });
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   // Supabaseからタスクを読み込み
@@ -233,10 +270,10 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 中央の作成ボタン（index 2）は画面を表示しないので、インデックスを調整
-    Widget currentScreen;
-    if (_currentIndex == 0) {
-      currentScreen = _isLoading 
+    // PageViewで表示する画面のリストを作成
+    final List<Widget> pages = [
+      // 0: タスク画面
+      _isLoading 
           ? const Center(
               child: CircularProgressIndicator(
                 color: Color(0xFFE85A3B),
@@ -250,11 +287,11 @@ class _MainScreenState extends State<MainScreen> {
                   _tasks.addAll(updatedTasks);
                 });
               },
-            );
-    } else if (_currentIndex == 1) {
-      currentScreen = const ScheduleScreen();
-    } else if (_currentIndex == 3) {
-      currentScreen = _isLoadingMemos 
+            ),
+      // 1: カレンダー画面
+      const ScheduleScreen(),
+      // 2: メモ画面
+      _isLoadingMemos 
           ? const Center(
               child: CircularProgressIndicator(
                 color: Color(0xFFE85A3B),
@@ -268,27 +305,10 @@ class _MainScreenState extends State<MainScreen> {
                   _memos.addAll(updatedMemos);
                 });
               },
-            );
-    } else if (_currentIndex == 4) {
-      currentScreen = const SettingsScreen();
-    } else {
-      // デフォルトはタスク画面
-      currentScreen = _isLoading 
-          ? const Center(
-              child: CircularProgressIndicator(
-                color: Color(0xFFE85A3B),
-              ),
-            )
-          : TaskScreen(
-              tasks: _tasks,
-              onTasksChanged: (updatedTasks) {
-                setState(() {
-                  _tasks.clear();
-                  _tasks.addAll(updatedTasks);
-                });
-              },
-            );
-    }
+            ),
+      // 3: 設定画面
+      const SettingsScreen(),
+    ];
 
     return Scaffold(
       appBar: PreferredSize(
@@ -349,7 +369,37 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ),
       ),
-      body: currentScreen,
+      body: PageView(
+        controller: _pageController,
+        physics: const PageScrollPhysics(), // 標準のPageScrollPhysicsでページスナップを確実にする
+        onPageChanged: (index) {
+          // PageViewのインデックスを_currentIndexに変換
+          // PageView: 0=タスク, 1=カレンダー, 2=メモ, 3=設定
+          // _currentIndex: 0=タスク, 1=カレンダー, 2=作成ボタン, 3=メモ, 4=設定
+          int newCurrentIndex;
+          switch (index) {
+            case 0: // タスク
+              newCurrentIndex = 0;
+              break;
+            case 1: // カレンダー
+              newCurrentIndex = 1;
+              break;
+            case 2: // メモ
+              newCurrentIndex = 3;
+              break;
+            case 3: // 設定
+              newCurrentIndex = 4;
+              break;
+            default:
+              newCurrentIndex = 0;
+          }
+          
+          setState(() {
+            _currentIndex = newCurrentIndex;
+          });
+        },
+        children: pages,
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: const Color(0xFF2B2B2B), // 黒背景
@@ -612,6 +662,39 @@ class _MainScreenState extends State<MainScreen> {
     return Expanded(
       child: GestureDetector(
         onTap: () {
+          // 作成ボタン（index 2）の場合はページ遷移しない
+          if (index == 2) {
+            return;
+          }
+          
+          // _currentIndexからPageViewのインデックスに変換
+          // _currentIndex: 0=タスク, 1=カレンダー, 2=作成ボタン, 3=メモ, 4=設定
+          // PageView: 0=タスク, 1=カレンダー, 2=メモ, 3=設定
+          int pageIndex;
+          switch (index) {
+            case 0: // タスク
+              pageIndex = 0;
+              break;
+            case 1: // カレンダー
+              pageIndex = 1;
+              break;
+            case 3: // メモ
+              pageIndex = 2;
+              break;
+            case 4: // 設定
+              pageIndex = 3;
+              break;
+            default:
+              pageIndex = 0;
+          }
+          
+          // PageViewをアニメーション付きで移動
+          _pageController.animateToPage(
+            pageIndex,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+          
           setState(() {
             _currentIndex = index;
           });
