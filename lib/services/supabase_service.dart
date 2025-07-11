@@ -254,7 +254,8 @@ class SupabaseService {
           .from('memos')
           .select('*')
           .eq('user_id', user.id)
-          .order('updated_at', ascending: false);
+          .order('is_pinned', ascending: false) // ピン留めを上部に
+          .order('updated_at', ascending: false); // 更新日時で降順
       
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
@@ -265,9 +266,10 @@ class SupabaseService {
         try {
           final response = await supabase
               .from('memos')
-              .select('id, user_id, title, content, created_at, updated_at')
+              .select('id, user_id, title, content, created_at, updated_at, is_pinned, tags, color_tag')
               .eq('user_id', user.id)
-              .order('updated_at', ascending: false);
+              .order('is_pinned', ascending: false) // ピン留めを上部に
+              .order('updated_at', ascending: false); // 更新日時で降順
           
           // modeカラムがない場合はデフォルト値を追加
           final memosWithMode = List<Map<String, dynamic>>.from(response)
@@ -285,6 +287,29 @@ class SupabaseService {
         }
       }
       
+      rethrow;
+    }
+  }
+
+  /// メモのピン留め状態を更新
+  Future<void> updateMemoPinStatus({
+    required String memoId,
+    required bool isPinned,
+  }) async {
+    final user = getCurrentUser();
+    if (user == null) return;
+
+    try {
+      // ピン留め状態のみを更新（クライアント側でソートを制御するためシンプルに）
+      await supabase
+          .from('memos')
+          .update({
+            'is_pinned': isPinned,
+          })
+          .eq('id', memoId)
+          .eq('user_id', user.id);
+    } catch (e) {
+      debugPrint('ピン留め状態の更新エラー: $e');
       rethrow;
     }
   }

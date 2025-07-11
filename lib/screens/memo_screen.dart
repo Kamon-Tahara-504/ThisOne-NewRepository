@@ -35,10 +35,14 @@ class _MemoScreenState extends State<MemoScreen> {
         'content': memo['content'] ?? '',
         'mode': memo['mode'] ?? 'memo',
         'rich_content': memo['rich_content'],
+        'is_pinned': memo['is_pinned'] ?? false, // ピン留め状態を追加
+        'tags': memo['tags'] ?? [], // タグを追加
+        'color_tag': memo['color_tag'] ?? '#FFD700', // 色タグを追加
         'createdAt': DateTime.parse(memo['created_at']).toLocal(),
         'updatedAt': DateTime.parse(memo['updated_at']).toLocal(),
       }).toList();
       
+      // データベース側でソート済みなので、クライアント側ソートは不要
       widget.onMemosChanged(updatedMemos);
     } catch (e) {
       if (mounted) {
@@ -142,6 +146,28 @@ class _MemoScreenState extends State<MemoScreen> {
     }
   }
 
+  // ピン留め状態を切り替え
+  void _togglePin(int index) async {
+    final memo = widget.memos[index];
+    final newPinStatus = !(memo['is_pinned'] ?? false);
+    
+    try {
+      await _supabaseService.updateMemoPinStatus(
+        memoId: memo['id'],
+        isPinned: newPinStatus,
+      );
+      
+      // 成功した場合はリストを再読み込み
+      _loadMemos();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ピン留めの更新に失敗しました: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -197,6 +223,7 @@ class _MemoScreenState extends State<MemoScreen> {
   Widget _buildMemoItem(int index) {
     final memo = widget.memos[index];
     final updatedAt = memo['updatedAt'] as DateTime;
+    final isPinned = memo['is_pinned'] ?? false;
     
     return Hero(
       tag: 'memo-${memo['id']}',
@@ -205,9 +232,9 @@ class _MemoScreenState extends State<MemoScreen> {
         child: Container(
           margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
-            color: const Color(0xFF3A3A3A),
+            color: const Color(0xFF3A3A3A), // ピン留め状態に関係なく統一
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[700]!),
+            border: Border.all(color: Colors.grey[700]!), // ピン留め状態に関係なく統一
           ),
           child: InkWell(
             onTap: () => _openMemoDetail(index),
@@ -219,6 +246,18 @@ class _MemoScreenState extends State<MemoScreen> {
                 children: [
                   Row(
                     children: [
+                      // ピン留めアイコン
+                      if (isPinned) ...[
+                        ShaderMask(
+                          shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
+                          child: const Icon(
+                            Icons.push_pin,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
                       // モード表示
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -244,6 +283,17 @@ class _MemoScreenState extends State<MemoScreen> {
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
+                        ),
+                      ),
+                      // ピン留めボタン
+                      IconButton(
+                        onPressed: () => _togglePin(index),
+                        icon: Icon(
+                          isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                          color: isPinned 
+                              ? const Color(0xFFE85A3B)
+                              : Colors.grey[500],
+                          size: 20,
                         ),
                       ),
                       IconButton(

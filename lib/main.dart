@@ -165,13 +165,16 @@ class _MainScreenState extends State<MainScreen> {
       final memos = await _supabaseService.getUserMemos();
       setState(() {
         _memos.clear();
-        // Supabaseデータを内部形式に変換
+        // Supabaseデータを内部形式に変換（データベース側でソート済み）
         _memos.addAll(memos.map((memo) => {
           'id': memo['id'],
           'title': memo['title'],
           'content': memo['content'] ?? '',
           'mode': memo['mode'] ?? 'memo',
           'rich_content': memo['rich_content'],
+          'is_pinned': memo['is_pinned'] ?? false, // ピン留め状態を追加
+          'tags': memo['tags'] ?? [], // タグを追加
+          'color_tag': memo['color_tag'] ?? '#FFD700', // 色タグを追加
           'createdAt': DateTime.parse(memo['created_at']).toLocal(),
           'updatedAt': DateTime.parse(memo['updated_at']).toLocal(),
         }));
