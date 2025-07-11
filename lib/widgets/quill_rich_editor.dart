@@ -23,7 +23,6 @@ class _QuillRichEditorState extends State<QuillRichEditor>
     with WidgetsBindingObserver {
   final FocusNode _memoFocusNode = FocusNode();
   bool _showToolbar = false;
-  bool _isBackgroundColorMode = false;
   OverlayEntry? _colorPanelOverlay;
 
   @override
@@ -90,10 +89,6 @@ class _QuillRichEditorState extends State<QuillRichEditor>
   }
 
   void _showColorPanelOverlay(bool isBackground) {
-    setState(() {
-      _isBackgroundColorMode = isBackground;
-    });
-
     _colorPanelOverlay = QuillColorPanel.createOverlay(
       context: context,
       controller: widget.controller,

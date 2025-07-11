@@ -237,7 +237,7 @@ class _AccountScreenState extends State<AccountScreen> {
     );
   }
 
-  Widget _buildLoggedInView(user) {
+  Widget _buildLoggedInView(dynamic user) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
