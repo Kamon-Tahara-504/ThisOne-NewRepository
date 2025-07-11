@@ -5,13 +5,13 @@ import 'quill_color_panel.dart';
 
 class QuillRichEditor extends StatefulWidget {
   final QuillController controller;
-  final VoidCallback onContentChanged;
+  final VoidCallback? onContentChanged;
   final ValueChanged<bool>? onFocusChanged;
 
   const QuillRichEditor({
     super.key,
     required this.controller,
-    required this.onContentChanged,
+    this.onContentChanged,
     this.onFocusChanged,
   });
 
@@ -19,9 +19,9 @@ class QuillRichEditor extends StatefulWidget {
   State<QuillRichEditor> createState() => _QuillRichEditorState();
 }
 
-class _QuillRichEditorState extends State<QuillRichEditor> with WidgetsBindingObserver {
+class _QuillRichEditorState extends State<QuillRichEditor>
+    with WidgetsBindingObserver {
   final FocusNode _memoFocusNode = FocusNode();
-  
   bool _showToolbar = false;
   bool _isBackgroundColorMode = false;
   OverlayEntry? _colorPanelOverlay;
@@ -30,8 +30,14 @@ class _QuillRichEditorState extends State<QuillRichEditor> with WidgetsBindingOb
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    
-    // フォーカス変更を監視
+
+    // QuillControllerにリスナーを追加
+    widget.controller.addListener(() {
+      // onContentChangedがnullでない場合のみ呼び出し
+      widget.onContentChanged?.call();
+    });
+
+    // フォーカスリスナーを追加
     _memoFocusNode.addListener(_onFocusChanged);
     
     // 自動フォーカスは無効にし、ユーザーがタップした時のみフォーカスを設定
@@ -94,7 +100,7 @@ class _QuillRichEditorState extends State<QuillRichEditor> with WidgetsBindingOb
       isBackgroundColorMode: isBackground,
       onClose: _hideColorPanel,
       onColorChanged: () {
-        widget.onContentChanged();
+        widget.onContentChanged?.call();
         setState(() {});
       },
     );
@@ -123,7 +129,7 @@ class _QuillRichEditorState extends State<QuillRichEditor> with WidgetsBindingOb
               onTextColorPressed: () => _toggleColorPanel(false),
               onBackgroundColorPressed: () => _toggleColorPanel(true),
               onStateChanged: () {
-                widget.onContentChanged();
+                widget.onContentChanged?.call();
                 setState(() {});
               },
             ),
