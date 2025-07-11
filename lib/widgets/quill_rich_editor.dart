@@ -6,11 +6,13 @@ import 'quill_color_panel.dart';
 class QuillRichEditor extends StatefulWidget {
   final QuillController controller;
   final VoidCallback onContentChanged;
+  final ValueChanged<bool>? onFocusChanged;
 
   const QuillRichEditor({
     super.key,
     required this.controller,
     required this.onContentChanged,
+    this.onFocusChanged,
   });
 
   @override
@@ -55,6 +57,8 @@ class _QuillRichEditorState extends State<QuillRichEditor> with WidgetsBindingOb
               _hideColorPanel();
             }
           });
+          // 親にフォーカス状態を通知
+          widget.onFocusChanged?.call(_memoFocusNode.hasFocus);
         }
       }
     });
@@ -135,6 +139,8 @@ class _QuillRichEditorState extends State<QuillRichEditor> with WidgetsBindingOb
                   setState(() {
                     _showToolbar = true;
                   });
+                  // 親にフォーカス状態を通知
+                  widget.onFocusChanged?.call(true);
                 }
               },
               child: Container(

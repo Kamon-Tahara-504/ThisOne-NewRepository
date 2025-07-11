@@ -37,6 +37,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
   
   bool _hasChanges = false;
   bool _isSaving = false;
+  bool _isMemoFocused = false; // メモのフォーカス状態を管理
   
   Timer? _debounceTimer;
   
@@ -193,6 +194,14 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
     }
   }
 
+  void _onMemoFocusChanged(bool isFocused) {
+    if (_isMemoFocused != isFocused) {
+      setState(() {
+        _isMemoFocused = isFocused;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Hero(
@@ -207,30 +216,42 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
           },
           child: Scaffold(
             backgroundColor: const Color(0xFF2B2B2B),
-            body: Column(
+            body: Stack(
               children: [
-                // メモバックヘッダー
-                MemoBackHeader(
-                  titleController: _titleController,
-                  titleFocusNode: _titleFocusNode,
-                  mode: widget.mode,
-                  lastUpdated: _lastUpdated,
-                  isSaving: _isSaving,
-                  onBackPressed: _handleBackPressed,
-                ),
-                
-                // メモ編集エリア（拡大）
-                Expanded(
+                // メモバックヘッダー（常に表示）
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
                   child: Container(
-                    margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    child: GestureDetector(
-                      onTap: () {
-                        // QuillRichEditorエリアのタップでは親のunfocus()を無効化
-                      },
-                      child: QuillRichEditor(
-                        controller: _quillController,
-                        onContentChanged: _onTextChanged,
-                      ),
+                    color: const Color(0xFF2B2B2B),
+                    child: MemoBackHeader(
+                      titleController: _titleController,
+                      titleFocusNode: _titleFocusNode,
+                      mode: widget.mode,
+                      lastUpdated: _lastUpdated,
+                      isSaving: _isSaving,
+                      onBackPressed: _handleBackPressed,
+                    ),
+                  ),
+                ),
+
+                // メモ編集エリア(メモの視認性を上げる上下動作)
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  top: _isMemoFocused ? 120 : 180, // フォーカス時は上に移動、通常時は少し下に、
+                  left: 16,
+                  right: 16,
+                  bottom: 16,
+                  child: GestureDetector(
+                    onTap: () {
+                      // QuillRichEditorエリアのタップでは親のunfocus()を無効化
+                    },
+                    child: QuillRichEditor(
+                      controller: _quillController,
+                      onContentChanged: _onTextChanged,
+                      onFocusChanged: _onMemoFocusChanged,
                     ),
                   ),
                 ),
