@@ -29,7 +29,7 @@ class MemoDetailScreen extends StatefulWidget {
   State<MemoDetailScreen> createState() => _MemoDetailScreenState();
 }
 
-class _MemoDetailScreenState extends State<MemoDetailScreen> {
+class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBindingObserver {
   late TextEditingController _titleController;
   late QuillController _quillController;
   final SupabaseService _supabaseService = SupabaseService();
@@ -51,6 +51,8 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
   @override
   void initState() {
     super.initState();
+    
+    WidgetsBinding.instance.addObserver(this);
     
     // 初期更新時刻を設定
     _lastUpdated = widget.updatedAt;
@@ -98,6 +100,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _debounceTimer?.cancel();
     _titleController.dispose();
     _quillController.dispose();
@@ -197,10 +200,11 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
       child: Material(
         color: const Color(0xFF2B2B2B),
         child: GestureDetector(
-                        onTap: () {
-                // 入力欄以外をタップしたときにキーボードを隠す
-                FocusScope.of(context).unfocus();
-              },
+          behavior: HitTestBehavior.translucent,
+          onTap: () {
+            // 入力欄以外をタップしたときにキーボードを隠す
+            FocusScope.of(context).unfocus();
+          },
           child: Scaffold(
             backgroundColor: const Color(0xFF2B2B2B),
             body: Column(
@@ -217,9 +221,17 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
                 
                 // メモ編集エリア（拡大）
                 Expanded(
-                  child: QuillRichEditor(
-                    controller: _quillController,
-                    onContentChanged: _onTextChanged,
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: GestureDetector(
+                      onTap: () {
+                        // QuillRichEditorエリアのタップでは親のunfocus()を無効化
+                      },
+                      child: QuillRichEditor(
+                        controller: _quillController,
+                        onContentChanged: _onTextChanged,
+                      ),
+                    ),
                   ),
                 ),
               ],

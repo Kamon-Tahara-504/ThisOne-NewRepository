@@ -3,7 +3,7 @@ import 'package:flutter_quill/flutter_quill.dart';
 import '../gradients.dart';
 import '../utils/color_utils.dart';
 
-class QuillToolbar extends StatelessWidget {
+class QuillToolbar extends StatefulWidget {
   final QuillController controller;
   final VoidCallback onTextColorPressed;
   final VoidCallback onBackgroundColorPressed;
@@ -18,6 +18,31 @@ class QuillToolbar extends StatelessWidget {
   });
 
   @override
+  State<QuillToolbar> createState() => _QuillToolbarState();
+}
+
+class _QuillToolbarState extends State<QuillToolbar> {
+  @override
+  void initState() {
+    super.initState();
+    // QuillControllerの変更を監視
+    widget.controller.addListener(_onControllerChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onControllerChanged);
+    super.dispose();
+  }
+
+  void _onControllerChanged() {
+    // 選択範囲や書式が変わったときにUIを更新
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -29,7 +54,7 @@ class QuillToolbar extends StatelessWidget {
         ),
       ),
       child: GestureDetector(
-        onTap: onStateChanged,
+        onTap: widget.onStateChanged,
         child: LayoutBuilder(
           builder: (context, constraints) {
             // 利用可能な幅からパディングを引く
@@ -112,14 +137,14 @@ class QuillToolbar extends StatelessWidget {
               _buildColorButton(
                 icon: Icons.text_format,
                 isTextColor: true,
-                onPressed: onTextColorPressed,
+                onPressed: widget.onTextColorPressed,
                 buttonSize: buttonSize,
                 margin: buttonMargin,
               ),
               _buildColorButton(
                 icon: Icons.format_color_fill,
                 isTextColor: false,
-                onPressed: onBackgroundColorPressed,
+                onPressed: widget.onBackgroundColorPressed,
                 buttonSize: buttonSize,
                 margin: buttonMargin,
               ),
@@ -192,9 +217,9 @@ class QuillToolbar extends StatelessWidget {
     // 現在の色を取得
     Color? currentColor;
     if (isTextColor) {
-      currentColor = ColorUtils.getCurrentTextColor(controller);
+      currentColor = ColorUtils.getCurrentTextColor(widget.controller);
     } else {
-      currentColor = ColorUtils.getCurrentBackgroundColor(controller);
+      currentColor = ColorUtils.getCurrentBackgroundColor(widget.controller);
     }
     
     // アイコンの色を決定
@@ -243,10 +268,10 @@ class QuillToolbar extends StatelessWidget {
 
   bool _isFormatActive(Attribute attribute) {
     try {
-      final selection = controller.selection;
+      final selection = widget.controller.selection;
       if (!selection.isValid) return false;
       
-      final style = controller.getSelectionStyle();
+      final style = widget.controller.getSelectionStyle();
       
       if (attribute.key == 'list') {
         final listAttribute = style.attributes['list'];
@@ -276,16 +301,16 @@ class QuillToolbar extends StatelessWidget {
   }
 
   void _toggleFormat(Attribute attribute) {
-    final selection = controller.selection;
+    final selection = widget.controller.selection;
     
     if (selection.isValid) {
-      final style = controller.getSelectionStyle();
+      final style = widget.controller.getSelectionStyle();
       final isCurrentlyActive = style.containsKey(attribute.key) && 
                                style.attributes[attribute.key] != null;
       
       if (attribute.key == 'list') {
         if (isCurrentlyActive) {
-          controller.formatSelection(Attribute.clone(attribute, null));
+          widget.controller.formatSelection(Attribute.clone(attribute, null));
         } else {
           final isOlActive = style.containsKey('list') && 
                             style.attributes['list'] == Attribute.ol;
@@ -293,21 +318,21 @@ class QuillToolbar extends StatelessWidget {
                             style.attributes['list'] == Attribute.ul;
           
           if (isOlActive || isUlActive) {
-            controller.formatSelection(Attribute.clone(Attribute.ol, null));
-            controller.formatSelection(Attribute.clone(Attribute.ul, null));
+            widget.controller.formatSelection(Attribute.clone(Attribute.ol, null));
+            widget.controller.formatSelection(Attribute.clone(Attribute.ul, null));
           }
           
-          controller.formatSelection(attribute);
+          widget.controller.formatSelection(attribute);
         }
       } else {
         if (isCurrentlyActive) {
-          controller.formatSelection(Attribute.clone(attribute, null));
+          widget.controller.formatSelection(Attribute.clone(attribute, null));
         } else {
-          controller.formatSelection(attribute);
+          widget.controller.formatSelection(attribute);
         }
       }
       
-      onStateChanged();
+      widget.onStateChanged();
     }
   }
 

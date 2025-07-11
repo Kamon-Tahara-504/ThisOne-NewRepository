@@ -31,6 +31,8 @@ class _QuillRichEditorState extends State<QuillRichEditor> with WidgetsBindingOb
     
     // フォーカス変更を監視
     _memoFocusNode.addListener(_onFocusChanged);
+    
+    // 自動フォーカスは無効にし、ユーザーがタップした時のみフォーカスを設定
   }
 
   @override
@@ -42,38 +44,31 @@ class _QuillRichEditorState extends State<QuillRichEditor> with WidgetsBindingOb
   }
 
   void _onFocusChanged() {
-    setState(() {
-      final newShowToolbar = _memoFocusNode.hasFocus;
-      // ツールバーが隠れる場合はカラーパネルも閉じる
-      if (_showToolbar && !newShowToolbar && _colorPanelOverlay != null) {
-        _hideColorPanel();
-      }
-      _showToolbar = newShowToolbar;
-    });
-    
-    // フォーカス変更時にツールバーの状態を更新
-    if (_showToolbar && mounted) {
-      // 短い遅延を追加して、フォーカスが完全に設定されるまで待つ
-      Future.delayed(const Duration(milliseconds: 50), () {
-        if (mounted) {
-          setState(() {});
+    // フォーカス変更を遅延処理で確実に反映
+    Future.delayed(const Duration(milliseconds: 50), () {
+      if (mounted) {
+        final shouldShow = _memoFocusNode.hasFocus;
+        if (_showToolbar != shouldShow) {
+          setState(() {
+            _showToolbar = shouldShow;
+            if (!_memoFocusNode.hasFocus && _colorPanelOverlay != null) {
+              _hideColorPanel();
+            }
+          });
         }
-      });
-    }
+      }
+    });
   }
 
   @override
   void didChangeMetrics() {
     super.didChangeMetrics();
+    
+    // カラーパネルが表示されている場合のみキーボード状態を監視
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
-    setState(() {
-      final newShowToolbar = keyboardHeight > 0 && _memoFocusNode.hasFocus;
-      // ツールバーが隠れる場合はカラーパネルも閉じる
-      if (_showToolbar && !newShowToolbar && _colorPanelOverlay != null) {
-        _hideColorPanel();
-      }
-      _showToolbar = newShowToolbar;
-    });
+    if (keyboardHeight == 0 && _colorPanelOverlay != null) {
+      _hideColorPanel();
+    }
   }
 
   void _toggleColorPanel(bool isBackground) {
@@ -111,7 +106,6 @@ class _QuillRichEditorState extends State<QuillRichEditor> with WidgetsBindingOb
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       decoration: BoxDecoration(
         color: const Color(0xFF3A3A3A),
         borderRadius: BorderRadius.circular(12),
@@ -132,37 +126,49 @@ class _QuillRichEditorState extends State<QuillRichEditor> with WidgetsBindingOb
           
           // エディタ
           Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFF3A3A3A),
-                borderRadius: _showToolbar 
-                    ? const BorderRadius.only(
-                        bottomLeft: Radius.circular(12),
-                        bottomRight: Radius.circular(12),
-                      )
-                    : BorderRadius.circular(12),
-              ),
-              child: QuillEditor.basic(
-                controller: widget.controller,
-                focusNode: _memoFocusNode,
-                config: QuillEditorConfig(
-                  padding: const EdgeInsets.all(16),
-                  placeholder: 'メモを入力してください...',
-                  autoFocus: false,
-                  expands: true,
-                  scrollable: true,
-                  keyboardAppearance: Brightness.dark,
-                  customStyles: DefaultStyles(
-                    paragraph: DefaultTextBlockStyle(
-                      const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16.0,
-                      ),
-                      HorizontalSpacing.zero,
-                      VerticalSpacing.zero,
-                      VerticalSpacing.zero,
-                      BoxDecoration(
-                        borderRadius: BorderRadius.circular(6),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                _memoFocusNode.requestFocus();
+                // 即座にツールバーを表示
+                if (!_showToolbar) {
+                  setState(() {
+                    _showToolbar = true;
+                  });
+                }
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3A3A3A),
+                  borderRadius: _showToolbar 
+                      ? const BorderRadius.only(
+                          bottomLeft: Radius.circular(12),
+                          bottomRight: Radius.circular(12),
+                        )
+                      : BorderRadius.circular(12),
+                ),
+                child: QuillEditor.basic(
+                  controller: widget.controller,
+                  focusNode: _memoFocusNode,
+                  config: QuillEditorConfig(
+                    padding: const EdgeInsets.all(16),
+                    placeholder: 'メモを入力してください...',
+                    autoFocus: false,
+                    expands: true,
+                    scrollable: true,
+                    keyboardAppearance: Brightness.dark,
+                    customStyles: DefaultStyles(
+                      paragraph: DefaultTextBlockStyle(
+                        const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16.0,
+                        ),
+                        HorizontalSpacing.zero,
+                        VerticalSpacing.zero,
+                        VerticalSpacing.zero,
+                        BoxDecoration(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
                       ),
                     ),
                   ),

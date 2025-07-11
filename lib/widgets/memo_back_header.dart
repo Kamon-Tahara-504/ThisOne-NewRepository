@@ -27,6 +27,7 @@ class MemoBackHeader extends StatelessWidget {
         Container(
           color: const Color(0xFF2B2B2B),
           child: SafeArea(
+            bottom: false,
             child: Container(
               height: 56, // AppBarの標準高さ
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -76,7 +77,7 @@ class MemoBackHeader extends StatelessWidget {
         // タイトル編集エリア
         Container(
           color: const Color(0xFF2B2B2B),
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8), //メモ全体の高さ調整
           child: Row(
             children: [
               // モードバッジ
@@ -113,7 +114,7 @@ class MemoBackHeader extends StatelessWidget {
                         hintText: 'タイトルを入力...',
                         hintStyle: TextStyle(color: Colors.grey, fontSize: 16),
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(vertical: 4),
+                        contentPadding: EdgeInsets.symmetric(vertical: 8),
                         isDense: true,
                       ),
                     ),
