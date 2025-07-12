@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../gradients.dart';
 import '../services/supabase_service.dart';
+import '../utils/color_utils.dart'; // 色分けラベル用のユーティリティを追加
 import 'memo_detail_screen.dart';
 
 class MemoScreen extends StatefulWidget {
@@ -64,6 +65,7 @@ class _MemoScreenState extends State<MemoScreen> {
           content: memo['content'],
           mode: memo['mode'],
           richContent: memo['rich_content'],
+          colorHex: memo['color_tag'], // 色ラベル情報を追加
           updatedAt: memo['updatedAt'],
         ),
         transitionDuration: const Duration(milliseconds: 300),
@@ -168,6 +170,37 @@ class _MemoScreenState extends State<MemoScreen> {
     }
   }
 
+  // 色分けラベルを変更
+  void _changeColorLabel(int index) async {
+    final memo = widget.memos[index];
+    
+    // 色選択ダイアログを表示
+    final selectedColorHex = await showDialog<String>(
+      context: context,
+      builder: (context) => _ColorLabelDialog(
+        currentColorHex: memo['color_tag'] ?? ColorUtils.defaultColorHex,
+      ),
+    );
+    
+    if (selectedColorHex != null && selectedColorHex != memo['color_tag']) {
+      try {
+        await _supabaseService.updateMemoColorLabel(
+          memoId: memo['id'],
+          colorHex: selectedColorHex,
+        );
+        
+        // 成功した場合はリストを再読み込み
+        _loadMemos();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('色ラベルの更新に失敗しました: $e')),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -258,19 +291,27 @@ class _MemoScreenState extends State<MemoScreen> {
                         ),
                         const SizedBox(width: 8),
                       ],
-                      // モード表示
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          gradient: createOrangeYellowGradient(),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          memo['mode'] == 'memo' ? 'メモ' : memo['mode'],
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
+                      // 色分けラベル表示（色背景+モード文字・タップで変更可能）
+                      GestureDetector(
+                        onTap: () => _changeColorLabel(index),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            gradient: ColorUtils.isGradientColor(memo['color_tag'] ?? ColorUtils.defaultColorHex)
+                                ? ColorUtils.getGradientFromHex(memo['color_tag'] ?? ColorUtils.defaultColorHex)
+                                : null,
+                            color: ColorUtils.isGradientColor(memo['color_tag'] ?? ColorUtils.defaultColorHex)
+                                ? null
+                                : ColorUtils.getColorFromHex(memo['color_tag'] ?? ColorUtils.defaultColorHex),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            memo['mode'] == 'memo' ? 'メモ' : memo['mode'],
+                            style: TextStyle(
+                              color: (memo['color_tag'] == '#FFEB3B') ? Colors.black : Colors.white, // 黄色の場合は黒文字
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
                       ),
@@ -330,6 +371,80 @@ class _MemoScreenState extends State<MemoScreen> {
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// 色選択ダイアログ
+class _ColorLabelDialog extends StatelessWidget {
+  final String currentColorHex;
+
+  const _ColorLabelDialog({
+    required this.currentColorHex,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: const Color(0xFF3A3A3A),
+      title: const Text(
+        '色ラベルを選択',
+        style: TextStyle(color: Colors.white),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 10色のパレットを表示（2行5列）
+          for (int row = 0; row < 2; row++)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  for (int col = 0; col < 5; col++)
+                    if (row * 5 + col < ColorUtils.colorLabelPalette.length)
+                      _buildColorOption(
+                        context,
+                        ColorUtils.colorLabelPalette[row * 5 + col],
+                      ),
+                ],
+              ),
+            ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            'キャンセル',
+            style: TextStyle(color: Colors.grey[400]),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildColorOption(BuildContext context, Map<String, dynamic> colorItem) {
+    final colorHex = colorItem['hex'] as String;
+    final isGradient = colorItem['isGradient'] as bool;
+    final color = colorItem['color'] as Color?;
+    final isSelected = currentColorHex == colorHex;
+
+    return GestureDetector(
+      onTap: () => Navigator.pop(context, colorHex),
+      child: Container(
+        width: 50,
+        height: 50,
+        decoration: BoxDecoration(
+          gradient: isGradient ? ColorUtils.getGradientFromHex(colorHex) : null,
+          color: isGradient ? null : color,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: isSelected ? Colors.white : Colors.grey[600]!,
+            width: isSelected ? 3 : 1,
           ),
         ),
       ),

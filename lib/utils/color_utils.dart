@@ -1,10 +1,63 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import '../gradients.dart'; // グラデーション用にインポート追加
 
 /// QuillControllerの色管理を行うユーティリティクラス
 class ColorUtils {
   
-  /// 現在のカーソル位置の文字色を取得
+  // 色分けラベル用の10色パレット（オレンジグラデーション追加）
+  static const List<Map<String, dynamic>> colorLabelPalette = [
+    {'name': '赤', 'color': Colors.red, 'hex': '#F44336', 'isGradient': false},
+    {'name': 'オレンジ', 'color': null, 'hex': '#FF9500', 'isGradient': true}, // グラデーション
+    {'name': '黄', 'color': Colors.yellow, 'hex': '#FFEB3B', 'isGradient': false},
+    {'name': '緑', 'color': Colors.green, 'hex': '#4CAF50', 'isGradient': false},
+    {'name': '青', 'color': Colors.blue, 'hex': '#2196F3', 'isGradient': false},
+    {'name': '紫', 'color': Colors.purple, 'hex': '#9C27B0', 'isGradient': false},
+    {'name': 'ピンク', 'color': Colors.pink, 'hex': '#E91E63', 'isGradient': false},
+    {'name': '茶', 'color': Colors.brown, 'hex': '#795548', 'isGradient': false},
+    {'name': '黒', 'color': Colors.black, 'hex': '#000000', 'isGradient': false},
+    {'name': 'グレー', 'color': Colors.grey, 'hex': '#9E9E9E', 'isGradient': false},
+  ];
+
+  // Hexコードから色を取得
+  static Color getColorFromHex(String hex) {
+    final colorMap = {
+      for (var item in colorLabelPalette) 
+        if (!(item['isGradient'] as bool)) item['hex'] as String: item['color'] as Color
+    };
+    // オレンジグラデーションの場合は代表色を返す
+    if (hex == '#FF9500') return const Color(0xFFE85A3B);
+    return colorMap[hex] ?? Colors.grey;
+  }
+
+  // Hexコードがグラデーションかどうかを判定
+  static bool isGradientColor(String hex) {
+    return hex == '#FF9500'; // オレンジグラデーション
+  }
+
+  // グラデーション取得
+  static LinearGradient? getGradientFromHex(String hex) {
+    if (hex == '#FF9500') {
+      return createOrangeYellowGradient();
+    }
+    return null;
+  }
+
+  // Hexコードから色名を取得
+  static String getColorNameFromHex(String hex) {
+    final nameMap = {
+      for (var item in colorLabelPalette) item['hex'] as String: item['name'] as String
+    };
+    return nameMap[hex] ?? 'グレー';
+  }
+
+  // デフォルトのラベル色（グレー）
+  static const String defaultColorHex = '#9E9E9E';
+  static const Color defaultColor = Colors.grey;
+
+  // 既存の機能（Quillエディタ用）
+  
+  /// QuillControllerから現在の文字色を取得
   static Color? getCurrentTextColor(QuillController controller) {
     try {
       final selection = controller.selection;

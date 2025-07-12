@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'gradients.dart';
 import 'supabase_config.dart';
 import 'services/supabase_service.dart';
+import 'utils/color_utils.dart'; // 色分けラベル用のユーティリティを追加
 import 'screens/auth_screen.dart';
 import 'screens/account_screen.dart';
 import 'screens/task_screen.dart';
@@ -887,6 +888,7 @@ class _MainScreenState extends State<MainScreen> {
       builder: (context) {
         final TextEditingController titleController = TextEditingController();
         String selectedMode = 'memo';
+        String selectedColorHex = ColorUtils.defaultColorHex; // デフォルト色を追加
         
         return StatefulBuilder(
           builder: (context, setState) {
@@ -938,7 +940,44 @@ class _MainScreenState extends State<MainScreen> {
                   ),
                   const SizedBox(height: 16),
                   
-                  // モード選択
+                  // 色選択
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '色ラベル',
+                        style: TextStyle(
+                          color: Colors.grey[400],
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      // 10色のカラーパレット（2行5列）
+                      for (int row = 0; row < 2; row++)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              for (int col = 0; col < 5; col++)
+                                if (row * 5 + col < ColorUtils.colorLabelPalette.length)
+                                  _buildColorOption(
+                                    ColorUtils.colorLabelPalette[row * 5 + col],
+                                    selectedColorHex,
+                                    (colorHex) {
+                                      setState(() {
+                                        selectedColorHex = colorHex;
+                                      });
+                                    },
+                                  ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // モード選択（既存）
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -999,7 +1038,7 @@ class _MainScreenState extends State<MainScreen> {
                     onPressed: () async {
                       if (titleController.text.trim().isNotEmpty) {
                         Navigator.pop(context); // 先にダイアログを閉じる
-                        await _createMemo(titleController.text.trim(), selectedMode);
+                        await _createMemo(titleController.text.trim(), selectedMode, selectedColorHex);
                       }
                     },
                     child: const Text(
@@ -1016,7 +1055,32 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  Future<void> _createMemo(String title, String mode) async {
+  // 色選択オプションのウィジェット（色のみ表示）
+  Widget _buildColorOption(Map<String, dynamic> colorItem, String selectedColorHex, Function(String) onColorSelected) {
+    final colorHex = colorItem['hex'] as String;
+    final isGradient = colorItem['isGradient'] as bool;
+    final color = colorItem['color'] as Color?;
+    final isSelected = selectedColorHex == colorHex;
+
+    return GestureDetector(
+      onTap: () => onColorSelected(colorHex),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          gradient: isGradient ? ColorUtils.getGradientFromHex(colorHex) : null,
+          color: isGradient ? null : color,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: isSelected ? Colors.white : Colors.grey[600]!,
+            width: isSelected ? 3 : 1,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _createMemo(String title, String mode, String colorHex) async {
     if (!mounted) return; // 最初にmountedをチェック
     final currentContext = context; // Contextをローカル変数で保存
     
@@ -1024,6 +1088,7 @@ class _MainScreenState extends State<MainScreen> {
       final newMemo = await _supabaseService.addMemo(
         title: title,
         mode: mode,
+        colorHex: colorHex,
       );
       
       if (!mounted) return; // 非同期処理後に再度チェック

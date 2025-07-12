@@ -314,12 +314,36 @@ class SupabaseService {
     }
   }
 
+  /// メモの色ラベルを更新
+  Future<void> updateMemoColorLabel({
+    required String memoId,
+    required String colorHex,
+  }) async {
+    final user = getCurrentUser();
+    if (user == null) return;
+
+    try {
+      // 色ラベルのみを更新
+      await supabase
+          .from('memos')
+          .update({
+            'color_tag': colorHex,
+          })
+          .eq('id', memoId)
+          .eq('user_id', user.id);
+    } catch (e) {
+      debugPrint('色ラベルの更新エラー: $e');
+      rethrow;
+    }
+  }
+
   /// メモを追加
   Future<Map<String, dynamic>?> addMemo({
     required String title,
     String content = '',
     String mode = 'memo',
     Map<String, dynamic>? richContent,
+    String? colorHex, // 色ラベルのパラメータを追加
   }) async {
     final user = getCurrentUser();
     if (user == null) return null;
@@ -330,6 +354,7 @@ class SupabaseService {
         'title': title,
         'content': content,
         'mode': mode,
+        'color_tag': colorHex ?? '#9E9E9E', // デフォルトはグレー
         // リッチコンテンツ（QuillのDelta）をJSON文字列として保存
         'rich_content': richContent != null ? jsonEncode(richContent) : null,
       };

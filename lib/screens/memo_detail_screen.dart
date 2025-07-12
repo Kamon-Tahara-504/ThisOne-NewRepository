@@ -12,6 +12,7 @@ class MemoDetailScreen extends StatefulWidget {
   final String content;
   final String mode;
   final String? richContent;
+  final String? colorHex; // 色ラベルのパラメータを追加
   final DateTime? updatedAt;
 
   const MemoDetailScreen({
@@ -21,6 +22,7 @@ class MemoDetailScreen extends StatefulWidget {
     required this.content,
     required this.mode,
     this.richContent,
+    this.colorHex, // 色ラベルのパラメータを追加
     this.updatedAt,
   });
 
@@ -162,6 +164,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
                       lastUpdated: _saveState.lastUpdated,
                       isSaving: _saveState.isSaving,
                       onBackPressed: _handleBackPressed,
+                      colorHex: widget.colorHex, // 色ラベル情報を渡す
                     ),
                   ),
                 ),

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../gradients.dart';
+import '../utils/color_utils.dart'; // 色分けラベル用のユーティリティを追加
 
 class MemoBackHeader extends StatelessWidget {
   final TextEditingController titleController;
   final FocusNode titleFocusNode;
   final String mode;
+  final String? colorHex; // 色ラベルのパラメータを追加
   final DateTime? lastUpdated;
   final bool isSaving;
   final VoidCallback onBackPressed;
@@ -14,6 +16,7 @@ class MemoBackHeader extends StatelessWidget {
     required this.titleController,
     required this.titleFocusNode,
     required this.mode,
+    this.colorHex, // 色ラベルのパラメータを追加
     required this.lastUpdated,
     required this.isSaving,
     required this.onBackPressed,
@@ -80,17 +83,22 @@ class MemoBackHeader extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 8), //メモ全体の高さ調整
           child: Row(
             children: [
-              // モードバッジ
+              // 色分けラベルバッジ（色背景+モード文字）
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  gradient: createOrangeYellowGradient(),
+                  gradient: ColorUtils.isGradientColor(colorHex ?? ColorUtils.defaultColorHex)
+                      ? ColorUtils.getGradientFromHex(colorHex ?? ColorUtils.defaultColorHex)
+                      : null,
+                  color: ColorUtils.isGradientColor(colorHex ?? ColorUtils.defaultColorHex)
+                      ? null
+                      : ColorUtils.getColorFromHex(colorHex ?? ColorUtils.defaultColorHex),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
                   mode == 'memo' ? 'メモ' : mode,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: (colorHex == '#FFEB3B') ? Colors.black : Colors.white, // 黄色の場合は黒文字
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
