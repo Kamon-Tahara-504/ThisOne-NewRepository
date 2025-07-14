@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import '../gradients.dart';
 import '../services/supabase_service.dart';
@@ -7,23 +8,78 @@ import 'memo_detail_screen.dart';
 class MemoScreen extends StatefulWidget {
   final List<Map<String, dynamic>> memos;
   final Function(List<Map<String, dynamic>>) onMemosChanged;
+  final String? newlyCreatedMemoId; // 新しく作成されたメモのID
+  final VoidCallback? onPopAnimationComplete; // ポップアニメーション完了時のコールバック
 
   const MemoScreen({
     super.key,
     required this.memos,
     required this.onMemosChanged,
+    this.newlyCreatedMemoId,
+    this.onPopAnimationComplete,
   });
 
   @override
   State<MemoScreen> createState() => _MemoScreenState();
 }
 
-class _MemoScreenState extends State<MemoScreen> {
+class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
   final SupabaseService _supabaseService = SupabaseService();
+  late AnimationController _popAnimationController;
+  late Animation<double> _popAnimation;
+  String? _animatingMemoId; // アニメーション中のメモID
 
   @override
   void initState() {
     super.initState();
+    
+    // ポップアニメーションコントローラー
+    _popAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    
+    _popAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _popAnimationController,
+      curve: Curves.elasticOut,
+    ));
+    
+    // アニメーション完了時のリスナー
+    _popAnimationController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        setState(() {
+          _animatingMemoId = null;
+        });
+        widget.onPopAnimationComplete?.call();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _popAnimationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(MemoScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    // 新しいメモが作成された場合にアニメーションを開始
+    if (widget.newlyCreatedMemoId != null && 
+        widget.newlyCreatedMemoId != oldWidget.newlyCreatedMemoId) {
+      _startPopAnimation(widget.newlyCreatedMemoId!);
+    }
+  }
+
+  void _startPopAnimation(String memoId) {
+    setState(() {
+      _animatingMemoId = memoId;
+    });
+    _popAnimationController.forward(from: 0.0);
   }
 
   // Supabaseからメモを再読み込み
@@ -71,8 +127,24 @@ class _MemoScreenState extends State<MemoScreen> {
         transitionDuration: const Duration(milliseconds: 300),
         reverseTransitionDuration: const Duration(milliseconds: 300),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          // Heroアニメーションのみを使用し、スライドアニメーションは無効化
-          return child;
+          // より現代的なスケール＆フェードアニメーション
+          return FadeTransition(
+            opacity: animation.drive(
+              Tween<double>(
+                begin: 0.0,
+                end: 1.0,
+              ).chain(CurveTween(curve: Curves.easeOutCubic)),
+            ),
+            child: ScaleTransition(
+              scale: animation.drive(
+                Tween<double>(
+                  begin: 0.8,
+                  end: 1.0,
+                ).chain(CurveTween(curve: Curves.easeOutBack)),
+              ),
+              child: child,
+            ),
+          );
         },
       ),
     );
@@ -257,123 +329,154 @@ class _MemoScreenState extends State<MemoScreen> {
     final memo = widget.memos[index];
     final updatedAt = memo['updatedAt'] as DateTime;
     final isPinned = memo['is_pinned'] ?? false;
+    final isAnimating = _animatingMemoId == memo['id'];
     
-    return Hero(
-      tag: 'memo-${memo['id']}',
-      child: Material(
-        color: Colors.transparent,
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: const Color(0xFF3A3A3A), // ピン留め状態に関係なく統一
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[700]!), // ピン留め状態に関係なく統一
+    Widget memoCard = Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF3A3A3A), // ピン留め状態に関係なく統一
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[700]!), // ピン留め状態に関係なく統一
+        // アニメーション中は特別な装飾を追加
+        boxShadow: isAnimating ? [
+          BoxShadow(
+            color: const Color(0xFFE85A3B).withValues(alpha: 0.6),
+            blurRadius: 20,
+            offset: const Offset(0, 5),
           ),
-          child: InkWell(
-            onTap: () => _openMemoDetail(index),
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        ] : null,
+      ),
+      child: InkWell(
+        onTap: isAnimating ? null : () => _openMemoDetail(index), // アニメーション中はタップを無効化
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      // ピン留めアイコン
-                      if (isPinned) ...[
-                        ShaderMask(
-                          shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
-                          child: const Icon(
-                            Icons.push_pin,
-                            size: 16,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                      // 色分けラベル表示（色背景+モード文字・タップで変更可能）
-                      GestureDetector(
-                        onTap: () => _changeColorLabel(index),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            gradient: ColorUtils.isGradientColor(memo['color_tag'] ?? ColorUtils.defaultColorHex)
-                                ? ColorUtils.getGradientFromHex(memo['color_tag'] ?? ColorUtils.defaultColorHex)
-                                : null,
-                            color: ColorUtils.isGradientColor(memo['color_tag'] ?? ColorUtils.defaultColorHex)
-                                ? null
-                                : ColorUtils.getColorFromHex(memo['color_tag'] ?? ColorUtils.defaultColorHex),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            memo['mode'] == 'memo' ? 'メモ' : memo['mode'],
-                            style: TextStyle(
-                              color: (memo['color_tag'] == '#FFEB3B') ? Colors.black : Colors.white, // 黄色の場合は黒文字
-                              fontSize: 10,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
+                  // ピン留めアイコン
+                  if (isPinned) ...[
+                    ShaderMask(
+                      shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
+                      child: const Icon(
+                        Icons.push_pin,
+                        size: 16,
+                        color: Colors.white,
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          memo['title'],
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      // ピン留めボタン
-                      IconButton(
-                        onPressed: () => _togglePin(index),
-                        icon: Icon(
-                          isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-                          color: isPinned 
-                              ? const Color(0xFFE85A3B)
-                              : Colors.grey[500],
-                          size: 20,
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => _deleteMemo(index),
-                        icon: Icon(
-                          Icons.delete_outline,
-                          color: Colors.grey[500],
-                          size: 20,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (memo['content'].isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      memo['content'],
-                      style: TextStyle(
-                        color: Colors.grey[300],
-                        fontSize: 14,
-                        height: 1.4,
-                      ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
                     ),
+                    const SizedBox(width: 8),
                   ],
-                  const SizedBox(height: 12),
-                  Text(
-                    '更新: ${updatedAt.year}/${updatedAt.month}/${updatedAt.day} ${updatedAt.hour.toString().padLeft(2, '0')}:${updatedAt.minute.toString().padLeft(2, '0')}',
-                    style: TextStyle(
+                  // 色分けラベル表示（色背景+モード文字・タップで変更可能）
+                  GestureDetector(
+                    onTap: () => _changeColorLabel(index),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        gradient: ColorUtils.isGradientColor(memo['color_tag'] ?? ColorUtils.defaultColorHex)
+                            ? ColorUtils.getGradientFromHex(memo['color_tag'] ?? ColorUtils.defaultColorHex)
+                            : null,
+                        color: ColorUtils.isGradientColor(memo['color_tag'] ?? ColorUtils.defaultColorHex)
+                            ? null
+                            : ColorUtils.getColorFromHex(memo['color_tag'] ?? ColorUtils.defaultColorHex),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        memo['mode'] == 'memo' ? 'メモ' : memo['mode'],
+                        style: TextStyle(
+                          color: (memo['color_tag'] == '#FFEB3B') ? Colors.black : Colors.white, // 黄色の場合は黒文字
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      memo['title'],
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  // ピン留めボタン
+                  IconButton(
+                    onPressed: () => _togglePin(index),
+                    icon: Icon(
+                      isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                      color: isPinned 
+                          ? const Color(0xFFE85A3B)
+                          : Colors.grey[500],
+                      size: 20,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => _deleteMemo(index),
+                    icon: Icon(
+                      Icons.delete_outline,
                       color: Colors.grey[500],
-                      fontSize: 12,
+                      size: 20,
                     ),
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 8),
+              // メモの内容プレビュー
+              if (memo['content'] != null && memo['content'].isNotEmpty) ...[
+                Text(
+                  memo['content'],
+                  style: TextStyle(
+                    color: Colors.grey[400],
+                    fontSize: 14,
+                    height: 1.4,
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+              ],
+              // 更新日時
+              Text(
+                '${updatedAt.month}/${updatedAt.day} ${updatedAt.hour.toString().padLeft(2, '0')}:${updatedAt.minute.toString().padLeft(2, '0')}',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 12,
+                ),
+              ),
+            ],
           ),
         ),
       ),
+    );
+    
+    // アニメーション中の場合は、スケールとバウンス効果を適用
+    if (isAnimating) {
+      return Material(
+        color: Colors.transparent,
+        child: AnimatedBuilder(
+          animation: _popAnimation,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: 0.8 + (_popAnimation.value * 0.2),
+              child: Transform.translate(
+                offset: Offset(0, -10 * (1 - _popAnimation.value)),
+                child: child,
+              ),
+            );
+          },
+          child: memoCard,
+        ),
+      );
+    }
+    
+    // 通常状態（Heroウィジェットを削除）
+    return Material(
+      color: Colors.transparent,
+      child: memoCard,
     );
   }
 }

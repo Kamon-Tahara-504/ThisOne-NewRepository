@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../gradients.dart';
 import '../utils/color_utils.dart'; // 色分けラベル用のユーティリティを追加
 
 class MemoBackHeader extends StatelessWidget {

@@ -1,5 +1,5 @@
+
 import 'package:flutter/material.dart';
-import 'package:flutter/physics.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -106,6 +106,7 @@ class _MainScreenState extends State<MainScreen> {
   bool _isLoading = true;
   bool _isLoadingMemos = true;
   OverlayEntry? _accountOverlay;
+  String? _newlyCreatedMemoId; // 新しく作成されたメモのIDを管理
   
   // PageViewController を追加
   late PageController _pageController;
@@ -307,6 +308,12 @@ class _MainScreenState extends State<MainScreen> {
                 setState(() {
                   _memos.clear();
                   _memos.addAll(updatedMemos);
+                });
+              },
+              newlyCreatedMemoId: _newlyCreatedMemoId,
+              onPopAnimationComplete: () {
+                setState(() {
+                  _newlyCreatedMemoId = null;
                 });
               },
             ),
@@ -883,202 +890,22 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   void _showCreateMemoDialog() {
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) {
-        final TextEditingController titleController = TextEditingController();
-        String selectedMode = 'memo';
-        String selectedColorHex = ColorUtils.defaultColorHex; // デフォルト色を追加
-        
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              backgroundColor: const Color(0xFF3A3A3A),
-              title: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'メモ作成',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _supabaseService.getCurrentUser() != null 
-                        ? 'アカウントに保存されます'
-                        : 'ローカルに保存されます（ログインして同期）',
-                    style: TextStyle(
-                      color: _supabaseService.getCurrentUser() != null 
-                          ? const Color(0xFFE85A3B)
-                          : Colors.grey[500],
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // タイトル入力
-                  TextField(
-                    controller: titleController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      labelText: 'タイトル',
-                      labelStyle: TextStyle(color: Colors.grey[400]),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: Colors.grey[600]!),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Color(0xFFE85A3B)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // 色選択
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '色ラベル',
-                        style: TextStyle(
-                          color: Colors.grey[400],
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      // 10色のカラーパレット（2行5列）
-                      for (int row = 0; row < 2; row++)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              for (int col = 0; col < 5; col++)
-                                if (row * 5 + col < ColorUtils.colorLabelPalette.length)
-                                  _buildColorOption(
-                                    ColorUtils.colorLabelPalette[row * 5 + col],
-                                    selectedColorHex,
-                                    (colorHex) {
-                                      setState(() {
-                                        selectedColorHex = colorHex;
-                                      });
-                                    },
-                                  ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // モード選択（既存）
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'モード',
-                        style: TextStyle(
-                          color: Colors.grey[400],
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey[600]!),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: DropdownButtonFormField<String>(
-                          value: selectedMode,
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          ),
-                          dropdownColor: const Color(0xFF3A3A3A),
-                          style: const TextStyle(color: Colors.white),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'memo',
-                              child: Text('メモモード'),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            if (value != null) {
-                              setState(() {
-                                selectedMode = value;
-                              });
-                            }
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(
-                    'キャンセル',
-                    style: TextStyle(color: Colors.grey[400]),
-                  ),
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: createOrangeYellowGradient(),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: TextButton(
-                    onPressed: () async {
-                      if (titleController.text.trim().isNotEmpty) {
-                        Navigator.pop(context); // 先にダイアログを閉じる
-                        await _createMemo(titleController.text.trim(), selectedMode, selectedColorHex);
-                      }
-                    },
-                    child: const Text(
-                      '作成',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ),
-              ],
-            );
+        return _CreateMemoBottomSheet(
+          supabaseService: _supabaseService,
+          onMemoCreated: (title, mode, colorHex) async {
+            await _createMemo(title, mode, colorHex);
           },
         );
       },
     );
   }
 
-  // 色選択オプションのウィジェット（色のみ表示）
-  Widget _buildColorOption(Map<String, dynamic> colorItem, String selectedColorHex, Function(String) onColorSelected) {
-    final colorHex = colorItem['hex'] as String;
-    final isGradient = colorItem['isGradient'] as bool;
-    final color = colorItem['color'] as Color?;
-    final isSelected = selectedColorHex == colorHex;
 
-    return GestureDetector(
-      onTap: () => onColorSelected(colorHex),
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          gradient: isGradient ? ColorUtils.getGradientFromHex(colorHex) : null,
-          color: isGradient ? null : color,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: isSelected ? Colors.white : Colors.grey[600]!,
-            width: isSelected ? 3 : 1,
-          ),
-        ),
-      ),
-    );
-  }
 
   Future<void> _createMemo(String title, String mode, String colorHex) async {
     if (!mounted) return; // 最初にmountedをチェック
@@ -1094,6 +921,11 @@ class _MainScreenState extends State<MainScreen> {
       if (!mounted) return; // 非同期処理後に再度チェック
       
       if (newMemo != null) {
+        // 新しく作成されたメモのIDを設定
+        setState(() {
+          _newlyCreatedMemoId = newMemo['id'];
+        });
+        
         // メモリストを再読み込み
         _loadMemos();
         
@@ -1122,5 +954,385 @@ class _MainScreenState extends State<MainScreen> {
         ),
     );
     }
+  }
+}
+
+// メモ作成ボトムシート（独立したStatefulWidget）
+class _CreateMemoBottomSheet extends StatefulWidget {
+  final SupabaseService supabaseService;
+  final Function(String, String, String) onMemoCreated;
+
+  const _CreateMemoBottomSheet({
+    required this.supabaseService,
+    required this.onMemoCreated,
+  });
+
+  @override
+  State<_CreateMemoBottomSheet> createState() => _CreateMemoBottomSheetState();
+}
+
+class _CreateMemoBottomSheetState extends State<_CreateMemoBottomSheet> {
+  late TextEditingController _titleController;
+  String _selectedMode = 'memo';
+  String _selectedColorHex = ColorUtils.defaultColorHex;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    super.dispose();
+  }
+
+  // 色選択オプション（強化版）
+  Widget _buildEnhancedColorOption(Map<String, dynamic> colorItem, String selectedColorHex, Function(String) onColorSelected) {
+    final colorHex = colorItem['hex'] as String;
+    final isGradient = colorItem['isGradient'] as bool;
+    final color = colorItem['color'] as Color?;
+    final isSelected = selectedColorHex == colorHex;
+
+    return GestureDetector(
+      onTap: () => onColorSelected(colorHex),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          gradient: isGradient ? ColorUtils.getGradientFromHex(colorHex) : null,
+          color: isGradient ? null : color,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: isSelected ? Colors.white : Colors.transparent,
+            width: 3,
+          ),
+          boxShadow: [
+            if (isSelected)
+              BoxShadow(
+                color: Colors.white.withValues(alpha: 0.5),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+          ],
+        ),
+        child: isSelected
+            ? const Icon(
+                Icons.check,
+                color: Colors.white,
+                size: 24,
+              )
+            : null,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        // 入力欄以外をタップしたときにキーボードを隠す
+        FocusScope.of(context).unfocus();
+      },
+      child: Container(
+        height: MediaQuery.of(context).size.height * 0.75,
+        decoration: const BoxDecoration(
+          color: Color(0xFF2B2B2B),
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+        ),
+        child: Column(
+          children: [
+            // ハンドル
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[600],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            
+            // ヘッダー
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // タイトルとグラデーション
+                  Row(
+                    children: [
+                                          const Text(
+                      'メモ作成',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                      const Spacer(),
+                      // 閉じるボタン
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close),
+                        color: Colors.grey[400],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  // サブタイトル
+                  Row(
+                    children: [
+                      Icon(
+                        widget.supabaseService.getCurrentUser() != null 
+                            ? Icons.cloud_done 
+                            : Icons.storage,
+                        size: 16,
+                        color: widget.supabaseService.getCurrentUser() != null 
+                            ? const Color(0xFFE85A3B)
+                            : Colors.grey[500],
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        widget.supabaseService.getCurrentUser() != null 
+                            ? 'アカウントに保存されます'
+                            : 'ローカルに保存されます（ログインして同期）',
+                        style: TextStyle(
+                          color: widget.supabaseService.getCurrentUser() != null 
+                              ? const Color(0xFFE85A3B)
+                              : Colors.grey[500],
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          
+          // メインコンテンツ
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // タイトル入力
+                  Text(
+                    'タイトル',
+                    style: TextStyle(
+                      color: Colors.grey[300],
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3A3A3A),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey[700]!),
+                    ),
+                    child: TextField(
+                      controller: _titleController,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'メモのタイトルを入力...',
+                        hintStyle: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 16,
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  
+                  // 色選択
+                  Text(
+                    '色ラベル',
+                    style: TextStyle(
+                      color: Colors.grey[300],
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3A3A3A),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey[700]!),
+                    ),
+                    child: Column(
+                      children: [
+                        // 選択された色のプレビュー
+                        Row(
+                          children: [
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                gradient: ColorUtils.colorLabelPalette
+                                    .firstWhere((color) => color['hex'] == _selectedColorHex)['isGradient']
+                                    ? ColorUtils.getGradientFromHex(_selectedColorHex)
+                                    : null,
+                                color: ColorUtils.colorLabelPalette
+                                    .firstWhere((color) => color['hex'] == _selectedColorHex)['isGradient']
+                                    ? null
+                                    : ColorUtils.colorLabelPalette
+                                        .firstWhere((color) => color['hex'] == _selectedColorHex)['color'],
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              '選択中の色',
+                              style: TextStyle(
+                                color: Colors.grey[300],
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        
+                        // カラーパレット（5x2のグリッド）
+                        for (int row = 0; row < 2; row++)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                for (int col = 0; col < 5; col++)
+                                  if (row * 5 + col < ColorUtils.colorLabelPalette.length)
+                                    _buildEnhancedColorOption(
+                                      ColorUtils.colorLabelPalette[row * 5 + col],
+                                      _selectedColorHex,
+                                      (colorHex) {
+                                        setState(() {
+                                          _selectedColorHex = colorHex;
+                                        });
+                                      },
+                                    ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  
+                  // モード選択
+                  Text(
+                    'モード',
+                    style: TextStyle(
+                      color: Colors.grey[300],
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3A3A3A),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey[700]!),
+                    ),
+                    child: DropdownButtonFormField<String>(
+                      value: _selectedMode,
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      ),
+                      dropdownColor: const Color(0xFF3A3A3A),
+                      style: const TextStyle(color: Colors.white, fontSize: 16),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'memo',
+                          child: Text('メモモード'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            _selectedMode = value;
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+          ),
+          
+          // 作成ボタン
+          Container(
+            padding: const EdgeInsets.all(24),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 56,
+                    decoration: BoxDecoration(
+                      gradient: createOrangeYellowGradient(),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFE85A3B).withValues(alpha: 0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        if (_titleController.text.trim().isNotEmpty) {
+                          Navigator.pop(context);
+                          await widget.onMemoCreated(_titleController.text.trim(), _selectedMode, _selectedColorHex);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Text(
+                        'メモを作成',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      ),
+    );
   }
 }

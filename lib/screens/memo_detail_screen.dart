@@ -12,7 +12,7 @@ class MemoDetailScreen extends StatefulWidget {
   final String content;
   final String mode;
   final String? richContent;
-  final String? colorHex; // 色ラベルのパラメータを追加
+  final String? colorHex;
   final DateTime? updatedAt;
 
   const MemoDetailScreen({
@@ -22,7 +22,7 @@ class MemoDetailScreen extends StatefulWidget {
     required this.content,
     required this.mode,
     this.richContent,
-    this.colorHex, // 色ラベルのパラメータを追加
+    this.colorHex,
     this.updatedAt,
   });
 
@@ -36,9 +36,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
   late MemoSaveManager _saveManager;
   final FocusNode _titleFocusNode = FocusNode();
   
-  bool _isMemoFocused = false; // メモのフォーカス状態を管理
-  
-  // 保存状態を管理
+  bool _isMemoFocused = false;
   MemoSaveState _saveState = const MemoSaveState();
 
   @override
@@ -84,7 +82,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
       initialLastUpdated: widget.updatedAt,
     );
     
-    // 初期化処理（PostFrameCallbackで初期化）
+    // 初期化処理
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _saveManager.initialize();
     });
@@ -100,13 +98,11 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
     super.dispose();
   }
 
-  /// 保存状態の変更コールバック
   void _onSaveStateChanged(MemoSaveState state) {
     setState(() {
       _saveState = state;
     });
     
-    // エラーがある場合はSnackBarで表示
     if (state.errorMessage != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -136,63 +132,57 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
 
   @override
   Widget build(BuildContext context) {
-    return Hero(
-      tag: 'memo-${widget.memoId}',
-      child: Material(
-        color: const Color(0xFF2B2B2B),
-        child: GestureDetector(
-          behavior: HitTestBehavior.translucent,
-          onTap: () {
-            // 入力欄以外をタップしたときにキーボードを隠す
-            FocusScope.of(context).unfocus();
-          },
-          child: Scaffold(
-            backgroundColor: const Color(0xFF2B2B2B),
-            body: Stack(
-              children: [
-                // メモバックヘッダー（常に表示）
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    color: const Color(0xFF2B2B2B),
-                    child: MemoBackHeader(
-                      titleController: _titleController,
-                      titleFocusNode: _titleFocusNode,
-                      mode: widget.mode,
-                      lastUpdated: _saveState.lastUpdated,
-                      isSaving: _saveState.isSaving,
-                      onBackPressed: _handleBackPressed,
-                      colorHex: widget.colorHex, // 色ラベル情報を渡す
-                    ),
+    return Material(
+      color: const Color(0xFF2B2B2B),
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () {
+          FocusScope.of(context).unfocus();
+        },
+        child: Scaffold(
+          backgroundColor: const Color(0xFF2B2B2B),
+          body: Stack(
+            children: [
+              // メモバックヘッダー
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  color: const Color(0xFF2B2B2B),
+                  child: MemoBackHeader(
+                    titleController: _titleController,
+                    titleFocusNode: _titleFocusNode,
+                    mode: widget.mode,
+                    lastUpdated: _saveState.lastUpdated,
+                    isSaving: _saveState.isSaving,
+                    onBackPressed: _handleBackPressed,
+                    colorHex: widget.colorHex,
                   ),
                 ),
-
-                // メモ編集エリア(メモの視認性を上げる上下動作)
-                AnimatedPositioned(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                  top: _isMemoFocused ? 120 : 180, // フォーカス時は上に移動、通常時は少し下に、
-                  left: 16,
-                  right: 16,
-                  bottom: 16,
-                  child: GestureDetector(
-                    onTap: () {
-                      // QuillRichEditorエリアのタップでは親のunfocus()を無効化
-                    },
-                    child: QuillRichEditor(
-                      controller: _quillController,
-                      onFocusChanged: _onMemoFocusChanged,
-                    ),
+              ),
+              // メモ編集エリア
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                top: _isMemoFocused ? 120 : 180,
+                left: 16,
+                right: 16,
+                bottom: 16,
+                child: GestureDetector(
+                  onTap: () {
+                    // QuillRichEditorエリアのタップでは親のunfocus()を無効化
+                  },
+                  child: QuillRichEditor(
+                    controller: _quillController,
+                    onFocusChanged: _onMemoFocusChanged,
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
-
 } 
