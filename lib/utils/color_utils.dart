@@ -5,18 +5,21 @@ import '../gradients.dart'; // グラデーション用にインポート追加
 /// QuillControllerの色管理を行うユーティリティクラス
 class ColorUtils {
   
-  // 色分けラベル用の10色パレット（オレンジグラデーション追加）
+  // 色分けラベル用の10色パレット（カスタム並び：2行×5列）
   static const List<Map<String, dynamic>> colorLabelPalette = [
-    {'name': '赤', 'color': Colors.red, 'hex': '#F44336', 'isGradient': false},
+    // 1行目: 灰色、茶色、オレンジ色、黄色、緑
+    {'name': 'グレー', 'color': Colors.grey, 'hex': '#9E9E9E', 'isGradient': false},
+    {'name': '茶', 'color': Colors.brown, 'hex': '#795548', 'isGradient': false},
     {'name': 'オレンジ', 'color': null, 'hex': '#FF9500', 'isGradient': true}, // グラデーション
     {'name': '黄', 'color': Colors.yellow, 'hex': '#FFEB3B', 'isGradient': false},
     {'name': '緑', 'color': Colors.green, 'hex': '#4CAF50', 'isGradient': false},
-    {'name': '青', 'color': Colors.blue, 'hex': '#2196F3', 'isGradient': false},
+    // 2行目: シアン、青、紫、ピンク、赤
+    {'name': 'シアン', 'color': Colors.cyan, 'hex': '#00BCD4', 'isGradient': false},
+    {'name': '青', 'color': Colors.indigo, 'hex': '#3F51B5', 'isGradient': false},
     {'name': '紫', 'color': Colors.purple, 'hex': '#9C27B0', 'isGradient': false},
     {'name': 'ピンク', 'color': Colors.pink, 'hex': '#E91E63', 'isGradient': false},
-    {'name': '茶', 'color': Colors.brown, 'hex': '#795548', 'isGradient': false},
-    {'name': '黒', 'color': Colors.black, 'hex': '#000000', 'isGradient': false},
-    {'name': 'グレー', 'color': Colors.grey, 'hex': '#9E9E9E', 'isGradient': false},
+    {'name': '赤', 'color': Colors.red, 'hex': '#F44336', 'isGradient': false},
+    
   ];
 
   // Hexコードから色を取得

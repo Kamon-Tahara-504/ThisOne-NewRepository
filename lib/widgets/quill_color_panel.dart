@@ -20,19 +20,19 @@ class QuillColorPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     // 色のリストを定義
     final List<Color?> firstRowColors = [
-      Colors.red,
-      Colors.pink,
-      Colors.purple,
-      Colors.blue,
-      Colors.green,
+       null, // リセットボタン
+       Colors.grey,
+       Colors.brown,
+       Colors.orange,
+       Colors.yellow,
     ];
     
     final List<Color?> secondRowColors = [
-      Colors.yellow,
-      Colors.orange,
-      Colors.brown,
-      Colors.grey,
-      null, // リセットボタン
+      Colors.green,
+      Colors.blue,
+      Colors.purple,
+      Colors.pink,
+      Colors.red,
     ];
 
     // 動的に横幅を計算
