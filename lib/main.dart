@@ -1,12 +1,12 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'gradients.dart';
 import 'supabase_config.dart';
 import 'services/supabase_service.dart';
 import 'utils/color_utils.dart'; // 色分けラベル用のユーティリティを追加
+import 'widgets/app_bars/custom_app_bar.dart';
 import 'screens/auth_screen.dart';
 import 'screens/account_screen.dart';
 import 'screens/task_screen.dart';
@@ -222,6 +222,24 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
+  void _handleAccountButtonPressed() {
+    final user = _supabaseService.getCurrentUser();
+    
+    if (user != null) {
+      // ログイン済みの場合：アカウント情報を表示
+      if (_accountOverlay != null) {
+        // 既に表示されている場合は閉じる
+        _closeAccountOverlay();
+      } else {
+        // まだ表示されていない場合は開く
+        _showAccountInfoOverlay();
+      }
+    } else {
+      // 未ログインの場合：認証画面に移動
+      _navigateToAccountOrAuth();
+    }
+  }
+
   // Supabaseにタスクを追加
   Future<void> _addTask(String title) async {
     if (title.trim().isEmpty) return;
@@ -322,63 +340,8 @@ class _MainScreenState extends State<MainScreen> {
     ];
 
     return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(40.0), // 56pxから40pxに縮小
-        child: Container(
-          color: const Color(0xFF2B2B2B), // 全体を黒背景に統一
-          child: Column(
-            children: [
-              // ステータスバー部分（黒背景に変更）
-              Container(
-                height: MediaQuery.of(context).padding.top,
-                width: double.infinity,
-                color: const Color(0xFF2B2B2B), // 黒背景
-              ),
-              // AppBar部分（黒背景）
-              Expanded(
-                child: Container(
-                  color: const Color(0xFF2B2B2B), // サブカラーの黒
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0), // 縦パディングを追加
-                          child: Row(
-                            children: [
-                              // ヘッダー左寄せのタイトル 
-                              Transform.translate(
-                                offset: const Offset(0, -6), // 2px上に移動
-                                child: Text(
-                                'ThisOne',
-                                  style: GoogleFonts.montserrat(
-                                  color: Colors.white,
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w500, // 文字の太さ
-                                    letterSpacing: 1.2,
-                                  ),
-                                ),
-                              ),
-                              const Spacer(), // 右側にスペースを作る
-                              // 右側にアカウントボタンを配置
-                              _buildAccountButton(),
-                            ],
-                          ),
-                        ),
-                      ),
-                      // グラデーションガイドライン
-                      Container(
-                        height: 2,
-                        decoration: BoxDecoration(
-                          gradient: createHorizontalOrangeYellowGradient(),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+      appBar: CustomAppBar(
+        onAccountButtonPressed: _handleAccountButtonPressed,
       ),
       body: PageView(
         controller: _pageController,
@@ -456,37 +419,7 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  Widget _buildAccountButton() {
-    final user = _supabaseService.getCurrentUser();
-    
-    return IconButton(
-      onPressed: () {
-        if (user != null) {
-          // ログイン済みの場合：アカウント情報を表示
-          if (_accountOverlay != null) {
-            // 既に表示されている場合は閉じる
-            _closeAccountOverlay();
-          } else {
-            // まだ表示されていない場合は開く
-            _showAccountInfoOverlay();
-          }
-        } else {
-          // 未ログインの場合：認証画面に移動
-          _navigateToAccountOrAuth();
-        }
-      },
-      padding: const EdgeInsets.all(4),
-      constraints: const BoxConstraints(
-        minWidth: 32,
-        minHeight: 32,
-      ),
-      icon: Icon(
-        user != null ? Icons.person : Icons.person_outline,
-        color: user != null ? const Color(0xFFE85A3B) : Colors.white,
-        size: 26,
-      ),
-    );
-  }
+
 
   void _closeAccountOverlay() {
     if (_accountOverlay != null) {
