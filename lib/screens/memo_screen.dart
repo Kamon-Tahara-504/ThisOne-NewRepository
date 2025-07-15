@@ -4,6 +4,7 @@ import '../gradients.dart';
 import '../services/supabase_service.dart';
 import '../utils/color_utils.dart'; // 色分けラベル用のユーティリティを追加
 import '../widgets/memo_item_card.dart';
+import '../widgets/memo_filter_header.dart';
 import 'memo_detail_screen.dart';
 
 class MemoScreen extends StatefulWidget {
@@ -372,136 +373,11 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
                   ),
                 ),
           // 色フィルタリングボタンとステータス表示（浮かせる）
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    const Color(0xFF2B2B2B).withOpacity(0.95),
-                    const Color(0xFF2B2B2B).withOpacity(0.8),
-                    const Color(0xFF2B2B2B).withOpacity(0.0),
-                  ],
-                  stops: const [0.0, 0.7, 1.0],
-                ),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  // 色フィルタリングボタン
-                  Container(
-                    decoration: BoxDecoration(
-                      color: _selectedColorFilter != null ? Colors.transparent : const Color(0xFF3A3A3A),
-                      borderRadius: BorderRadius.circular(20),
-                      border: _selectedColorFilter != null
-                          ? Border.all(
-                              width: 1,
-                              color: Colors.transparent,
-                            )
-                          : Border.all(
-                              color: Colors.grey[600]!,
-                            ),
-                      gradient: _selectedColorFilter != null
-                          ? createOrangeYellowGradient()
-                          : null,
-                    ),
-                    child: Container(
-                      margin: const EdgeInsets.all(1),
-                      decoration: BoxDecoration(
-                        color: _selectedColorFilter != null ? Colors.transparent : const Color(0xFF3A3A3A),
-                        borderRadius: BorderRadius.circular(19),
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: _showColorFilterBottomSheet,
-                          borderRadius: BorderRadius.circular(19),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                ShaderMask(
-                                  shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
-                                  child: const Icon(
-                                    Icons.palette,
-                                    size: 18,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                ShaderMask(
-                                  shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
-                                  child: Text(
-                                    _selectedColorFilter != null ? '色フィルタ中' : '色で検索',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // フィルタリング状態表示と解除ボタン
-                  if (_selectedColorFilter != null) ...[
-                    const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        gradient: ColorUtils.isGradientColor(_selectedColorFilter!)
-                            ? ColorUtils.getGradientFromHex(_selectedColorFilter!)
-                            : null,
-                        color: ColorUtils.isGradientColor(_selectedColorFilter!)
-                            ? null
-                            : ColorUtils.getColorFromHex(_selectedColorFilter!),
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'フィルタ中',
-                            style: TextStyle(
-                              color: (_selectedColorFilter == '#FFEB3B') ? Colors.black : Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: _clearColorFilter,
-                            child: Icon(
-                              Icons.close,
-                              size: 16,
-                              color: (_selectedColorFilter == '#FFEB3B') ? Colors.black : Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                  const Spacer(),
-                  // メモ数表示
-                  Text(
-                    '${filteredMemos.length}件のメモ',
-                    style: TextStyle(
-                      color: Colors.grey[500],
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          MemoFilterHeader(
+            selectedColorFilter: _selectedColorFilter,
+            memoCount: filteredMemos.length,
+            onShowColorFilterBottomSheet: _showColorFilterBottomSheet,
+            onClearColorFilter: _clearColorFilter,
           ),
         ],
       ),
