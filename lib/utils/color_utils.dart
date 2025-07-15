@@ -7,43 +7,55 @@ class ColorUtils {
   
   // 色分けラベル用の10色パレット（カスタム並び：2行×5列）
   static const List<Map<String, dynamic>> colorLabelPalette = [
-    // 1行目: 灰色、茶色、オレンジ色、黄色、緑
-    {'name': 'グレー', 'color': Colors.grey, 'hex': '#9E9E9E', 'isGradient': false},
-    {'name': '茶', 'color': Colors.brown, 'hex': '#795548', 'isGradient': false},
+         // 1行目: 灰色、茶色、濃い緑、黄、オレンジ
+    {'name': 'グレー', 'color': null, 'hex': '#9E9E9E', 'isGradient': true}, // グラデーション
+    {'name': '濃い緑', 'color': null, 'hex': '#2E7D32', 'isGradient': true}, // グラデーション
+    {'name': '黄', 'color': null, 'hex': '#FFEB3B', 'isGradient': true}, // グラデーション
     {'name': 'オレンジ', 'color': null, 'hex': '#FF9500', 'isGradient': true}, // グラデーション
-    {'name': '黄', 'color': Colors.yellow, 'hex': '#FFEB3B', 'isGradient': false},
-    {'name': '緑', 'color': Colors.green, 'hex': '#4CAF50', 'isGradient': false},
+    {'name': '茶', 'color': null, 'hex': '#795548', 'isGradient': true}, // グラデーション
     // 2行目: シアン、青、紫、ピンク、赤
-    {'name': 'シアン', 'color': Colors.cyan, 'hex': '#00BCD4', 'isGradient': false},
-    {'name': '青', 'color': Colors.indigo, 'hex': '#3F51B5', 'isGradient': false},
-    {'name': '紫', 'color': Colors.purple, 'hex': '#9C27B0', 'isGradient': false},
-    {'name': 'ピンク', 'color': Colors.pink, 'hex': '#E91E63', 'isGradient': false},
-    {'name': '赤', 'color': Colors.red, 'hex': '#F44336', 'isGradient': false},
-    
+    {'name': 'シアン', 'color': null, 'hex': '#00BCD4', 'isGradient': true}, // グラデーション
+    {'name': '青', 'color': null, 'hex': '#3F51B5', 'isGradient': true}, // グラデーション
+    {'name': '紫', 'color': null, 'hex': '#9C27B0', 'isGradient': true}, // グラデーション
+    {'name': 'ピンク', 'color': null, 'hex': '#E91E63', 'isGradient': true}, // グラデーション
+    {'name': '赤', 'color': null, 'hex': '#F44336', 'isGradient': true}, // グラデーション
   ];
 
-  // Hexコードから色を取得
+  // Hexコードから色を取得（グラデーション色の場合は代表色を返す）
   static Color getColorFromHex(String hex) {
+    // 各色の代表色を定義
     final colorMap = {
-      for (var item in colorLabelPalette) 
-        if (!(item['isGradient'] as bool)) item['hex'] as String: item['color'] as Color
+      '#9E9E9E': Colors.grey,           // グレー
+      '#2E7D32': const Color(0xFF2E7D32), // 濃い緑
+      '#FFEB3B': Colors.yellow,         // 黄
+      '#FF9500': const Color(0xFFE85A3B), // オレンジ
+      '#795548': Colors.brown,          // 茶
+      '#00BCD4': Colors.cyan,           // シアン
+      '#3F51B5': Colors.indigo,         // 青
+      '#9C27B0': Colors.purple,         // 紫
+      '#E91E63': Colors.pink,           // ピンク
+      '#F44336': Colors.red,            // 赤
     };
-    // オレンジグラデーションの場合は代表色を返す
-    if (hex == '#FF9500') return const Color(0xFFE85A3B);
+    
     return colorMap[hex] ?? Colors.grey;
   }
 
   // Hexコードがグラデーションかどうかを判定
   static bool isGradientColor(String hex) {
-    return hex == '#FF9500'; // オレンジグラデーション
+    // 全ての色ラベルでグラデーションを使用可能にする
+    return colorLabelPalette.any((color) => color['hex'] == hex);
   }
 
   // グラデーション取得
   static LinearGradient? getGradientFromHex(String hex) {
-    if (hex == '#FF9500') {
-      return createOrangeYellowGradient();
-    }
-    return null;
+    // 色ラベルパレットから色名を取得
+    final colorItem = colorLabelPalette.firstWhere(
+      (color) => color['hex'] == hex,
+      orElse: () => {'name': 'オレンジ'}, // デフォルト
+    );
+    
+    final colorName = colorItem['name'] as String;
+    return createColorGradient(colorName);
   }
 
   // Hexコードから色名を取得

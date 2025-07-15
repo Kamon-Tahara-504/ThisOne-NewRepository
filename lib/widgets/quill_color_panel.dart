@@ -22,14 +22,14 @@ class QuillColorPanel extends StatelessWidget {
     final List<Color?> firstRowColors = [
        null, // リセットボタン
        Colors.grey,
-       Colors.brown,
-       Colors.orange,
+       Colors.green,
        Colors.yellow,
+       Colors.orange,
     ];
     
     final List<Color?> secondRowColors = [
-      Colors.green,
-      Colors.blue,
+      Colors.cyan,
+      Colors.indigo,
       Colors.purple,
       Colors.pink,
       Colors.red,
