@@ -28,6 +28,7 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
   late AnimationController _popAnimationController;
   late Animation<double> _popAnimation;
   String? _animatingMemoId; // アニメーション中のメモID
+  String? _selectedColorFilter; // 選択された色フィルタ
 
   @override
   void initState() {
@@ -82,6 +83,43 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
     _popAnimationController.forward(from: 0.0);
   }
 
+  // フィルタリングされたメモを取得
+  List<Map<String, dynamic>> get _filteredMemos {
+    if (_selectedColorFilter == null) {
+      return widget.memos;
+    }
+    return widget.memos.where((memo) => 
+      memo['color_tag'] == _selectedColorFilter
+    ).toList();
+  }
+
+  // 色フィルタリングを設定
+  void _setColorFilter(String? colorHex) {
+    setState(() {
+      _selectedColorFilter = colorHex;
+    });
+  }
+
+  // 色フィルタリングをクリア
+  void _clearColorFilter() {
+    setState(() {
+      _selectedColorFilter = null;
+    });
+  }
+
+  // 色フィルタリングBottomSheetを表示
+  void _showColorFilterBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => _ColorFilterBottomSheet(
+        selectedColorFilter: _selectedColorFilter,
+        onColorSelected: _setColorFilter,
+      ),
+    );
+  }
+
   // Supabaseからメモを再読み込み
   Future<void> _loadMemos() async {
     try {
@@ -110,8 +148,7 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
     }
   }
 
-  void _openMemoDetail(int index) async {
-    final memo = widget.memos[index];
+  void _openMemoDetail(Map<String, dynamic> memo) async {
     final result = await Navigator.push(
       context,
       PageRouteBuilder(
@@ -155,9 +192,7 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
     }
   }
 
-  void _deleteMemo(int index) async {
-    final memo = widget.memos[index];
-    
+  void _deleteMemo(Map<String, dynamic> memo) async {
     // 削除確認ダイアログ
     final shouldDelete = await showDialog<bool>(
       context: context,
@@ -221,8 +256,7 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
   }
 
   // ピン留め状態を切り替え
-  void _togglePin(int index) async {
-    final memo = widget.memos[index];
+  void _togglePin(Map<String, dynamic> memo) async {
     final newPinStatus = !(memo['is_pinned'] ?? false);
     
     try {
@@ -243,9 +277,7 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
   }
 
   // 色分けラベルを変更
-  void _changeColorLabel(int index) async {
-    final memo = widget.memos[index];
-    
+  void _changeColorLabel(Map<String, dynamic> memo) async {
     // 色選択ダイアログを表示
     final selectedColorHex = await showDialog<String>(
       context: context,
@@ -275,58 +307,199 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final filteredMemos = _filteredMemos;
+    
     return Scaffold(
       backgroundColor: const Color(0xFF2B2B2B),
-      body: widget.memos.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+      body: Stack(
+        children: [
+          // メモリスト（全体に表示）
+          filteredMemos.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ShaderMask(
+                        shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
+                        child: const Icon(
+                          Icons.note_alt_outlined,
+                          size: 64,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        _selectedColorFilter != null ? 'この色のメモがありません' : 'メモがありません',
+                        style: TextStyle(
+                          color: Colors.grey[400],
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _selectedColorFilter != null 
+                            ? '他の色を選択するか、フィルタを解除してください'
+                            : '下部の + ボタンから新しいメモを追加してください',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  color: const Color(0xFFE85A3B),
+                  backgroundColor: const Color(0xFF3A3A3A),
+                  onRefresh: _loadMemos,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.only(top: 60, left: 16, right: 16, bottom: 16),
+                    itemCount: filteredMemos.length,
+                    itemBuilder: (context, index) {
+                      return _buildMemoItem(filteredMemos, index);
+                    },
+                  ),
+                ),
+          // 色フィルタリングボタンとステータス表示（浮かせる）
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    const Color(0xFF2B2B2B).withOpacity(0.95),
+                    const Color(0xFF2B2B2B).withOpacity(0.8),
+                    const Color(0xFF2B2B2B).withOpacity(0.0),
+                  ],
+                  stops: const [0.0, 0.7, 1.0],
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
                 children: [
-                  ShaderMask(
-                    shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
-                    child: const Icon(
-                    Icons.note_alt_outlined,
-                    size: 64,
-                      color: Colors.white,
+                  // 色フィルタリングボタン
+                  Container(
+                    decoration: BoxDecoration(
+                      color: _selectedColorFilter != null ? Colors.transparent : const Color(0xFF3A3A3A),
+                      borderRadius: BorderRadius.circular(20),
+                      border: _selectedColorFilter != null
+                          ? Border.all(
+                              width: 1,
+                              color: Colors.transparent,
+                            )
+                          : Border.all(
+                              color: Colors.grey[600]!,
+                            ),
+                      gradient: _selectedColorFilter != null
+                          ? createOrangeYellowGradient()
+                          : null,
+                    ),
+                    child: Container(
+                      margin: const EdgeInsets.all(1),
+                      decoration: BoxDecoration(
+                        color: _selectedColorFilter != null ? Colors.transparent : const Color(0xFF3A3A3A),
+                        borderRadius: BorderRadius.circular(19),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _showColorFilterBottomSheet,
+                          borderRadius: BorderRadius.circular(19),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                ShaderMask(
+                                  shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
+                                  child: const Icon(
+                                    Icons.palette,
+                                    size: 18,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                ShaderMask(
+                                  shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
+                                  child: Text(
+                                    _selectedColorFilter != null ? '色フィルタ中' : '色で検索',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'メモがありません',
-                    style: TextStyle(
-                      color: Colors.grey[400],
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
+                  // フィルタリング状態表示と解除ボタン
+                  if (_selectedColorFilter != null) ...[
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        gradient: ColorUtils.isGradientColor(_selectedColorFilter!)
+                            ? ColorUtils.getGradientFromHex(_selectedColorFilter!)
+                            : null,
+                        color: ColorUtils.isGradientColor(_selectedColorFilter!)
+                            ? null
+                            : ColorUtils.getColorFromHex(_selectedColorFilter!),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'フィルタ中',
+                            style: TextStyle(
+                              color: (_selectedColorFilter == '#FFEB3B') ? Colors.black : Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: _clearColorFilter,
+                            child: Icon(
+                              Icons.close,
+                              size: 16,
+                              color: (_selectedColorFilter == '#FFEB3B') ? Colors.black : Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
+                  ],
+                  const Spacer(),
+                  // メモ数表示
                   Text(
-                    '下部の + ボタンから新しいメモを追加してください',
+                    '${filteredMemos.length}件のメモ',
                     style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 14,
+                      color: Colors.grey[500],
+                      fontSize: 12,
                     ),
                   ),
                 ],
               ),
-            )
-          : RefreshIndicator(
-              color: const Color(0xFFE85A3B),
-              backgroundColor: const Color(0xFF3A3A3A),
-              onRefresh: _loadMemos,
-              child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-                itemCount: widget.memos.length,
-              itemBuilder: (context, index) {
-                return _buildMemoItem(index);
-              },
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildMemoItem(int index) {
-    final memo = widget.memos[index];
+  Widget _buildMemoItem(List<Map<String, dynamic>> memos, int index) {
+    final memo = memos[index];
     final updatedAt = memo['updatedAt'] as DateTime;
     final isPinned = memo['is_pinned'] ?? false;
     final isAnimating = _animatingMemoId == memo['id'];
@@ -347,7 +520,7 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
         ] : null,
       ),
       child: InkWell(
-        onTap: isAnimating ? null : () => _openMemoDetail(index), // アニメーション中はタップを無効化
+        onTap: isAnimating ? null : () => _openMemoDetail(memo), // アニメーション中はタップを無効化
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -370,7 +543,7 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
                   ],
                   // 色分けラベル表示（色背景+モード文字・タップで変更可能）
                   GestureDetector(
-                    onTap: () => _changeColorLabel(index),
+                    onTap: () => _changeColorLabel(memo),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
@@ -405,7 +578,7 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
                   ),
                   // ピン留めボタン
                   IconButton(
-                    onPressed: () => _togglePin(index),
+                    onPressed: () => _togglePin(memo),
                     icon: Icon(
                       isPinned ? Icons.push_pin : Icons.push_pin_outlined,
                       color: isPinned 
@@ -415,7 +588,7 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
                     ),
                   ),
                   IconButton(
-                    onPressed: () => _deleteMemo(index),
+                    onPressed: () => _deleteMemo(memo),
                     icon: Icon(
                       Icons.delete_outline,
                       color: Colors.grey[500],
@@ -477,6 +650,137 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
     return Material(
       color: Colors.transparent,
       child: memoCard,
+    );
+  }
+}
+
+// 色フィルタリング用のBottomSheet
+class _ColorFilterBottomSheet extends StatelessWidget {
+  final String? selectedColorFilter;
+  final Function(String?) onColorSelected;
+
+  const _ColorFilterBottomSheet({
+    required this.selectedColorFilter,
+    required this.onColorSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: const BoxDecoration(
+        color: Color(0xFF3A3A3A),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.palette,
+                color: Colors.white,
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                '色でメモを検索',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const Spacer(),
+              if (selectedColorFilter != null)
+                TextButton(
+                  onPressed: () {
+                    onColorSelected(null);
+                    Navigator.pop(context);
+                  },
+                  child: const Text(
+                    'すべて表示',
+                    style: TextStyle(
+                      color: Color(0xFFE85A3B),
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '表示したいメモの色を選択してください',
+            style: TextStyle(
+              color: Colors.grey[400],
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 24),
+          // 色パレット（2行5列）
+          for (int row = 0; row < 2; row++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  for (int col = 0; col < 5; col++)
+                    if (row * 5 + col < ColorUtils.colorLabelPalette.length)
+                      _buildColorFilterOption(
+                        context,
+                        ColorUtils.colorLabelPalette[row * 5 + col],
+                      ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildColorFilterOption(BuildContext context, Map<String, dynamic> colorItem) {
+    final colorHex = colorItem['hex'] as String;
+    final isGradient = colorItem['isGradient'] as bool;
+    final color = colorItem['color'] as Color?;
+    final isSelected = selectedColorFilter == colorHex;
+
+    return GestureDetector(
+      onTap: () {
+        onColorSelected(colorHex);
+        Navigator.pop(context);
+      },
+      child: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          gradient: isGradient ? ColorUtils.getGradientFromHex(colorHex) : null,
+          color: isGradient ? null : color,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: isSelected ? Colors.white : Colors.grey[600]!,
+            width: isSelected ? 3 : 1,
+          ),
+          boxShadow: isSelected ? [
+            BoxShadow(
+              color: Colors.white.withValues(alpha: 0.3),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ] : null,
+        ),
+        child: isSelected
+            ? const Icon(
+                Icons.check,
+                color: Colors.white,
+                size: 28,
+              )
+            : null,
+      ),
     );
   }
 }
