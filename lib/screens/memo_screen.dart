@@ -1,10 +1,10 @@
 
 import 'package:flutter/material.dart';
-import '../gradients.dart';
 import '../services/supabase_service.dart';
 import '../utils/color_utils.dart'; // 色分けラベル用のユーティリティを追加
 import '../widgets/memo_item_card.dart';
 import '../widgets/memo_filter_header.dart';
+import '../widgets/empty_memo_state.dart';
 import 'memo_detail_screen.dart';
 
 class MemoScreen extends StatefulWidget {
@@ -317,39 +317,8 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
         children: [
           // メモリスト（全体に表示）
           filteredMemos.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      ShaderMask(
-                        shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
-                        child: const Icon(
-                          Icons.note_alt_outlined,
-                          size: 64,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        _selectedColorFilter != null ? 'この色のメモがありません' : 'メモがありません',
-                        style: TextStyle(
-                          color: Colors.grey[400],
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _selectedColorFilter != null 
-                            ? '他の色を選択するか、フィルタを解除してください'
-                            : '下部の + ボタンから新しいメモを追加してください',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
+              ? EmptyMemoState(
+                  hasColorFilter: _selectedColorFilter != null,
                 )
               : RefreshIndicator(
                   color: const Color(0xFFE85A3B),
