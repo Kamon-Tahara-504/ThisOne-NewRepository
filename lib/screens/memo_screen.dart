@@ -5,6 +5,7 @@ import '../utils/color_utils.dart'; // 色分けラベル用のユーティリ�
 import '../widgets/memo_item_card.dart';
 import '../widgets/memo_filter_header.dart';
 import '../widgets/empty_memo_state.dart';
+import '../widgets/color_palette.dart';
 import 'memo_detail_screen.dart';
 
 class MemoScreen extends StatefulWidget {
@@ -199,7 +200,7 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF3A3A3A),
+        backgroundColor: const Color(0xFF2B2B2B),
         title: const Text(
           'メモを削除',
           style: TextStyle(color: Colors.white),
@@ -322,7 +323,7 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
                 )
               : RefreshIndicator(
                   color: const Color(0xFFE85A3B),
-                  backgroundColor: const Color(0xFF3A3A3A),
+                  backgroundColor: const Color(0xFF2B2B2B),
                   onRefresh: _loadMemos,
                   child: ListView.builder(
                     padding: const EdgeInsets.only(top: 60, left: 16, right: 16, bottom: 16),
@@ -371,7 +372,7 @@ class _ColorFilterBottomSheet extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: const BoxDecoration(
-        color: Color(0xFF3A3A3A),
+        color: Color(0xFF2B2B2B),
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(20),
           topRight: Radius.circular(20),
@@ -423,68 +424,23 @@ class _ColorFilterBottomSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          // 色パレット（2行5列）
-          for (int row = 0; row < 2; row++)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  for (int col = 0; col < 5; col++)
-                    if (row * 5 + col < ColorUtils.colorLabelPalette.length)
-                      _buildColorFilterOption(
-                        context,
-                        ColorUtils.colorLabelPalette[row * 5 + col],
-                      ),
-                ],
-              ),
-            ),
+          // 色パレット
+          ColorPalette(
+            selectedColorHex: selectedColorFilter,
+            onColorSelected: (colorHex) {
+              onColorSelected(colorHex);
+              Navigator.pop(context);
+            },
+            showCheckIcon: true,
+            itemSize: 56.0,
+          ),
           const SizedBox(height: 16),
         ],
       ),
     );
   }
 
-  Widget _buildColorFilterOption(BuildContext context, Map<String, dynamic> colorItem) {
-    final colorHex = colorItem['hex'] as String;
-    final isGradient = colorItem['isGradient'] as bool;
-    final color = colorItem['color'] as Color?;
-    final isSelected = selectedColorFilter == colorHex;
 
-    return GestureDetector(
-      onTap: () {
-        onColorSelected(colorHex);
-        Navigator.pop(context);
-      },
-      child: Container(
-        width: 56,
-        height: 56,
-        decoration: BoxDecoration(
-          gradient: isGradient ? ColorUtils.getGradientFromHex(colorHex) : null,
-          color: isGradient ? null : color,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: isSelected ? Colors.white : Colors.grey[600]!,
-            width: isSelected ? 3 : 1,
-          ),
-          boxShadow: isSelected ? [
-            BoxShadow(
-              color: Colors.white.withValues(alpha: 0.3),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ] : null,
-        ),
-        child: isSelected
-            ? const Icon(
-                Icons.check,
-                color: Colors.white,
-                size: 28,
-              )
-            : null,
-      ),
-    );
-  }
 }
 
 // 色選択ダイアログ
@@ -498,7 +454,7 @@ class _ColorLabelDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: const Color(0xFF3A3A3A),
+      backgroundColor: const Color(0xFF2B2B2B),
       title: const Text(
         '色ラベルを選択',
         style: TextStyle(color: Colors.white),
@@ -506,22 +462,13 @@ class _ColorLabelDialog extends StatelessWidget {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // 10色のパレットを表示（2行5列）
-          for (int row = 0; row < 2; row++)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  for (int col = 0; col < 5; col++)
-                    if (row * 5 + col < ColorUtils.colorLabelPalette.length)
-                      _buildColorOption(
-                        context,
-                        ColorUtils.colorLabelPalette[row * 5 + col],
-                      ),
-                ],
-              ),
-            ),
+          // 色パレット
+          ColorPalette(
+            selectedColorHex: currentColorHex,
+            onColorSelected: (colorHex) => Navigator.pop(context, colorHex),
+            showCheckIcon: false,
+            itemSize: 50.0,
+          ),
         ],
       ),
       actions: [
@@ -536,27 +483,5 @@ class _ColorLabelDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildColorOption(BuildContext context, Map<String, dynamic> colorItem) {
-    final colorHex = colorItem['hex'] as String;
-    final isGradient = colorItem['isGradient'] as bool;
-    final color = colorItem['color'] as Color?;
-    final isSelected = currentColorHex == colorHex;
 
-    return GestureDetector(
-      onTap: () => Navigator.pop(context, colorHex),
-      child: Container(
-        width: 50,
-        height: 50,
-        decoration: BoxDecoration(
-          gradient: isGradient ? ColorUtils.getGradientFromHex(colorHex) : null,
-          color: isGradient ? null : color,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: isSelected ? Colors.white : Colors.grey[600]!,
-            width: isSelected ? 3 : 1,
-          ),
-        ),
-      ),
-    );
-  }
 } 
