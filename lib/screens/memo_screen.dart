@@ -320,15 +320,15 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
           filteredMemos.isEmpty
               ? EmptyMemoState(
                   hasColorFilter: _selectedColorFilter != null,
-                )
-              : RefreshIndicator(
-                  color: const Color(0xFFE85A3B),
+                  )
+                : RefreshIndicator(
+                    color: const Color(0xFFE85A3B),
                   backgroundColor: const Color(0xFF2B2B2B),
-                  onRefresh: _loadMemos,
-                  child: ListView.builder(
+                    onRefresh: _loadMemos,
+                    child: ListView.builder(
                     padding: const EdgeInsets.only(top: 60, left: 16, right: 16, bottom: 16),
-                    itemCount: filteredMemos.length,
-                    itemBuilder: (context, index) {
+                      itemCount: filteredMemos.length,
+                      itemBuilder: (context, index) {
                       final memo = filteredMemos[index];
                       return MemoItemCard(
                         memo: memo,
@@ -339,9 +339,9 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
                         onDelete: () => _deleteMemo(memo),
                         onChangeColorLabel: () => _changeColorLabel(memo),
                       );
-                    },
+                      },
+                    ),
                   ),
-                ),
           // 色フィルタリングボタンとステータス表示（浮かせる）
           MemoFilterHeader(
             selectedColorFilter: _selectedColorFilter,
@@ -370,67 +370,67 @@ class _ColorFilterBottomSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
       decoration: const BoxDecoration(
         color: Color(0xFF2B2B2B),
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(20),
           topRight: Radius.circular(20),
         ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.palette,
-                color: Colors.white,
-                size: 24,
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                '色でメモを検索',
-                style: TextStyle(
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.palette,
                   color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
+                  size: 24,
                 ),
-              ),
-              const Spacer(),
-              if (selectedColorFilter != null)
-                TextButton(
-                  onPressed: () {
-                    onColorSelected(null);
-                    Navigator.pop(context);
-                  },
-                  child: const Text(
-                    'すべて表示',
-                    style: TextStyle(
-                      color: Color(0xFFE85A3B),
-                      fontSize: 14,
-                    ),
+                const SizedBox(width: 12),
+                const Text(
+                  '色でメモを検索',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '表示したいメモの色を選択してください',
-            style: TextStyle(
-              color: Colors.grey[400],
-              fontSize: 14,
+                const Spacer(),
+                if (selectedColorFilter != null)
+                  TextButton(
+                    onPressed: () {
+                      onColorSelected(null);
+                      Navigator.pop(context);
+                    },
+                    child: const Text(
+                      'すべて表示',
+                      style: TextStyle(
+                        color: Color(0xFFE85A3B),
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+              ],
             ),
-          ),
-          const SizedBox(height: 24),
+            const SizedBox(height: 16),
+            Text(
+              '表示したいメモの色を選択してください',
+              style: TextStyle(
+                color: Colors.grey[400],
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 24),
           // 色パレット
           ColorPalette(
             selectedColorHex: selectedColorFilter,
             onColorSelected: (colorHex) {
-              onColorSelected(colorHex);
-              Navigator.pop(context);
-            },
+        onColorSelected(colorHex);
+        Navigator.pop(context);
+      },
             showCheckIcon: true,
             itemSize: 56.0,
           ),
@@ -468,7 +468,7 @@ class _ColorLabelDialog extends StatelessWidget {
             onColorSelected: (colorHex) => Navigator.pop(context, colorHex),
             showCheckIcon: false,
             itemSize: 50.0,
-          ),
+            ),
         ],
       ),
       actions: [
