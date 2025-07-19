@@ -619,10 +619,11 @@ class _CreateMemoBottomSheetState extends State<_CreateMemoBottomSheet> {
                     ),
                     child: ElevatedButton(
                       onPressed: () async {
-                        if (_titleController.text.trim().isNotEmpty) {
-                          Navigator.pop(context);
-                          await widget.onMemoCreated(_titleController.text.trim(), _selectedMode, _selectedColorHex);
-                        }
+                        final title = _titleController.text.trim().isNotEmpty 
+                            ? _titleController.text.trim() 
+                            : '無題';
+                        Navigator.pop(context);
+                        await widget.onMemoCreated(title, _selectedMode, _selectedColorHex);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent,
