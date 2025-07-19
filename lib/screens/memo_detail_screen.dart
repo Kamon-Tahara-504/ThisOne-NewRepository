@@ -5,6 +5,7 @@ import 'dart:async';
 import '../widgets/memo_back_header.dart';
 import '../widgets/quill_rich_editor.dart';
 import '../widgets/memo_save_manager.dart';
+import '../utils/calculator_utils.dart';
 
 class MemoDetailScreen extends StatefulWidget {
   final String memoId;
@@ -38,6 +39,9 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
   
   bool _isMemoFocused = false;
   MemoSaveState _saveState = const MemoSaveState();
+  
+  // 計算機モード用の状態
+  String _calculatorSummary = '';
 
   @override
   void initState() {
@@ -82,6 +86,13 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
       initialLastUpdated: widget.updatedAt,
     );
     
+    // 計算機モードの場合、テキスト変更リスナーを追加
+    if (widget.mode == 'calculator' || widget.mode == 'rich') {
+      _quillController.addListener(_onQuillTextChanged);
+      // 初期計算
+      _updateCalculations();
+    }
+    
     // 初期化処理
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _saveManager.initialize();
@@ -93,6 +104,12 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
     WidgetsBinding.instance.removeObserver(this);
     _saveManager.dispose();
     _titleController.dispose();
+    
+    // 計算機モードのリスナーを削除
+    if (widget.mode == 'calculator' || widget.mode == 'rich') {
+      _quillController.removeListener(_onQuillTextChanged);
+    }
+    
     _quillController.dispose();
     _titleFocusNode.dispose();
     super.dispose();
@@ -111,6 +128,24 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
         ),
       );
     }
+  }
+
+  // 計算機モード: テキスト変更リスナー
+  void _onQuillTextChanged() {
+    if (widget.mode == 'calculator' || widget.mode == 'rich') {
+      _updateCalculations();
+    }
+  }
+
+  // 計算機モード: 計算を更新
+  void _updateCalculations() {
+    final text = _quillController.document.toPlainText();
+    final entries = CalculatorUtils.extractCalculations(text);
+    final summary = CalculatorUtils.generateSummary(entries);
+    
+    setState(() {
+      _calculatorSummary = summary;
+    });
   }
 
   Future<void> _handleBackPressed() async {
@@ -169,13 +204,70 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
                 left: 16,
                 right: 16,
                 bottom: 16,
-                child: GestureDetector(
-                  onTap: () {
-                    // QuillRichEditorエリアのタップでは親のunfocus()を無効化
-                  },
-                  child: QuillRichEditor(
-                    controller: _quillController,
-                    onFocusChanged: _onMemoFocusChanged,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3A3A3A), // メモ入力欄と同じ背景色
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      // 計算機モード: 合計表示 (メモ入力中は非表示)
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                        height: (widget.mode == 'calculator' || widget.mode == 'rich') && 
+                                _calculatorSummary.isNotEmpty && 
+                                !_isMemoFocused ? 68 : 0,
+                        child: (widget.mode == 'calculator' || widget.mode == 'rich') && 
+                               _calculatorSummary.isNotEmpty && 
+                               !_isMemoFocused
+                          ? Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.all(8), // 外枠との間隔
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    const Color(0xFFE85A3B).withValues(alpha: 0.15),
+                                    const Color(0xFFFFD700).withValues(alpha: 0.15),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: const Color(0xFFE85A3B),
+                                  width: 2,
+                                ),
+                              ),
+                              child: Text(
+                                _calculatorSummary,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                      ),
+                      // メモエディター
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: GestureDetector(
+                            onTap: () {
+                              // QuillRichEditorエリアのタップでは親のunfocus()を無効化
+                            },
+                            child: QuillRichEditor(
+                              controller: _quillController,
+                              onFocusChanged: _onMemoFocusChanged,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
