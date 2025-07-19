@@ -95,11 +95,11 @@ class MemoBackHeader extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
-                  mode == 'memo' ? 'メモ' : mode,
+                  mode == 'memo' ? 'メモ' : (mode == 'calculator' || mode == 'rich') ? '計算機' : mode,
                   style: TextStyle(
                     color: (colorHex == '#FFEB3B') ? Colors.black : Colors.white, // 黄色の場合は黒文字
                     fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),

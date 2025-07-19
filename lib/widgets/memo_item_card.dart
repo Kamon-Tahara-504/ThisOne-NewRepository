@@ -79,11 +79,11 @@ class MemoItemCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        memo['mode'] == 'memo' ? 'メモ' : memo['mode'],
+                        memo['mode'] == 'memo' ? 'メモ' : (memo['mode'] == 'calculator' || memo['mode'] == 'rich') ? '計算機' : memo['mode'],
                         style: TextStyle(
                           color: (memo['color_tag'] == '#FFEB3B') ? Colors.black : Colors.white, // 黄色の場合は黒文字
                           fontSize: 10,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),

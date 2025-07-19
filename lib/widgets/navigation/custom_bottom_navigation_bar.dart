@@ -525,19 +525,19 @@ class _CreateMemoBottomSheetState extends State<_CreateMemoBottomSheet> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: GestureDetector(
-                              onTap: () => setState(() => _selectedMode = 'rich'),
+                              onTap: () => setState(() => _selectedMode = 'calculator'),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(vertical: 12),
                                 decoration: BoxDecoration(
-                                  gradient: _selectedMode == 'rich' 
+                                  gradient: _selectedMode == 'calculator' 
                                       ? createHorizontalOrangeYellowGradient()
                                       : null,
-                                  color: _selectedMode == 'rich' 
+                                  color: _selectedMode == 'calculator' 
                                       ? null 
                                       : const Color(0xFF3A3A3A),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: _selectedMode == 'rich' 
+                                    color: _selectedMode == 'calculator' 
                                         ? Colors.transparent 
                                         : Colors.grey[600]!,
                                     width: 1,
@@ -546,13 +546,13 @@ class _CreateMemoBottomSheetState extends State<_CreateMemoBottomSheet> {
                                 child: const Column(
                                   children: [
                                     Icon(
-                                      Icons.auto_awesome,
+                                      Icons.calculate,
                                       color: Colors.white,
                                       size: 24,
                                     ),
                                     SizedBox(height: 4),
                                     Text(
-                                      'リッチ',
+                                      '計算機',
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 14,
