@@ -398,12 +398,6 @@ class _CreateMemoBottomSheetState extends State<_CreateMemoBottomSheet> {
                   // タイトル
                   Row(
                     children: [
-                      const Icon(
-                        Icons.note_add,
-                        color: Color(0xFFE85A3B),
-                        size: 28,
-                      ),
-                      const SizedBox(width: 12),
                       const Text(
                         'メモを作成',
                         style: TextStyle(
