@@ -279,9 +279,8 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
     }
   }
 
-  // 色分けラベルを変更
+  // 色分けラベルを変更（元の機能を復活）
   void _changeColorLabel(Map<String, dynamic> memo) async {
-    // 色選択ダイアログを表示
     final selectedColorHex = await showDialog<String>(
       context: context,
       builder: (context) => _ColorLabelDialog(
@@ -443,7 +442,7 @@ class _ColorFilterBottomSheet extends StatelessWidget {
 
 }
 
-// 色選択ダイアログ
+// 色ラベル選択ダイアログ
 class _ColorLabelDialog extends StatelessWidget {
   final String currentColorHex;
 
@@ -466,8 +465,8 @@ class _ColorLabelDialog extends StatelessWidget {
           ColorPalette(
             selectedColorHex: currentColorHex,
             onColorSelected: (colorHex) => Navigator.pop(context, colorHex),
-            showCheckIcon: false,
-            itemSize: 50.0,
+            showCheckIcon: true,
+            itemSize: 45.0,
             ),
         ],
       ),
@@ -482,6 +481,4 @@ class _ColorLabelDialog extends StatelessWidget {
       ],
     );
   }
-
-
 } 

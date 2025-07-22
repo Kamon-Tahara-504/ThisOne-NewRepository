@@ -337,6 +337,52 @@ class SupabaseService {
     }
   }
 
+  /// メモのモードを更新
+  Future<void> updateMemoMode({
+    required String memoId,
+    required String mode,
+  }) async {
+    final user = getCurrentUser();
+    if (user == null) return;
+
+    try {
+      await supabase
+          .from('memos')
+          .update({
+            'mode': mode,
+          })
+          .eq('id', memoId)
+          .eq('user_id', user.id);
+    } catch (e) {
+      debugPrint('メモモードの更新エラー: $e');
+      rethrow;
+    }
+  }
+
+  /// メモの設定（モードと色ラベル）を一括更新
+  Future<void> updateMemoSettings({
+    required String memoId,
+    required String mode,
+    required String colorHex,
+  }) async {
+    final user = getCurrentUser();
+    if (user == null) return;
+
+    try {
+      await supabase
+          .from('memos')
+          .update({
+            'mode': mode,
+            'color_tag': colorHex,
+          })
+          .eq('id', memoId)
+          .eq('user_id', user.id);
+    } catch (e) {
+      debugPrint('メモ設定の更新エラー: $e');
+      rethrow;
+    }
+  }
+
   /// メモを追加
   Future<Map<String, dynamic>?> addMemo({
     required String title,

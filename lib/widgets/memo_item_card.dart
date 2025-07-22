@@ -64,7 +64,7 @@ class MemoItemCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                   ],
-                  // 色分けラベル表示（色背景+モード文字・タップで変更可能）
+                  // 色分けラベル表示（色背景+モード文字・タップで色変更可能）
                   GestureDetector(
                     onTap: onChangeColorLabel,
                     child: Container(
