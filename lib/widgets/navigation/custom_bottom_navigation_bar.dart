@@ -209,18 +209,16 @@ class CustomBottomNavigationBar extends StatelessWidget {
                 'タスク追加',
                 style: TextStyle(color: Colors.white),
               ),
-              const SizedBox(height: 4),
-              Text(
-                supabaseService.getCurrentUser() != null 
-                    ? 'アカウントに保存されます'
-                    : 'ローカルに保存されます（ログインして同期）',
-                style: TextStyle(
-                  color: supabaseService.getCurrentUser() != null 
-                      ? const Color(0xFFE85A3B)
-                      : Colors.grey[500],
-                  fontSize: 12,
+              if (supabaseService.getCurrentUser() == null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'ローカルに保存されます（ログインして同期）',
+                  style: TextStyle(
+                    color: Colors.grey[500],
+                    fontSize: 12,
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
                      content: TextField(
@@ -407,17 +405,14 @@ class _CreateMemoBottomSheetState extends State<_CreateMemoBottomSheet> {
                         ),
                       ),
                       const Spacer(),
-                      Text(
-                        widget.supabaseService.getCurrentUser() != null 
-                            ? 'アカウントに保存'
-                            : 'ローカルに保存',
-                        style: TextStyle(
-                          color: widget.supabaseService.getCurrentUser() != null 
-                              ? const Color(0xFFE85A3B)
-                              : Colors.grey[500],
-                          fontSize: 12,
+                      if (widget.supabaseService.getCurrentUser() == null)
+                        Text(
+                          'ローカルに保存',
+                          style: TextStyle(
+                            color: Colors.grey[500],
+                            fontSize: 12,
+                          ),
                         ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 32),
