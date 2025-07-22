@@ -154,7 +154,7 @@ class MemoItemCard extends StatelessWidget {
                       ],
                       // 更新日時
                       Text(
-                        '${updatedAt.month}/${updatedAt.day} ${updatedAt.hour.toString().padLeft(2, '0')}:${updatedAt.minute.toString().padLeft(2, '0')}',
+                        '${updatedAt.year}/${updatedAt.month}/${updatedAt.day} ${updatedAt.hour.toString().padLeft(2, '0')}:${updatedAt.minute.toString().padLeft(2, '0')}',
                         style: TextStyle(
                           color: Colors.grey[600],
                           fontSize: 12,
