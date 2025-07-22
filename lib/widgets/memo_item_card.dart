@@ -45,102 +45,123 @@ class MemoItemCard extends StatelessWidget {
       child: InkWell(
         onTap: isAnimating ? null : onTap, // アニメーション中はタップを無効化
         borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        child: IntrinsicHeight(
+          child: Row(
             children: [
-              Row(
-                children: [
-                  // ピン留めアイコン
-                  if (isPinned) ...[
-                    ShaderMask(
-                      shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
-                      child: const Icon(
-                        Icons.push_pin,
-                        size: 16,
-                        color: Colors.white,
-                      ),
+              // 左側の付箋テープ部分
+              GestureDetector(
+                onTap: onChangeColorLabel,
+                child: Container(
+                  width: 8,
+                  height: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: ColorUtils.isGradientColor(memo['color_tag'] ?? ColorUtils.defaultColorHex)
+                        ? ColorUtils.getGradientFromHex(memo['color_tag'] ?? ColorUtils.defaultColorHex)
+                        : null,
+                    color: ColorUtils.isGradientColor(memo['color_tag'] ?? ColorUtils.defaultColorHex)
+                        ? null
+                        : ColorUtils.getColorFromHex(memo['color_tag'] ?? ColorUtils.defaultColorHex),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      bottomLeft: Radius.circular(12),
                     ),
-                    const SizedBox(width: 8),
-                  ],
-                  // 色分けラベル表示（色背景+モード文字・タップで色変更可能）
-                  GestureDetector(
-                    onTap: onChangeColorLabel,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        gradient: ColorUtils.isGradientColor(memo['color_tag'] ?? ColorUtils.defaultColorHex)
-                            ? ColorUtils.getGradientFromHex(memo['color_tag'] ?? ColorUtils.defaultColorHex)
-                            : null,
-                        color: ColorUtils.isGradientColor(memo['color_tag'] ?? ColorUtils.defaultColorHex)
-                            ? null
-                            : ColorUtils.getColorFromHex(memo['color_tag'] ?? ColorUtils.defaultColorHex),
-                        borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              // メモ本体部分
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          // ピン留めアイコン
+                          if (isPinned) ...[
+                            ShaderMask(
+                              shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
+                              child: const Icon(
+                                Icons.push_pin,
+                                size: 16,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          // モード表示ラベル
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[600]!.withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              memo['mode'] == 'memo' ? 'メモ' : (memo['mode'] == 'calculator' || memo['mode'] == 'rich') ? '計算機' : memo['mode'],
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              memo['title'],
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          // ピン留めボタン
+                          IconButton(
+                            onPressed: onTogglePin,
+                            icon: Icon(
+                              isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                              color: isPinned 
+                                  ? const Color(0xFFE85A3B)
+                                  : Colors.grey[500],
+                              size: 20,
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: onDelete,
+                            icon: Icon(
+                              Icons.delete_outline,
+                              color: Colors.grey[500],
+                              size: 20,
+                            ),
+                          ),
+                        ],
                       ),
-                      child: Text(
-                        memo['mode'] == 'memo' ? 'メモ' : (memo['mode'] == 'calculator' || memo['mode'] == 'rich') ? '計算機' : memo['mode'],
+                      const SizedBox(height: 8),
+                      // メモの内容プレビュー
+                      if (memo['content'] != null && memo['content'].isNotEmpty) ...[
+                        Text(
+                          memo['content'],
+                          style: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 14,
+                            height: 1.4,
+                          ),
+                          maxLines: 2, // メモ詳細を2行まで表示
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      // 更新日時
+                      Text(
+                        '${updatedAt.month}/${updatedAt.day} ${updatedAt.hour.toString().padLeft(2, '0')}:${updatedAt.minute.toString().padLeft(2, '0')}',
                         style: TextStyle(
-                          color: (memo['color_tag'] == '#FFEB3B') ? Colors.black : Colors.white, // 黄色の場合は黒文字
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[600],
+                          fontSize: 12,
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      memo['title'],
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  // ピン留めボタン
-                  IconButton(
-                    onPressed: onTogglePin,
-                    icon: Icon(
-                      isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-                      color: isPinned 
-                          ? const Color(0xFFE85A3B)
-                          : Colors.grey[500],
-                      size: 20,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: onDelete,
-                    icon: Icon(
-                      Icons.delete_outline,
-                      color: Colors.grey[500],
-                      size: 20,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              // メモの内容プレビュー
-              if (memo['content'] != null && memo['content'].isNotEmpty) ...[
-                Text(
-                  memo['content'],
-                  style: TextStyle(
-                    color: Colors.grey[400],
-                    fontSize: 14,
-                    height: 1.4,
-                  ),
-                  maxLines: 2, // メモ詳細を2行まで表示
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
-              ],
-              // 更新日時
-              Text(
-                '${updatedAt.month}/${updatedAt.day} ${updatedAt.hour.toString().padLeft(2, '0')}:${updatedAt.minute.toString().padLeft(2, '0')}',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 12,
                 ),
               ),
             ],

@@ -79,63 +79,84 @@ class MemoBackHeader extends StatelessWidget {
         // タイトル編集エリア
         Container(
           color: const Color(0xFF2B2B2B),
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8), //メモ全体の高さ調整
-          child: Row(
-            children: [
-              // 色分けラベルバッジ（色背景+モード文字）
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  gradient: ColorUtils.isGradientColor(colorHex ?? ColorUtils.defaultColorHex)
-                      ? ColorUtils.getGradientFromHex(colorHex ?? ColorUtils.defaultColorHex)
-                      : null,
-                  color: ColorUtils.isGradientColor(colorHex ?? ColorUtils.defaultColorHex)
-                      ? null
-                      : ColorUtils.getColorFromHex(colorHex ?? ColorUtils.defaultColorHex),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  mode == 'memo' ? 'メモ' : (mode == 'calculator' || mode == 'rich') ? '計算機' : mode,
-                  style: TextStyle(
-                    color: (colorHex == '#FFEB3B') ? Colors.black : Colors.white, // 黄色の場合は黒文字
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+          padding: const EdgeInsets.fromLTRB(22, 0, 12, 10), //メモ全体の高さ調整
+          child: IntrinsicHeight(
+            child: Row(
+              children: [
+                // 左端の小テープ（位置調整）
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Container(
+                    width: 6,
+                    height: 46, // 固定高さで確実にサイズ調整
+                    decoration: BoxDecoration(
+                      gradient: ColorUtils.isGradientColor(colorHex ?? ColorUtils.defaultColorHex)
+                          ? ColorUtils.getGradientFromHex(colorHex ?? ColorUtils.defaultColorHex)
+                          : null,
+                      color: ColorUtils.isGradientColor(colorHex ?? ColorUtils.defaultColorHex)
+                          ? null
+                          : ColorUtils.getColorFromHex(colorHex ?? ColorUtils.defaultColorHex),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              // タイトル編集とメタ情報
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TextField(
-                      controller: titleController,
-                      focusNode: titleFocusNode,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                const SizedBox(width: 8),
+                // タイトル入力とメタ情報
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextField(
+                        controller: titleController,
+                        focusNode: titleFocusNode,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        decoration: const InputDecoration(
+                          hintText: 'タイトルを入力...',
+                          hintStyle: TextStyle(color: Colors.grey, fontSize: 16),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(vertical: 8),
+                          isDense: true,
+                        ),
                       ),
-                      decoration: const InputDecoration(
-                        hintText: 'タイトルを入力...',
-                        hintStyle: TextStyle(color: Colors.grey, fontSize: 16),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(vertical: 8),
-                        isDense: true,
+                      // モードラベルと更新時刻を横並びに
+                      Row(
+                        children: [
+                          // モード表示ラベル
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[600]!.withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              mode == 'memo' ? 'メモ' : (mode == 'calculator' || mode == 'rich') ? '計算機' : mode,
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // 更新時刻
+                          Text(
+                            _getLastUpdatedText(),
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    Text(
-                      _getLastUpdatedText(),
-                      style: TextStyle(
-                        color: Colors.grey[500],
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ],
