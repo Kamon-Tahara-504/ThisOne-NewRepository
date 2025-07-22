@@ -130,7 +130,7 @@ class MemoItemCard extends StatelessWidget {
                     fontSize: 14,
                     height: 1.4,
                   ),
-                  maxLines: 3,
+                  maxLines: 2, // メモ詳細を2行まで表示
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 8),
