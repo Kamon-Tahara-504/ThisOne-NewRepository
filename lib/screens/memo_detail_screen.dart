@@ -42,6 +42,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
   
   // 計算機モード用の状態
   String _calculatorSummary = '';
+  Map<String, dynamic> _summaryData = {};
 
   @override
   void initState() {
@@ -142,10 +143,106 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
     final text = _quillController.document.toPlainText();
     final entries = CalculatorUtils.extractCalculations(text);
     final summary = CalculatorUtils.generateSummary(entries);
+    final summaryData = CalculatorUtils.getSummaryData(entries);
     
     setState(() {
       _calculatorSummary = summary;
+      _summaryData = summaryData;
     });
+  }
+
+  // カード風サマリー表示を作成
+  Widget _buildColoredSummaryText() {
+    // フォールバック: _summaryDataが空の場合は従来の表示
+    if (_summaryData.isEmpty || _calculatorSummary.isEmpty) {
+      return Text(
+        _calculatorSummary,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 15,
+          fontWeight: FontWeight.bold,
+        ),
+        textAlign: TextAlign.center,
+      );
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        // 収入カード
+        _buildSummaryCard(
+          label: '収入',
+          amount: _summaryData['incomeAmount'] ?? '¥0',
+          color: Colors.green,
+          isVisible: _summaryData['hasIncome'] == true,
+        ),
+        // 支出カード
+        _buildSummaryCard(
+          label: '支出',
+          amount: _summaryData['expenseAmount'] ?? '¥0',
+          color: Colors.red,
+          isVisible: _summaryData['hasExpense'] == true,
+        ),
+        // 残高カード
+        _buildSummaryCard(
+          label: '残高',
+          amount: _summaryData['totalAmount'] ?? '¥0',
+          color: (_summaryData['total'] ?? 0) >= 0 ? Colors.blue : Colors.orange,
+          isVisible: true, // 残高は常に表示
+        ),
+      ],
+    );
+  }
+
+  // 個別のサマリーカードを作成
+  Widget _buildSummaryCard({
+    required String label,
+    required String amount,
+    required Color color,
+    required bool isVisible,
+  }) {
+    return Expanded(
+      child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: color.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '$label ',
+              style: TextStyle(
+                color: color,
+                fontSize: 9,
+                fontWeight: FontWeight.w600,
+                height: 1.0,
+              ),
+            ),
+            Flexible(
+              child: Text(
+                amount,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  height: 1.0,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _handleBackPressed() async {
@@ -212,46 +309,20 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
                   child: Column(
                     children: [
                       // 計算機モード: 合計表示 (メモ入力中は非表示)
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                        height: (widget.mode == 'calculator' || widget.mode == 'rich') && 
-                                _calculatorSummary.isNotEmpty && 
-                                !_isMemoFocused ? 68 : 0,
-                        child: (widget.mode == 'calculator' || widget.mode == 'rich') && 
-                               _calculatorSummary.isNotEmpty && 
-                               !_isMemoFocused
-                          ? Container(
-                              width: double.infinity,
-                              margin: const EdgeInsets.all(8), // 外枠との間隔
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    const Color(0xFFE85A3B).withValues(alpha: 0.15),
-                                    const Color(0xFFFFD700).withValues(alpha: 0.15),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: const Color(0xFFE85A3B),
-                                  width: 2,
-                                ),
-                              ),
-                              child: Text(
-                                _calculatorSummary,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            )
-                          : const SizedBox.shrink(),
-                      ),
+                      if ((widget.mode == 'calculator' || widget.mode == 'rich') && 
+                          _calculatorSummary.isNotEmpty && 
+                          !_isMemoFocused)
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                          width: double.infinity,
+                          margin: const EdgeInsets.all(2),
+                          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: _buildColoredSummaryText(),
+                        ),
                       // メモエディター
                       Expanded(
                         child: ClipRRect(

@@ -12,8 +12,8 @@ class CalculatorUtils {
       final line = lines[lineIndex].trim();
       if (line.isEmpty) continue;
       
-      // 数値パターンを検索（+123, -456, 123 形式）
-      final RegExp numberPattern = RegExp(r'([+-]?\d+(?:\.\d+)?)');
+      // 数値パターンを検索（+123, -456 形式のみ、記号必須）
+      final RegExp numberPattern = RegExp(r'([+-]\d+(?:\.\d+)?)');
       final Iterable<RegExpMatch> matches = numberPattern.allMatches(line);
       
       for (final match in matches) {
@@ -91,9 +91,8 @@ class CalculatorUtils {
     }
   }
   
-  // 合計のサマリーテキストを生成
+  // 合計のサマリーテキストを生成（残高なし）
   static String generateSummary(List<CalculatorEntry> entries) {
-    final total = calculateTotal(entries);
     final income = calculateIncome(entries);
     final expense = calculateExpense(entries);
     
@@ -108,10 +107,26 @@ class CalculatorUtils {
       buffer.write('支出: ${formatAmount(expense)}');
     }
     
-    if (buffer.isNotEmpty) buffer.write(' | ');
-    buffer.write('残高: ${formatAmount(total)}');
-    
     return buffer.toString();
+  }
+  
+  // 収入・支出・残高の情報を取得（カード表示用）
+  static Map<String, dynamic> getSummaryData(List<CalculatorEntry> entries) {
+    final income = calculateIncome(entries);
+    final expense = calculateExpense(entries);
+    final total = calculateTotal(entries);
+    
+    return {
+      'income': income,
+      'expense': expense,
+      'total': total,
+      'hasIncome': income > 0,
+      'hasExpense': expense < 0,
+      'hasTotal': total != 0,
+      'incomeAmount': formatAmount(income),
+      'expenseAmount': formatAmount(expense),
+      'totalAmount': formatAmount(total),
+    };
   }
 }
 
