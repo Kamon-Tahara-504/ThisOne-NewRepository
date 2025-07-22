@@ -204,7 +204,8 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
     return Expanded(
       child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 2),
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+       
+        padding: const EdgeInsets.only(top: 8, bottom: 8, left: 4, right: 4),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(6),
@@ -213,31 +214,35 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
             width: 1,
           ),
         ),
-        child: Row(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              '$label ',
-              style: TextStyle(
-                color: color,
-                fontSize: 9,
-                fontWeight: FontWeight.w600,
-                height: 1.0,
-              ),
-            ),
-            Flexible(
+            Transform.translate(
+              offset: const Offset(0, -2), // ラベルを2px上に移動
               child: Text(
-                amount,
+                label,
                 style: TextStyle(
                   color: color,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 10, //収入などの文字サイズ
+                  fontWeight: FontWeight.w600,
                   height: 1.0,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
               ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              amount,
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                height: 1.0,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
