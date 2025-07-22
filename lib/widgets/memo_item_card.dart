@@ -9,7 +9,7 @@ class MemoItemCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onTogglePin;
   final VoidCallback onDelete;
-  final VoidCallback onChangeColorLabel;
+  final VoidCallback onEditMemo; // 編集ボタン用のコールバック
 
   const MemoItemCard({
     super.key,
@@ -18,7 +18,7 @@ class MemoItemCard extends StatelessWidget {
     required this.onTap,
     required this.onTogglePin,
     required this.onDelete,
-    required this.onChangeColorLabel,
+    required this.onEditMemo, // 編集コールバックを必須に
     this.popAnimation,
   });
 
@@ -49,22 +49,19 @@ class MemoItemCard extends StatelessWidget {
           child: Row(
             children: [
               // 左側の付箋テープ部分
-              GestureDetector(
-                onTap: onChangeColorLabel,
-                child: Container(
-                  width: 8,
-                  height: double.infinity,
-                  decoration: BoxDecoration(
-                    gradient: ColorUtils.isGradientColor(memo['color_tag'] ?? ColorUtils.defaultColorHex)
-                        ? ColorUtils.getGradientFromHex(memo['color_tag'] ?? ColorUtils.defaultColorHex)
-                        : null,
-                    color: ColorUtils.isGradientColor(memo['color_tag'] ?? ColorUtils.defaultColorHex)
-                        ? null
-                        : ColorUtils.getColorFromHex(memo['color_tag'] ?? ColorUtils.defaultColorHex),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(12),
-                      bottomLeft: Radius.circular(12),
-                    ),
+              Container(
+                width: 8,
+                height: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: ColorUtils.isGradientColor(memo['color_tag'] ?? ColorUtils.defaultColorHex)
+                      ? ColorUtils.getGradientFromHex(memo['color_tag'] ?? ColorUtils.defaultColorHex)
+                      : null,
+                  color: ColorUtils.isGradientColor(memo['color_tag'] ?? ColorUtils.defaultColorHex)
+                      ? null
+                      : ColorUtils.getColorFromHex(memo['color_tag'] ?? ColorUtils.defaultColorHex),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    bottomLeft: Radius.circular(12),
                   ),
                 ),
               ),
@@ -124,6 +121,15 @@ class MemoItemCard extends StatelessWidget {
                               color: isPinned 
                                   ? const Color(0xFFE85A3B)
                                   : Colors.grey[500],
+                              size: 20,
+                            ),
+                          ),
+                          // 編集ボタン
+                          IconButton(
+                            onPressed: onEditMemo,
+                            icon: Icon(
+                              Icons.edit_outlined,
+                              color: Colors.grey[500],
                               size: 20,
                             ),
                           ),
