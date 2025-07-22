@@ -28,9 +28,9 @@ class MemoFilterHeader extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              const Color(0xFF2B2B2B).withOpacity(0.95),
-              const Color(0xFF2B2B2B).withOpacity(0.8),
-              const Color(0xFF2B2B2B).withOpacity(0.0),
+              const Color(0xFF2B2B2B).withValues(alpha: 0.95),
+              const Color(0xFF2B2B2B).withValues(alpha: 0.8),
+              const Color(0xFF2B2B2B).withValues(alpha: 0.0),
             ],
             stops: const [0.0, 0.7, 1.0],
           ),
