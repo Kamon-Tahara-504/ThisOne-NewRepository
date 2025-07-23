@@ -109,6 +109,9 @@ class _MainScreenState extends State<MainScreen> {
   // PageViewController を追加
   late PageController _pageController;
 
+  // GlobalKey for ScheduleScreen
+  final GlobalKey _scheduleScreenKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
@@ -276,7 +279,7 @@ class _MainScreenState extends State<MainScreen> {
               },
             ),
       // 1: カレンダー画面
-      const ScheduleScreen(),
+      ScheduleScreen(key: _scheduleScreenKey),
       // 2: メモ画面
       _isLoadingMemos 
           ? const Center(
@@ -345,6 +348,15 @@ class _MainScreenState extends State<MainScreen> {
         supabaseService: _supabaseService,
         onTaskAdded: (title) => _addTask(title),
         onMemoCreated: (title, mode, colorHex) => _createMemo(title, mode, colorHex),
+        onScheduleCreate: () {
+          // スケジュール画面がアクティブな場合、スケジュール作成ボトムシートを開く
+          if (_currentIndex == 1) {
+            final scheduleScreenState = _scheduleScreenKey.currentState as dynamic;
+            if (scheduleScreenState != null) {
+              scheduleScreenState.addScheduleFromExternal();
+            }
+          }
+        },
       ),
     );
   }

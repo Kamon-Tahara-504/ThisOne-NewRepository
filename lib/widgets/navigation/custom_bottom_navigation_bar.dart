@@ -10,6 +10,7 @@ class CustomBottomNavigationBar extends StatelessWidget {
   final SupabaseService supabaseService;
   final Function(String) onTaskAdded;
   final Function(String, String, String) onMemoCreated;
+  final VoidCallback? onScheduleCreate; // スケジュール作成コールバックを追加
 
   const CustomBottomNavigationBar({
     super.key,
@@ -19,6 +20,7 @@ class CustomBottomNavigationBar extends StatelessWidget {
     required this.supabaseService,
     required this.onTaskAdded,
     required this.onMemoCreated,
+    this.onScheduleCreate, // スケジュール作成コールバックを追加
   });
 
   @override
@@ -269,10 +271,10 @@ class CustomBottomNavigationBar extends StatelessWidget {
   }
 
   void _showCreateScheduleDialog(BuildContext context) {
-    // スケジュール作成のシンプルな実装
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('スケジュール作成機能（開発中）')),
-    );
+    // スケジュール作成ボトムシートを呼び出し
+    if (onScheduleCreate != null) {
+      onScheduleCreate!();
+    }
   }
 
   void _showCreateMemoDialog(BuildContext context) {
