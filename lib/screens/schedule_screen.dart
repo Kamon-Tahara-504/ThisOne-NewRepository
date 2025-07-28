@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import '../gradients.dart';
+import '../utils/color_utils.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
@@ -56,6 +57,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
+      enableDrag: true,
+      isDismissible: true,
+      useSafeArea: true,
       builder: (context) => _AddScheduleBottomSheet(
         selectedDate: _selectedDate,
         onAdd: _addSchedule,
@@ -240,7 +244,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                               final endTime = schedule['endTime'] as TimeOfDay?;
                               final colorHex = schedule['colorHex'] ?? '#E85A3B';
                               final scheduleColor = Color(int.parse(colorHex.substring(1), radix: 16) + 0xFF000000);
-                              final notificationMode = schedule['notificationMode'] ?? 'none';
+                              final isNotificationEnabled = schedule['notificationMode'] != 'none' && schedule['notificationMode'] != null;
                               
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 8),
@@ -298,15 +302,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                         ),
                                       ),
                                       // 通知アイコン
-                                      if (notificationMode == 'reminder')
+                                      if (isNotificationEnabled)
                                         Icon(
                                           Icons.notifications,
-                                          color: Colors.grey[500],
-                                          size: 16,
-                                        ),
-                                      if (notificationMode == 'alarm')
-                                        Icon(
-                                          Icons.alarm,
                                           color: Colors.grey[500],
                                           size: 16,
                                         ),
@@ -363,24 +361,13 @@ class _AddScheduleBottomSheetState extends State<_AddScheduleBottomSheet> {
   TimeOfDay _startTime = TimeOfDay.now();
   TimeOfDay _endTime = TimeOfDay(hour: TimeOfDay.now().hour + 1, minute: TimeOfDay.now().minute);
   bool _isAllDay = false;
-  String _selectedColorHex = '#9E9E9E'; // デフォルトはグレー（文字色カラーパレットと同じ）
-  String _notificationMode = 'reminder'; // 'reminder' or 'alarm'
-  int _reminderMinutes = 15; // デフォルト15分前
-  bool _isAlarmEnabled = false;
+  String _selectedColorHex = '#9E9E9E';
+  bool _isNotificationEnabled = false;
+  int _reminderMinutes = 15;
+  bool _showDetailedSettings = false;
+  late PageController _pageController;
 
-  // 色選択オプション（画像の色ラベルと同じ色と並び順）
-  final List<Map<String, dynamic>> _colorOptions = [
-    {'name': '白', 'hex': '#FFFFFF', 'color': Colors.white},
-    {'name': 'グレー', 'hex': '#9E9E9E', 'color': Colors.grey},
-    {'name': '濃い緑', 'hex': '#2E7D32', 'color': const Color(0xFF2E7D32)},
-    {'name': '黄', 'hex': '#FFEB3B', 'color': Colors.yellow},
-    {'name': 'オレンジ', 'hex': '#FF9500', 'color': const Color(0xFFE85A3B)},
-    {'name': 'シアン', 'hex': '#00BCD4', 'color': Colors.cyan},
-    {'name': '濃い青', 'hex': '#3F51B5', 'color': Colors.indigo},
-    {'name': '紫', 'hex': '#9C27B0', 'color': Colors.purple},
-    {'name': 'ピンク', 'hex': '#E91E63', 'color': Colors.pink},
-    {'name': '赤', 'hex': '#F44336', 'color': Colors.red},
-  ];
+
 
   // 通知時間オプション
   final List<Map<String, dynamic>> _reminderOptions = [
@@ -392,9 +379,16 @@ class _AddScheduleBottomSheetState extends State<_AddScheduleBottomSheet> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: 0);
+  }
+
+  @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -409,28 +403,28 @@ class _AddScheduleBottomSheetState extends State<_AddScheduleBottomSheet> {
         'endTime': _endTime,
         'isAllDay': _isAllDay,
         'colorHex': _selectedColorHex,
-        'notificationMode': _notificationMode,
-        'reminderMinutes': _reminderMinutes,
-        'isAlarmEnabled': _isAlarmEnabled,
+        'notificationMode': _isNotificationEnabled ? 'reminder' : 'none',
+        'reminderMinutes': _isNotificationEnabled ? _reminderMinutes : 0,
+        'isAlarmEnabled': false,
         'createdAt': DateTime.now(),
       });
       Navigator.pop(context);
     }
   }
 
-  Color _getColorFromHex(String hex) {
-    return Color(int.parse(hex.substring(1), radix: 16) + 0xFF000000);
-  }
-
   Widget _buildColorOption(Map<String, dynamic> colorOption) {
     final isSelected = _selectedColorHex == colorOption['hex'];
+    final colorHex = colorOption['hex'] as String;
+    final isGradient = colorOption['isGradient'] as bool;
+    
     return GestureDetector(
-      onTap: () => setState(() => _selectedColorHex = colorOption['hex']),
+      onTap: () => setState(() => _selectedColorHex = colorHex),
       child: Container(
-        width: 40,
-        height: 40,
+        width: 32,
+        height: 32,
         decoration: BoxDecoration(
-          color: colorOption['color'],
+          gradient: isGradient ? ColorUtils.getGradientFromHex(colorHex) : null,
+          color: isGradient ? null : ColorUtils.getColorFromHex(colorHex),
           shape: BoxShape.circle,
           border: Border.all(
             color: isSelected ? Colors.white : Colors.transparent,
@@ -448,7 +442,7 @@ class _AddScheduleBottomSheetState extends State<_AddScheduleBottomSheet> {
             ? const Icon(
                 Icons.check,
                 color: Colors.white,
-                size: 20,
+                size: 14,
               )
             : null,
       ),
@@ -458,7 +452,7 @@ class _AddScheduleBottomSheetState extends State<_AddScheduleBottomSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.85,
+      height: MediaQuery.of(context).size.height * 0.65,
       decoration: const BoxDecoration(
         color: Color(0xFF2B2B2B),
         borderRadius: BorderRadius.only(
@@ -480,95 +474,154 @@ class _AddScheduleBottomSheetState extends State<_AddScheduleBottomSheet> {
           ),
           
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // タイトル
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.event_note,
-                        color: Color(0xFFE85A3B),
-                        size: 28,
-                      ),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'スケジュール作成',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+            child: PageView(
+              controller: _pageController,
+              physics: const PageScrollPhysics(),
+              onPageChanged: (index) {
+                setState(() {
+                  _showDetailedSettings = index == 1;
+                });
+              },
+              children: [
+                SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: _buildBasicSettings(),
+                ),
+                SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: _buildDetailedSettings(),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 第1段階：基本設定
+  Widget _buildBasicSettings() {
+    return Column(
+      key: const ValueKey('basic'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 日付表示
+        Text(
+          '${widget.selectedDate.year}年${widget.selectedDate.month}月${widget.selectedDate.day}日',
+          style: TextStyle(
+            color: Colors.grey[400],
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 8),
+        // タイトル
+        Row(
+          children: [
+            ShaderMask(
+              shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
+              child: const Icon(
+                Icons.event_note,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'スケジュール作成',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        
+        // タイトル入力
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[700]!, width: 1),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'タイトル',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${widget.selectedDate.year}年${widget.selectedDate.month}月${widget.selectedDate.day}日',
-                    style: TextStyle(
-                      color: Colors.grey[400],
-                      fontSize: 16,
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3A3A3A),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[600]!),
+                  ),
+                  child: TextField(
+                    controller: _titleController,
+                    style: const TextStyle(color: Colors.white, fontSize: 16),
+                    decoration: const InputDecoration(
+                      hintText: 'スケジュールのタイトルを入力...',
+                      hintStyle: TextStyle(color: Colors.grey),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.all(16),
                     ),
                   ),
-                  const SizedBox(height: 32),
-                  
-                  // タイトル入力
-                  const Text(
-                    'タイトル',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF3A3A3A),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[600]!),
-                    ),
-                    child: TextField(
-                      controller: _titleController,
-                      style: const TextStyle(color: Colors.white, fontSize: 16),
-                      decoration: const InputDecoration(
-                        hintText: 'スケジュールのタイトルを入力...',
-                        hintStyle: TextStyle(color: Colors.grey),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.all(16),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        
+        // 時間設定
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[700]!, width: 1),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 終日設定
+                Row(
+                  children: [
+                    const Text(
+                      '終日',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // 終日設定
-                  Row(
-                    children: [
-                      const Text(
-                        '終日',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const Spacer(),
-                      Switch(
-                        value: _isAllDay,
-                        onChanged: (value) => setState(() => _isAllDay = value),
-                        activeColor: const Color(0xFFE85A3B),
-                        inactiveThumbColor: Colors.grey[400],
-                        inactiveTrackColor: Colors.grey[700],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // 時間設定（終日でない場合）
-                  if (!_isAllDay) ...[
-                    Row(
+                    const SizedBox(width: 12),
+                    Switch(
+                      value: _isAllDay,
+                      onChanged: (value) => setState(() => _isAllDay = value),
+                      activeColor: const Color(0xFFE85A3B),
+                      inactiveThumbColor: Colors.grey[400],
+                      inactiveTrackColor: Colors.grey[700],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                
+                // 時間設定
+                AnimatedOpacity(
+                  opacity: _isAllDay ? 0.3 : 1.0,
+                  duration: const Duration(milliseconds: 200),
+                  child: IgnorePointer(
+                    ignoring: _isAllDay,
+                    child: Row(
                       children: [
                         Expanded(
                           child: Column(
@@ -578,11 +631,11 @@ class _AddScheduleBottomSheetState extends State<_AddScheduleBottomSheet> {
                                 '開始時間',
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 6),
                               GestureDetector(
                                 onTap: () async {
                                   final time = await showTimePicker(
@@ -594,19 +647,20 @@ class _AddScheduleBottomSheetState extends State<_AddScheduleBottomSheet> {
                                   }
                                 },
                                 child: Container(
-                                  padding: const EdgeInsets.all(16),
+                                  padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
                                     color: const Color(0xFF3A3A3A),
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(8),
                                     border: Border.all(color: Colors.grey[600]!),
                                   ),
                                   child: Row(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.access_time, color: Colors.grey[400]),
+                                      Icon(Icons.access_time, color: Colors.grey[400], size: 16),
                                       const SizedBox(width: 8),
                                       Text(
                                         '${_startTime.hour.toString().padLeft(2, '0')}:${_startTime.minute.toString().padLeft(2, '0')}',
-                                        style: const TextStyle(color: Colors.white, fontSize: 16),
+                                        style: const TextStyle(color: Colors.white, fontSize: 14),
                                       ),
                                     ],
                                   ),
@@ -624,11 +678,11 @@ class _AddScheduleBottomSheetState extends State<_AddScheduleBottomSheet> {
                                 '終了時間',
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 6),
                               GestureDetector(
                                 onTap: () async {
                                   final time = await showTimePicker(
@@ -640,19 +694,20 @@ class _AddScheduleBottomSheetState extends State<_AddScheduleBottomSheet> {
                                   }
                                 },
                                 child: Container(
-                                  padding: const EdgeInsets.all(16),
+                                  padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
                                     color: const Color(0xFF3A3A3A),
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(8),
                                     border: Border.all(color: Colors.grey[600]!),
                                   ),
                                   child: Row(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.access_time, color: Colors.grey[400]),
+                                      Icon(Icons.access_time, color: Colors.grey[400], size: 16),
                                       const SizedBox(width: 8),
                                       Text(
                                         '${_endTime.hour.toString().padLeft(2, '0')}:${_endTime.minute.toString().padLeft(2, '0')}',
-                                        style: const TextStyle(color: Colors.white, fontSize: 16),
+                                        style: const TextStyle(color: Colors.white, fontSize: 14),
                                       ),
                                     ],
                                   ),
@@ -663,232 +718,362 @@ class _AddScheduleBottomSheetState extends State<_AddScheduleBottomSheet> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
-                  ],
-                  
-                  // 色設定
-                  const Text(
-                    '色ラベル',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        
+        // 色設定
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[700]!, width: 1),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '色ラベル',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // カラーパレット（横スクロール一列）
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 8), // 左端の余白
+                      for (int i = 0; i < ColorUtils.colorLabelPalette.length; i++) ...[
+                        _buildColorOption(ColorUtils.colorLabelPalette[i]),
+                        if (i < ColorUtils.colorLabelPalette.length - 1)
+                          const SizedBox(width: 12), // アイテム間の間隔
+                      ],
+                      const SizedBox(width: 8), // 右端の余白
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        
+        const SizedBox(height: 12),
+        
+        // ボタン
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3A3A3A),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[600]!),
+                ),
+                child: TextButton(
+                  onPressed: () {
+                    _pageController.animateToPage(
+                      1,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                  },
+                  child: const Text(
+                    '詳細設定',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  // カラーパレット（2行5列のグリッド）
-                  Column(
-                    children: [
-                      for (int row = 0; row < 2; row++)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              for (int col = 0; col < 5; col++)
-                                if (row * 5 + col < _colorOptions.length)
-                                  _buildColorOption(_colorOptions[row * 5 + col]),
-                            ],
-                          ),
-                        ),
-                    ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              flex: 2,
+              child: Container(
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: createHorizontalOrangeYellowGradient(),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ElevatedButton(
+                  onPressed: _addSchedule,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  const SizedBox(height: 24),
-                  
-                  // 通知モード設定
-                  const Text(
-                    '通知設定',
+                  child: const Text(
+                    '作成',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => _notificationMode = 'reminder'),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: BoxDecoration(
-                              gradient: _notificationMode == 'reminder' 
-                                  ? createHorizontalOrangeYellowGradient()
-                                  : null,
-                              color: _notificationMode == 'reminder' 
-                                  ? null 
-                                  : const Color(0xFF3A3A3A),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: _notificationMode == 'reminder' 
-                                    ? Colors.transparent 
-                                    : Colors.grey[600]!,
-                                width: 1,
-                              ),
-                            ),
-                            child: const Column(
-                              children: [
-                                Icon(
-                                  Icons.notifications,
-                                  color: Colors.white,
-                                  size: 24,
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  '時間前通知',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => _notificationMode = 'alarm'),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: BoxDecoration(
-                              gradient: _notificationMode == 'alarm' 
-                                  ? createHorizontalOrangeYellowGradient()
-                                  : null,
-                              color: _notificationMode == 'alarm' 
-                                  ? null 
-                                  : const Color(0xFF3A3A3A),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: _notificationMode == 'alarm' 
-                                    ? Colors.transparent 
-                                    : Colors.grey[600]!,
-                                width: 1,
-                              ),
-                            ),
-                            child: const Column(
-                              children: [
-                                Icon(
-                                  Icons.alarm,
-                                  color: Colors.white,
-                                  size: 24,
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  'アラーム',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // 第2段階：詳細設定
+  Widget _buildDetailedSettings() {
+    return Column(
+      key: const ValueKey('detailed'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 日付表示
+        Text(
+          '${widget.selectedDate.year}年${widget.selectedDate.month}月${widget.selectedDate.day}日',
+          style: TextStyle(
+            color: Colors.grey[400],
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 8),
+        // タイトル
+        Row(
+          children: [
+            ShaderMask(
+              shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
+              child: const Icon(
+                Icons.settings,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              '詳細設定',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        
+        // 説明入力
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[700]!, width: 1),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '説明',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
-                  const SizedBox(height: 16),
-                  
-                  // 通知設定詳細
-                  if (_notificationMode == 'reminder') ...[
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3A3A3A),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[600]!),
+                  ),
+                  child: TextField(
+                    controller: _descriptionController,
+                    style: const TextStyle(color: Colors.white, fontSize: 16),
+                    maxLines: 2,
+                    decoration: const InputDecoration(
+                      hintText: '詳細な説明を入力...',
+                      hintStyle: TextStyle(color: Colors.grey),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.all(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        
+        // 通知設定
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[700]!, width: 1),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 通知スイッチ
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.notifications_outlined,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
                     const Text(
-                      '通知タイミング',
+                      '通知を有効にする',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 14,
+                        fontSize: 16,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _reminderOptions.map((option) {
-                        final isSelected = _reminderMinutes == option['minutes'];
-                        return GestureDetector(
-                          onTap: () => setState(() => _reminderMinutes = option['minutes']),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: isSelected ? const Color(0xFFE85A3B) : const Color(0xFF3A3A3A),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: isSelected ? Colors.transparent : Colors.grey[600]!,
-                              ),
-                            ),
-                            child: Text(
-                              option['label'],
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
+                    const SizedBox(width: 12),
+                    Switch(
+                      value: _isNotificationEnabled,
+                      onChanged: (value) => setState(() => _isNotificationEnabled = value),
+                      activeColor: const Color(0xFFE85A3B),
+                      inactiveThumbColor: Colors.grey[400],
+                      inactiveTrackColor: Colors.grey[700],
                     ),
-                  ] else ...[
-                    Row(
+                  ],
+                ),
+                
+                // 通知設定詳細
+                AnimatedOpacity(
+                  opacity: _isNotificationEnabled ? 1.0 : 0.3,
+                  duration: const Duration(milliseconds: 200),
+                  child: IgnorePointer(
+                    ignoring: !_isNotificationEnabled,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        const SizedBox(height: 12),
                         const Text(
-                          'アラーム音を有効にする',
+                          '通知タイミング',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                        const Spacer(),
-                        Switch(
-                          value: _isAlarmEnabled,
-                          onChanged: (value) => setState(() => _isAlarmEnabled = value),
-                          activeColor: const Color(0xFFE85A3B),
-                          inactiveThumbColor: Colors.grey[400],
-                          inactiveTrackColor: Colors.grey[700],
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _reminderOptions.map((option) {
+                            final isSelected = _reminderMinutes == option['minutes'];
+                            return GestureDetector(
+                              onTap: () => setState(() => _reminderMinutes = option['minutes']),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: isSelected ? const Color(0xFFE85A3B) : const Color(0xFF3A3A3A),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: isSelected ? Colors.transparent : Colors.grey[600]!,
+                                  ),
+                                ),
+                                child: Text(
+                                  option['label'],
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
                         ),
                       ],
                     ),
-                  ],
-                  const SizedBox(height: 32),
-                  
-                  // 作成ボタン
-                  Container(
-                    width: double.infinity,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      gradient: createHorizontalOrangeYellowGradient(),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: ElevatedButton(
-                      onPressed: _addSchedule,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      child: const Text(
-                        'スケジュールを作成',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+        
+        const SizedBox(height: 12),
+        
+        // ボタン
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3A3A3A),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[600]!),
+                ),
+                child: TextButton(
+                  onPressed: () {
+                    _pageController.animateToPage(
+                      0,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                  },
+                  child: const Text(
+                    '戻る',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              flex: 2,
+              child: Container(
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: createHorizontalOrangeYellowGradient(),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ElevatedButton(
+                  onPressed: _addSchedule,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'スケジュールを作成',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 } 
