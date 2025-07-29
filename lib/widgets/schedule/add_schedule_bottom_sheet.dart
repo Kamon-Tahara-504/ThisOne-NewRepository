@@ -28,6 +28,9 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
   int _reminderMinutes = 15;
   bool _showDetailedSettings = false;
   late PageController _pageController;
+  bool _isCustomReminder = false;
+  int _customValue = 15;
+  String _customUnit = 'minutes'; // 'minutes', 'hours', 'days'
 
   // 通知時間オプション
   final List<Map<String, dynamic>> _reminderOptions = [
@@ -36,6 +39,7 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
     {'label': '30分前', 'minutes': 30},
     {'label': '1時間前', 'minutes': 60},
     {'label': '1日前', 'minutes': 1440},
+    {'label': 'カスタム', 'minutes': -1}, // -1はカスタムの識別子
   ];
 
   @override
@@ -52,8 +56,49 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
     super.dispose();
   }
 
+  // カスタム時間を分単位で計算
+  int _getCustomReminderMinutes() {
+    switch (_customUnit) {
+      case 'minutes':
+        return _customValue;
+      case 'hours':
+        return _customValue * 60;
+      case 'days':
+        return _customValue * 1440;
+      default:
+        return _customValue;
+    }
+  }
+
+  // カスタム設定ダイアログを表示
+  void _showCustomReminderDialog() async {
+    int tempCustomValue = _customValue;
+    String tempCustomUnit = _customUnit;
+    
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => _CustomReminderDialog(
+        initialValue: _customValue,
+        initialUnit: _customUnit,
+      ),
+    );
+    
+    if (result != null) {
+      setState(() {
+        _customValue = result['value'];
+        _customUnit = result['unit'];
+        _isCustomReminder = true;
+        _reminderMinutes = _getCustomReminderMinutes();
+      });
+    }
+  }
+
   void _addSchedule() {
     if (_titleController.text.trim().isNotEmpty) {
+      final finalReminderMinutes = _isCustomReminder 
+          ? _getCustomReminderMinutes()
+          : _reminderMinutes;
+          
       widget.onAdd({
         'id': DateTime.now().millisecondsSinceEpoch,
         'title': _titleController.text.trim(),
@@ -64,7 +109,7 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
         'isAllDay': _isAllDay,
         'colorHex': _selectedColorHex,
         'notificationMode': _isNotificationEnabled ? 'reminder' : 'none',
-        'reminderMinutes': _isNotificationEnabled ? _reminderMinutes : 0,
+        'reminderMinutes': _isNotificationEnabled ? finalReminderMinutes : 0,
         'isAlarmEnabled': false,
         'createdAt': DateTime.now(),
       });
@@ -646,9 +691,22 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
                           spacing: 8,
                           runSpacing: 8,
                           children: _reminderOptions.map((option) {
-                            final isSelected = _reminderMinutes == option['minutes'];
+                            final isCustomOption = option['minutes'] == -1;
+                            final isSelected = isCustomOption 
+                                ? _isCustomReminder 
+                                : _reminderMinutes == option['minutes'] && !_isCustomReminder;
+                            
                             return GestureDetector(
-                              onTap: () => setState(() => _reminderMinutes = option['minutes']),
+                              onTap: () {
+                                if (isCustomOption) {
+                                  _showCustomReminderDialog();
+                                } else {
+                                  setState(() {
+                                    _isCustomReminder = false;
+                                    _reminderMinutes = option['minutes'];
+                                  });
+                                }
+                              },
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 decoration: BoxDecoration(
@@ -659,7 +717,9 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
                                   ),
                                 ),
                                 child: Text(
-                                  option['label'],
+                                  isCustomOption && _isCustomReminder 
+                                      ? 'カスタム (${_customValue}${_customUnit == 'minutes' ? '分' : _customUnit == 'hours' ? '時間' : '日'}前)'
+                                      : option['label'],
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 12,
@@ -740,6 +800,151 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
               ),
             ),
           ],
+        ),
+      ],
+    );
+  }
+}
+
+// カスタム通知設定用の独立ダイアログ
+class _CustomReminderDialog extends StatefulWidget {
+  final int initialValue;
+  final String initialUnit;
+
+  const _CustomReminderDialog({
+    required this.initialValue,
+    required this.initialUnit,
+  });
+
+  @override
+  State<_CustomReminderDialog> createState() => _CustomReminderDialogState();
+}
+
+class _CustomReminderDialogState extends State<_CustomReminderDialog> {
+  late TextEditingController _controller;
+  late int _value;
+  late String _unit;
+
+  @override
+  void initState() {
+    super.initState();
+    _value = widget.initialValue;
+    _unit = widget.initialUnit;
+    _controller = TextEditingController(text: _value.toString());
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: const Color(0xFF3A3A3A),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      title: const Text(
+        'カスタム通知設定',
+        style: TextStyle(color: Colors.white, fontSize: 18),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: TextField(
+                  controller: _controller,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: const Color(0xFF2B2B2B),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey[600]!),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey[600]!),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFFE85A3B)),
+                    ),
+                  ),
+                  keyboardType: TextInputType.number,
+                  onChanged: (value) {
+                    final intValue = int.tryParse(value);
+                    if (intValue != null && intValue > 0) {
+                      _value = intValue;
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 3,
+                child: DropdownButtonFormField<String>(
+                  value: _unit,
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: const Color(0xFF2B2B2B),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey[600]!),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey[600]!),
+                    ),
+                  ),
+                  dropdownColor: const Color(0xFF3A3A3A),
+                  style: const TextStyle(color: Colors.white),
+                  items: const [
+                    DropdownMenuItem(value: 'minutes', child: Text('分前')),
+                    DropdownMenuItem(value: 'hours', child: Text('時間前')),
+                    DropdownMenuItem(value: 'days', child: Text('日前')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() {
+                        _unit = value;
+                      });
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            'キャンセル',
+            style: TextStyle(color: Colors.grey[400]),
+          ),
+        ),
+        Container(
+          decoration: BoxDecoration(
+            gradient: createHorizontalOrangeYellowGradient(),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: TextButton(
+            onPressed: () {
+              Navigator.pop(context, {
+                'value': _value,
+                'unit': _unit,
+              });
+            },
+            child: const Text(
+              '設定',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
         ),
       ],
     );
