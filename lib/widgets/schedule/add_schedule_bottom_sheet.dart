@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../../gradients.dart';
 import '../../utils/color_utils.dart';
 
@@ -26,7 +25,6 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
   String _selectedColorHex = '#9E9E9E';
   bool _isNotificationEnabled = false;
   int _reminderMinutes = 15;
-  bool _showDetailedSettings = false;
   late PageController _pageController;
   bool _isCustomReminder = false;
   int _customValue = 15;
@@ -72,9 +70,6 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
 
   // カスタム設定ダイアログを表示
   void _showCustomReminderDialog() async {
-    int tempCustomValue = _customValue;
-    String tempCustomUnit = _customUnit;
-    
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) => _CustomReminderDialog(
@@ -189,9 +184,7 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
                   controller: _pageController,
                   physics: const PageScrollPhysics(),
                   onPageChanged: (index) {
-                    setState(() {
-                      _showDetailedSettings = index == 1;
-                    });
+                    // ページ変更時の処理（必要に応じて追加）
                   },
                   children: [
                     SingleChildScrollView(
@@ -321,7 +314,7 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
                     Switch(
                       value: _isAllDay,
                       onChanged: (value) => setState(() => _isAllDay = value),
-                      activeColor: const Color(0xFFE85A3B),
+                      activeThumbColor: const Color(0xFFE85A3B),
                       inactiveThumbColor: Colors.grey[400],
                       inactiveTrackColor: Colors.grey[700],
                     ),
@@ -661,7 +654,7 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
                     Switch(
                       value: _isNotificationEnabled,
                       onChanged: (value) => setState(() => _isNotificationEnabled = value),
-                      activeColor: const Color(0xFFE85A3B),
+                      activeThumbColor: const Color(0xFFE85A3B),
                       inactiveThumbColor: Colors.grey[400],
                       inactiveTrackColor: Colors.grey[700],
                     ),
@@ -718,7 +711,7 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
                                 ),
                                 child: Text(
                                   isCustomOption && _isCustomReminder 
-                                      ? 'カスタム (${_customValue}${_customUnit == 'minutes' ? '分' : _customUnit == 'hours' ? '時間' : '日'}前)'
+                                      ? 'カスタム ($_customValue${_customUnit == 'minutes' ? '分' : _customUnit == 'hours' ? '時間' : '日'}前)'
                                       : option['label'],
                                   style: const TextStyle(
                                     color: Colors.white,

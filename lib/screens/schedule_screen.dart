@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import '../gradients.dart';
-import '../utils/color_utils.dart';
 import '../widgets/schedule/add_schedule_bottom_sheet.dart';
 
 class ScheduleScreen extends StatefulWidget {
@@ -123,13 +122,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
-                  // イベントマーカー
-                  markerDecoration: const BoxDecoration(
-                    color: Color(0xFFFFD700),
-                    shape: BoxShape.circle,
-                  ),
-                  markersMaxCount: 3,
-                  markerSize: 6,
+                                  // イベントマーカー（カスタム数値表示を使用）
+                markersMaxCount: 0, // デフォルトマーカーを無効化
+                markerSize: 0, // デフォルトマーカーサイズを0に
                 ),
                 headerStyle: HeaderStyle(
                   formatButtonVisible: true,
@@ -176,6 +171,34 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                         ),
                       ),
                     );
+                  },
+                  markerBuilder: (context, day, events) {
+                    final eventCount = events.length;
+                    if (eventCount > 0) {
+                      return Positioned(
+                        right: 1,
+                        bottom: 1,
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            color: Colors.green,
+                            shape: BoxShape.circle,
+                          ),
+                          width: 18,
+                          height: 18,
+                          child: Center(
+                            child: Text(
+                              eventCount > 99 ? '99+' : eventCount.toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                    return null;
                   },
                 ),
                 onDaySelected: (selectedDay, focusedDay) {
