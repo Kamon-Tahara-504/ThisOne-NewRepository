@@ -1,7 +1,9 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:convert';
-import '../supabase_config.dart';
+
+// Supabaseクライアントを使用
+final supabase = Supabase.instance.client;
 
 class SupabaseService {
   
@@ -506,5 +508,201 @@ class SupabaseService {
         .delete()
         .eq('id', memoId)
         .eq('user_id', user.id);
+  }
+
+  // スケジュール専用メソッド
+
+  /// ユーザーのスケジュールを全て取得
+  Future<List<Map<String, dynamic>>> getUserSchedules() async {
+    final user = getCurrentUser();
+    if (user == null) return [];
+
+    try {
+      final response = await supabase
+          .from('schedules')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('schedule_date', ascending: true)
+          .order('start_time', ascending: true);
+      
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      debugPrint('スケジュール取得エラー: $e');
+      return [];
+    }
+  }
+
+  /// 特定の日付のスケジュールを取得
+  Future<List<Map<String, dynamic>>> getSchedulesForDate(DateTime date) async {
+    final user = getCurrentUser();
+    if (user == null) return [];
+
+    try {
+      final dateString = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      
+      final response = await supabase
+          .from('schedules')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('schedule_date', dateString)
+          .order('start_time', ascending: true);
+      
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      debugPrint('日付別スケジュール取得エラー: $e');
+      return [];
+    }
+  }
+
+  /// スケジュールを追加
+  Future<Map<String, dynamic>?> addSchedule({
+    required String title,
+    String? description,
+    required DateTime date,
+    required TimeOfDay startTime,
+    TimeOfDay? endTime,
+    bool isAllDay = false,
+    String? location,
+    int reminderMinutes = 0,
+    String? colorHex,
+  }) async {
+    final user = getCurrentUser();
+    if (user == null) return null;
+
+    try {
+      final dateString = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      final startTimeString = '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}:00';
+      final endTimeString = endTime != null 
+          ? '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}:00'
+          : null;
+
+      final scheduleData = {
+        'user_id': user.id,
+        'title': title,
+        'description': description,
+        'schedule_date': dateString,
+        'start_time': startTimeString,
+        'end_time': endTimeString,
+        'is_all_day': isAllDay,
+        'location': location,
+        'reminder_minutes': reminderMinutes,
+      };
+
+      final response = await supabase
+          .from('schedules')
+          .insert(scheduleData)
+          .select()
+          .single();
+
+      return response;
+    } catch (e) {
+      debugPrint('スケジュール追加エラー: $e');
+      return null;
+    }
+  }
+
+  /// スケジュールを更新
+  Future<void> updateSchedule({
+    required String scheduleId,
+    String? title,
+    String? description,
+    DateTime? date,
+    TimeOfDay? startTime,
+    TimeOfDay? endTime,
+    bool? isAllDay,
+    String? location,
+    int? reminderMinutes,
+  }) async {
+    final user = getCurrentUser();
+    if (user == null) return;
+
+    try {
+      final updateData = <String, dynamic>{};
+      
+      if (title != null) updateData['title'] = title;
+      if (description != null) updateData['description'] = description;
+      if (date != null) {
+        updateData['schedule_date'] = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      }
+      if (startTime != null) {
+        updateData['start_time'] = '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}:00';
+      }
+      if (endTime != null) {
+        updateData['end_time'] = '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}:00';
+      }
+      if (isAllDay != null) updateData['is_all_day'] = isAllDay;
+      if (location != null) updateData['location'] = location;
+      if (reminderMinutes != null) updateData['reminder_minutes'] = reminderMinutes;
+
+      if (updateData.isNotEmpty) {
+        await supabase
+            .from('schedules')
+            .update(updateData)
+            .eq('id', scheduleId)
+            .eq('user_id', user.id);
+      }
+    } catch (e) {
+      debugPrint('スケジュール更新エラー: $e');
+      rethrow;
+    }
+  }
+
+  /// スケジュールを削除
+  Future<void> deleteSchedule(String scheduleId) async {
+    final user = getCurrentUser();
+    if (user == null) return;
+
+    try {
+      await supabase
+          .from('schedules')
+          .delete()
+          .eq('id', scheduleId)
+          .eq('user_id', user.id);
+    } catch (e) {
+      debugPrint('スケジュール削除エラー: $e');
+      rethrow;
+    }
+  }
+
+  /// データベースのスケジュールデータをアプリ用に変換
+  Map<String, dynamic> convertDatabaseScheduleToApp(Map<String, dynamic> dbSchedule) {
+    final startTimeString = dbSchedule['start_time'] as String?;
+    final endTimeString = dbSchedule['end_time'] as String?;
+    final scheduleDateString = dbSchedule['schedule_date'] as String;
+
+    // TIME型からTimeOfDayに変換
+    TimeOfDay? parseTimeString(String? timeString) {
+      if (timeString == null) return null;
+      final parts = timeString.split(':');
+      if (parts.length >= 2) {
+        final hour = int.tryParse(parts[0]);
+        final minute = int.tryParse(parts[1]);
+        if (hour != null && minute != null) {
+          return TimeOfDay(hour: hour, minute: minute);
+        }
+      }
+      return null;
+    }
+
+    // DATE型からDateTimeに変換
+    DateTime parseDate(String dateString) {
+      return DateTime.parse(dateString);
+    }
+
+    return {
+      'id': dbSchedule['id'],
+      'title': dbSchedule['title'],
+      'description': dbSchedule['description'],
+      'date': parseDate(scheduleDateString),
+      'startTime': parseTimeString(startTimeString),
+      'endTime': parseTimeString(endTimeString),
+      'isAllDay': dbSchedule['is_all_day'] ?? false,
+      'colorHex': '#E85A3B', // デフォルト色（後で拡張可能）
+      'notificationMode': (dbSchedule['reminder_minutes'] as int? ?? 0) > 0 ? 'reminder' : 'none',
+      'reminderMinutes': dbSchedule['reminder_minutes'] ?? 0,
+      'isAlarmEnabled': false,
+      'createdAt': DateTime.parse(dbSchedule['created_at']),
+      'location': dbSchedule['location'],
+    };
   }
 } 
