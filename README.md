@@ -238,7 +238,7 @@ dependencies:
 - [Table Calendar Package](https://pub.dev/packages/table_calendar)
 - [Flutter Quill Documentation](https://pub.dev/packages/flutter_quill)
 
-##　comimitメッセージ
+##  commitメッセージ
 
 - fix：バグ修正
 - hotfix：クリティカルなバグ修正
