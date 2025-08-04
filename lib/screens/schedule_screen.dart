@@ -110,6 +110,47 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     return _schedules[normalizedDate] ?? [];
   }
 
+  /// カレンダー表示形式を切り替える
+  void _toggleCalendarFormat() {
+    setState(() {
+      switch (_calendarFormat) {
+        case CalendarFormat.month:
+          _calendarFormat = CalendarFormat.twoWeeks;
+          break;
+        case CalendarFormat.twoWeeks:
+          _calendarFormat = CalendarFormat.week;
+          break;
+        case CalendarFormat.week:
+          _calendarFormat = CalendarFormat.month;
+          break;
+      }
+    });
+  }
+
+  /// 現在のカレンダー表示形式に応じたアイコンを取得
+  IconData _getCalendarFormatIcon() {
+    switch (_calendarFormat) {
+      case CalendarFormat.month:
+        return Icons.calendar_view_month;
+      case CalendarFormat.twoWeeks:
+        return Icons.calendar_view_week;
+      case CalendarFormat.week:
+        return Icons.view_agenda;
+    }
+  }
+
+  /// 現在のカレンダー表示形式に応じたテキストを取得
+  String _getCalendarFormatText() {
+    switch (_calendarFormat) {
+      case CalendarFormat.month:
+        return '月表示';
+      case CalendarFormat.twoWeeks:
+        return '2週間';
+      case CalendarFormat.week:
+        return '1週間';
+    }
+  }
+
   /// スケジュールを追加（データベースにも保存）
   Future<void> _addSchedule(Map<String, dynamic> schedule) async {
     try {
@@ -201,100 +242,182 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.grey[700]!),
                     ),
-                    child: TableCalendar<Map<String, dynamic>>(
-                      firstDay: DateTime.utc(2020, 1, 1),
-                      lastDay: DateTime.utc(2030, 12, 31),
-                      focusedDay: _focusedDate,
-                      selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
-                      calendarFormat: _calendarFormat,
-                      eventLoader: _getSchedulesForDate,
-                      startingDayOfWeek: StartingDayOfWeek.sunday,
-                      headerStyle: const HeaderStyle(
-                        formatButtonVisible: false,
-                        titleCentered: true,
-                        leftChevronIcon: Icon(Icons.chevron_left, color: Colors.white),
-                        rightChevronIcon: Icon(Icons.chevron_right, color: Colors.white),
-                        titleTextStyle: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        headerPadding: EdgeInsets.all(12),
-                      ),
-                      calendarStyle: CalendarStyle(
-                        outsideDaysVisible: false,
-                        weekendTextStyle: const TextStyle(color: Colors.white),
-                        defaultTextStyle: const TextStyle(color: Colors.white),
-                        selectedDecoration: BoxDecoration(
-                          gradient: createOrangeYellowGradient(),
-                          shape: BoxShape.circle,
-                        ),
-                        todayDecoration: BoxDecoration(
-                          color: Colors.grey[600],
-                          shape: BoxShape.circle,
-                        ),
-                        markerDecoration: const BoxDecoration(
-                          color: Colors.transparent,
-                        ),
-                        markersMaxCount: 1,
-                        markerSize: 0,
-                      ),
-                      calendarBuilders: CalendarBuilders(
-                        dowBuilder: (context, day) {
-                          final weekdays = ['日', '月', '火', '水', '木', '金', '土'];
-                          return Center(
-                            child: Text(
-                              weekdays[day.weekday % 7],
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w500,
+                    child: Column(
+                      children: [
+                        // カスタムヘッダー
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            children: [
+                              // 左矢印
+                              IconButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _focusedDate = DateTime(_focusedDate.year, _focusedDate.month - 1);
+                                  });
+                                },
+                                icon: const Icon(Icons.chevron_left, color: Colors.white),
+                                iconSize: 24,
+                                splashRadius: 20,
                               ),
-                            ),
-                          );
-                        },
-                        markerBuilder: (context, day, events) {
-                          final eventCount = events.length;
-                          if (eventCount > 0) {
-                            return Positioned(
-                              right: 1,
-                              bottom: 1,
-                              child: Container(
-                                decoration: const BoxDecoration(
-                                  color: Colors.green,
-                                  shape: BoxShape.circle,
+                              
+                              // 中央に配置するためのSpacer
+                              const Spacer(),
+                              
+                              // 年月表示
+                              Text(
+                                '${_focusedDate.year}年${_focusedDate.month}月',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
                                 ),
-                                width: 18,
-                                height: 18,
-                                child: Center(
-                                  child: Text(
-                                    eventCount > 99 ? '99+' : eventCount.toString(),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                              ),
+                              
+                              const SizedBox(width: 12),
+                              
+                              // 表示形式切り替えボタン
+                              GestureDetector(
+                                onTap: _toggleCalendarFormat,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    gradient: createHorizontalOrangeYellowGradient(),
+                                    borderRadius: BorderRadius.circular(14),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.3),
+                                        blurRadius: 3,
+                                        offset: const Offset(0, 1),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        _getCalendarFormatIcon(),
+                                        color: Colors.white,
+                                        size: 14,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        _getCalendarFormatText(),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
-                            );
-                          }
-                          return null;
-                        },
-                      ),
-                      onDaySelected: (selectedDay, focusedDay) {
-                        setState(() {
-                          _selectedDate = selectedDay;
-                          _focusedDate = focusedDay;
-                        });
-                      },
-                      onFormatChanged: (format) {
-                        setState(() {
-                          _calendarFormat = format;
-                        });
-                      },
-                      onPageChanged: (focusedDay) {
-                        _focusedDate = focusedDay;
-                      },
+                              
+                              // 中央に配置するためのSpacer
+                              const Spacer(),
+                              
+                              // 右矢印
+                              IconButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _focusedDate = DateTime(_focusedDate.year, _focusedDate.month + 1);
+                                  });
+                                },
+                                icon: const Icon(Icons.chevron_right, color: Colors.white),
+                                iconSize: 24,
+                                splashRadius: 20,
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        // TableCalendar（ヘッダー非表示）
+                        TableCalendar<Map<String, dynamic>>(
+                          firstDay: DateTime.utc(2020, 1, 1),
+                          lastDay: DateTime.utc(2030, 12, 31),
+                          focusedDay: _focusedDate,
+                          selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
+                          calendarFormat: _calendarFormat,
+                          eventLoader: _getSchedulesForDate,
+                          startingDayOfWeek: StartingDayOfWeek.sunday,
+                          headerVisible: false,
+                          calendarStyle: CalendarStyle(
+                            outsideDaysVisible: false,
+                            weekendTextStyle: const TextStyle(color: Colors.white),
+                            defaultTextStyle: const TextStyle(color: Colors.white),
+                            selectedDecoration: BoxDecoration(
+                              gradient: createOrangeYellowGradient(),
+                              shape: BoxShape.circle,
+                            ),
+                            todayDecoration: BoxDecoration(
+                              color: Colors.grey[600],
+                              shape: BoxShape.circle,
+                            ),
+                            markerDecoration: const BoxDecoration(
+                              color: Colors.transparent,
+                            ),
+                            markersMaxCount: 1,
+                            markerSize: 0,
+                          ),
+                          calendarBuilders: CalendarBuilders(
+                            dowBuilder: (context, day) {
+                              final weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+                              return Center(
+                                child: Text(
+                                  weekdays[day.weekday % 7],
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              );
+                            },
+                            markerBuilder: (context, day, events) {
+                              final eventCount = events.length;
+                              if (eventCount > 0) {
+                                return Positioned(
+                                  right: 1,
+                                  bottom: 1,
+                                  child: Container(
+                                    decoration: const BoxDecoration(
+                                      color: Colors.green,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    width: 18,
+                                    height: 18,
+                                    child: Center(
+                                      child: Text(
+                                        eventCount > 99 ? '99+' : eventCount.toString(),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }
+                              return null;
+                            },
+                          ),
+                          onDaySelected: (selectedDay, focusedDay) {
+                            setState(() {
+                              _selectedDate = selectedDay;
+                              _focusedDate = focusedDay;
+                            });
+                          },
+                          onFormatChanged: (format) {
+                            setState(() {
+                              _calendarFormat = format;
+                            });
+                          },
+                          onPageChanged: (focusedDay) {
+                            _focusedDate = focusedDay;
+                          },
+                        ),
+                      ],
                     ),
                   ),
                 ),
