@@ -127,27 +127,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     });
   }
 
-  /// 現在のカレンダー表示形式に応じたアイコンを取得
-  IconData _getCalendarFormatIcon() {
-    switch (_calendarFormat) {
-      case CalendarFormat.month:
-        return Icons.calendar_view_month;
-      case CalendarFormat.twoWeeks:
-        return Icons.calendar_view_week;
-      case CalendarFormat.week:
-        return Icons.view_agenda;
-    }
-  }
-
   /// 現在のカレンダー表示形式に応じたテキストを取得
   String _getCalendarFormatText() {
     switch (_calendarFormat) {
       case CalendarFormat.month:
-        return '月表示';
+        return 'Month';
       case CalendarFormat.twoWeeks:
-        return '2週間';
+        return '2 Weeks';
       case CalendarFormat.week:
-        return '1週間';
+        return 'Week';
     }
   }
 
@@ -292,24 +280,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                       ),
                                     ],
                                   ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        _getCalendarFormatIcon(),
-                                        color: Colors.white,
-                                        size: 14,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        _getCalendarFormatText(),
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
+                                  child: Text(
+                                    _getCalendarFormatText(),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                               ),
