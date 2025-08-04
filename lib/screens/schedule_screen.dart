@@ -320,9 +320,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                           startingDayOfWeek: StartingDayOfWeek.sunday,
                           headerVisible: false,
                           calendarStyle: CalendarStyle(
-                            outsideDaysVisible: false,
+                            outsideDaysVisible: true,
                             weekendTextStyle: const TextStyle(color: Colors.white),
                             defaultTextStyle: const TextStyle(color: Colors.white),
+                            // 前月・次月の日付スタイル（薄いグレー）
+                            outsideTextStyle: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 16,
+                            ),
                             selectedDecoration: BoxDecoration(
                               gradient: createOrangeYellowGradient(),
                               shape: BoxShape.circle,

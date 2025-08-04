@@ -238,6 +238,19 @@ dependencies:
 - [Table Calendar Package](https://pub.dev/packages/table_calendar)
 - [Flutter Quill Documentation](https://pub.dev/packages/flutter_quill)
 
+##　comimitメッセージ
+
+- fix：バグ修正
+- hotfix：クリティカルなバグ修正
+- add：新規（ファイル）機能追加
+- update：機能修正（バグではない）
+- change：仕様変更
+- clean：整理（リファクタリング等）
+- disable：無効化（コメントアウト等）
+- remove：削除（ファイル）
+- upgrade：バージョンアップ
+- revert：変更取り消し
+
 ##  Contributing
 
 プロジェクトへの貢献は歓迎します！  
