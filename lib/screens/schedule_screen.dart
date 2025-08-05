@@ -328,13 +328,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                               color: Colors.grey[600],
                               fontSize: 16,
                             ),
-                            selectedDecoration: BoxDecoration(
+                            selectedDecoration: const BoxDecoration(
                               color: Colors.transparent,
                               shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.orange,
-                                width: 2,
-                              ),
                             ),
                             todayDecoration: BoxDecoration(
                               gradient: createOrangeYellowGradient(),
@@ -355,6 +351,31 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              );
+                            },
+                            selectedBuilder: (context, day, focusedDay) {
+                              return Container(
+                                margin: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  gradient: createOrangeYellowGradient(),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Container(
+                                  margin: const EdgeInsets.all(2),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF3A3A3A), // 背景色に合わせる
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      day.day.toString(),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               );
