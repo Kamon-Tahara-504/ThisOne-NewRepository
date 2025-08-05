@@ -329,11 +329,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                               fontSize: 16,
                             ),
                             selectedDecoration: BoxDecoration(
-                              gradient: createOrangeYellowGradient(),
+                              color: Colors.transparent,
                               shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.orange,
+                                width: 2,
+                              ),
                             ),
                             todayDecoration: BoxDecoration(
-                              color: Colors.grey[600],
+                              gradient: createOrangeYellowGradient(),
                               shape: BoxShape.circle,
                             ),
                             markerDecoration: const BoxDecoration(
