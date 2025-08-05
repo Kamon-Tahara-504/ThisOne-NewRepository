@@ -165,9 +165,15 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
               topRight: Radius.circular(20),
             ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+          child: GestureDetector(
+            onTap: () {
+              // 入力欄以外をタップした時にキーボードを格納
+              FocusScope.of(context).unfocus();
+            },
+            behavior: HitTestBehavior.opaque,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
               // ハンドル
               Container(
                 margin: const EdgeInsets.symmetric(vertical: 12),
@@ -202,7 +208,8 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
               ),
             ],
           ),
-        );
+        ),
+      );
       },
     );
   }
