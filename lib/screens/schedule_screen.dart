@@ -356,6 +356,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                               );
                             },
                             selectedBuilder: (context, day, focusedDay) {
+                              final isToday = isSameDay(day, DateTime.now());
+                              
                               return Container(
                                 margin: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
@@ -368,15 +370,32 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                     color: Color(0xFF3A3A3A), // 背景色に合わせる
                                     shape: BoxShape.circle,
                                   ),
-                                  child: Center(
-                                    child: Text(
-                                      day.day.toString(),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
+                                  child: isToday
+                                      ? Container(
+                                          margin: const EdgeInsets.all(6),
+                                          decoration: BoxDecoration(
+                                            gradient: createOrangeYellowGradient(),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              day.day.toString(),
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                        )
+                                      : Center(
+                                          child: Text(
+                                            day.day.toString(),
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
                                 ),
                               );
                             },
