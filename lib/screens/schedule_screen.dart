@@ -319,42 +319,89 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                           eventLoader: _getSchedulesForDate,
                           startingDayOfWeek: StartingDayOfWeek.sunday,
                           headerVisible: false,
-                          calendarStyle: CalendarStyle(
-                            outsideDaysVisible: true,
-                            weekendTextStyle: const TextStyle(color: Colors.white),
-                            defaultTextStyle: const TextStyle(color: Colors.white),
-                            // 前月・次月の日付スタイル（薄いグレー）
-                            outsideTextStyle: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 16,
-                            ),
-                            selectedDecoration: const BoxDecoration(
-                              color: Colors.transparent,
-                              shape: BoxShape.circle,
-                            ),
-                            todayDecoration: BoxDecoration(
-                              gradient: createOrangeYellowGradient(),
-                              shape: BoxShape.circle,
-                            ),
-                            markerDecoration: const BoxDecoration(
-                              color: Colors.transparent,
-                            ),
-                            markersMaxCount: 1,
-                            markerSize: 0,
-                          ),
-                          calendarBuilders: CalendarBuilders(
-                            dowBuilder: (context, day) {
-                              final weekdays = ['日', '月', '火', '水', '木', '金', '土'];
-                              return Center(
-                                child: Text(
-                                  weekdays[day.weekday % 7],
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              );
-                            },
+                                    calendarStyle: CalendarStyle(
+            outsideDaysVisible: true,
+            weekendTextStyle: const TextStyle(color: Colors.white),
+            defaultTextStyle: const TextStyle(color: Colors.white),
+            // 前月・次月の日付スタイル（薄いグレー）
+            outsideTextStyle: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 16,
+            ),
+            // 過去の日付も通常の白色に設定（期限切れでも色を変えない）
+            disabledTextStyle: const TextStyle(color: Colors.white),
+            // 今日より前の日付の色も設定
+            holidayTextStyle: const TextStyle(color: Colors.white),
+            rangeStartTextStyle: const TextStyle(color: Colors.white),
+            rangeEndTextStyle: const TextStyle(color: Colors.white),
+            withinRangeTextStyle: const TextStyle(color: Colors.white),
+            weekendDecoration: const BoxDecoration(
+              color: Colors.transparent,
+              shape: BoxShape.circle,
+            ),
+            selectedDecoration: const BoxDecoration(
+              color: Colors.transparent,
+              shape: BoxShape.circle,
+            ),
+            todayDecoration: BoxDecoration(
+              gradient: createOrangeYellowGradient(),
+              shape: BoxShape.circle,
+            ),
+            markerDecoration: const BoxDecoration(
+              color: Colors.transparent,
+            ),
+            markersMaxCount: 1,
+            markerSize: 0,
+          ),
+                                    calendarBuilders: CalendarBuilders(
+            // 曜日ビルダー（日〜土）
+            dowBuilder: (context, day) {
+              final weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+              return Center(
+                child: Text(
+                  weekdays[day.weekday % 7],
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              );
+            },
+            // 通常の日付ビルダー（すべての日付を白色に統一）
+            defaultBuilder: (context, day, focusedDay) {
+              return Center(
+                child: Text(
+                  day.day.toString(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                  ),
+                ),
+              );
+            },
+
+            // 範囲外の日付ビルダー
+            outsideBuilder: (context, day, focusedDay) {
+              return Center(
+                child: Text(
+                  day.day.toString(),
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 16,
+                  ),
+                ),
+              );
+            },
+            // 無効な日付ビルダー（過去の日付など）
+            disabledBuilder: (context, day, focusedDay) {
+              return Center(
+                child: Text(
+                  day.day.toString(),
+                  style: const TextStyle(
+                    color: Colors.white, // 過去の日付も白色に
+                  ),
+                ),
+              );
+            },
                             selectedBuilder: (context, day, focusedDay) {
                               final isToday = isSameDay(day, DateTime.now());
                               

@@ -13,4 +13,4 @@ class SupabaseConfig {
 }
 
 // Supabaseクライアントへの簡単なアクセス
-final supabase = Supabase.instance.client; 
+final supabase = Supabase.instance.client;
