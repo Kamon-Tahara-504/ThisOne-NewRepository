@@ -151,6 +151,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         endTime: schedule['endTime'],
         isAllDay: schedule['isAllDay'],
         reminderMinutes: schedule['reminderMinutes'],
+        colorHex: schedule['colorHex'],
       );
       
       if (dbSchedule != null) {
