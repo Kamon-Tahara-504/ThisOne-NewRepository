@@ -357,19 +357,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                 ),
                               );
                             },
-                            // 過去の日付を白く表示するためのカスタムビルダー
-                            prioritizedBuilder: (context, day, focusedDay) {
-                              // 今日以前の日付はここで白色で表示
-                              if (day.isBefore(DateTime.now().subtract(const Duration(days: 1)))) {
-                                return Center(
-                                  child: Text(
-                                    day.day.toString(),
-                                    style: const TextStyle(color: Colors.white),
-                                  ),
-                                );
-                              }
-                              return null; // 今日または未来の日付は通常通り表示
-                            },
+
                             selectedBuilder: (context, day, focusedDay) {
                               final isToday = isSameDay(day, DateTime.now());
                               
