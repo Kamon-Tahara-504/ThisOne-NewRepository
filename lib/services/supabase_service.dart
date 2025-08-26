@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:convert';
+import '../utils/color_utils.dart';
 
 // Supabaseクライアントを使用
 final supabase = Supabase.instance.client;
@@ -689,6 +690,15 @@ class SupabaseService {
       return DateTime.parse(dateString);
     }
 
+    // スケジュールIDを基に色パレットから色を選択
+    String getScheduleColor(String scheduleId) {
+      final colorPalette = ColorUtils.colorLabelPalette;
+      // スケジュールIDのハッシュ値を使って色のインデックスを決定
+      final hash = scheduleId.hashCode.abs();
+      final colorIndex = hash % colorPalette.length;
+      return colorPalette[colorIndex]['hex'] as String;
+    }
+
     return {
       'id': dbSchedule['id'],
       'title': dbSchedule['title'],
@@ -697,7 +707,7 @@ class SupabaseService {
       'startTime': parseTimeString(startTimeString),
       'endTime': parseTimeString(endTimeString),
       'isAllDay': dbSchedule['is_all_day'] ?? false,
-      'colorHex': '#E85A3B', // デフォルト色（後で拡張可能）
+      'colorHex': getScheduleColor(dbSchedule['id']), // IDを基に色を選択
       'notificationMode': (dbSchedule['reminder_minutes'] as int? ?? 0) > 0 ? 'reminder' : 'none',
       'reminderMinutes': dbSchedule['reminder_minutes'] ?? 0,
       'isAlarmEnabled': false,

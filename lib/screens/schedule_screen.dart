@@ -154,10 +154,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       );
       
       if (dbSchedule != null) {
-        // データベースの結果をアプリ用に変換
+        // データベースの結果をアプリ用に変換（IDベースの色が自動的に設定される）
         final appSchedule = _supabaseService.convertDatabaseScheduleToApp(dbSchedule);
-        // 追加でcolorHexを保持（後で拡張予定）
-        appSchedule['colorHex'] = schedule['colorHex'];
         
         // ローカルのMapに追加
         setState(() {
@@ -319,89 +317,59 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                           eventLoader: _getSchedulesForDate,
                           startingDayOfWeek: StartingDayOfWeek.sunday,
                           headerVisible: false,
-                                    calendarStyle: CalendarStyle(
-            outsideDaysVisible: true,
-            weekendTextStyle: const TextStyle(color: Colors.white),
-            defaultTextStyle: const TextStyle(color: Colors.white),
-            // 前月・次月の日付スタイル（薄いグレー）
-            outsideTextStyle: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 16,
-            ),
-            // 過去の日付も通常の白色に設定（期限切れでも色を変えない）
-            disabledTextStyle: const TextStyle(color: Colors.white),
-            // 今日より前の日付の色も設定
-            holidayTextStyle: const TextStyle(color: Colors.white),
-            rangeStartTextStyle: const TextStyle(color: Colors.white),
-            rangeEndTextStyle: const TextStyle(color: Colors.white),
-            withinRangeTextStyle: const TextStyle(color: Colors.white),
-            weekendDecoration: const BoxDecoration(
-              color: Colors.transparent,
-              shape: BoxShape.circle,
-            ),
-            selectedDecoration: const BoxDecoration(
-              color: Colors.transparent,
-              shape: BoxShape.circle,
-            ),
-            todayDecoration: BoxDecoration(
-              gradient: createOrangeYellowGradient(),
-              shape: BoxShape.circle,
-            ),
-            markerDecoration: const BoxDecoration(
-              color: Colors.transparent,
-            ),
-            markersMaxCount: 1,
-            markerSize: 0,
-          ),
-                                    calendarBuilders: CalendarBuilders(
-            // 曜日ビルダー（日〜土）
-            dowBuilder: (context, day) {
-              final weekdays = ['日', '月', '火', '水', '木', '金', '土'];
-              return Center(
-                child: Text(
-                  weekdays[day.weekday % 7],
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              );
-            },
-            // 通常の日付ビルダー（すべての日付を白色に統一）
-            defaultBuilder: (context, day, focusedDay) {
-              return Center(
-                child: Text(
-                  day.day.toString(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                  ),
-                ),
-              );
-            },
-
-            // 範囲外の日付ビルダー
-            outsideBuilder: (context, day, focusedDay) {
-              return Center(
-                child: Text(
-                  day.day.toString(),
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 16,
-                  ),
-                ),
-              );
-            },
-            // 無効な日付ビルダー（過去の日付など）
-            disabledBuilder: (context, day, focusedDay) {
-              return Center(
-                child: Text(
-                  day.day.toString(),
-                  style: const TextStyle(
-                    color: Colors.white, // 過去の日付も白色に
-                  ),
-                ),
-              );
-            },
+                          calendarStyle: CalendarStyle(
+                            outsideDaysVisible: true,
+                            weekendTextStyle: const TextStyle(color: Colors.white),
+                            defaultTextStyle: const TextStyle(color: Colors.white),
+                            // 前月・次月の日付スタイル（薄いグレー）
+                            outsideTextStyle: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 16,
+                            ),
+                            // 過去の日付も白色で表示（期限切れでも色を変えない）
+                            todayTextStyle: const TextStyle(color: Colors.white),
+                            selectedTextStyle: const TextStyle(color: Colors.white),
+                            selectedDecoration: const BoxDecoration(
+                              color: Colors.transparent,
+                              shape: BoxShape.circle,
+                            ),
+                            todayDecoration: BoxDecoration(
+                              gradient: createOrangeYellowGradient(),
+                              shape: BoxShape.circle,
+                            ),
+                            markerDecoration: const BoxDecoration(
+                              color: Colors.transparent,
+                            ),
+                            markersMaxCount: 1,
+                            markerSize: 0,
+                          ),
+                          calendarBuilders: CalendarBuilders(
+                            // 曜日ビルダー（日〜土）
+                            dowBuilder: (context, day) {
+                              final weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+                              return Center(
+                                child: Text(
+                                  weekdays[day.weekday % 7],
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              );
+                            },
+                            // 過去の日付を白く表示するためのカスタムビルダー
+                            prioritizedBuilder: (context, day, focusedDay) {
+                              // 今日以前の日付はここで白色で表示
+                              if (day.isBefore(DateTime.now().subtract(const Duration(days: 1)))) {
+                                return Center(
+                                  child: Text(
+                                    day.day.toString(),
+                                    style: const TextStyle(color: Colors.white),
+                                  ),
+                                );
+                              }
+                              return null; // 今日または未来の日付は通常通り表示
+                            },
                             selectedBuilder: (context, day, focusedDay) {
                               final isToday = isSameDay(day, DateTime.now());
                               
