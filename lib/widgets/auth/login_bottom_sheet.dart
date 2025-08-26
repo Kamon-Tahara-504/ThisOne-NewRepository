@@ -170,8 +170,8 @@ class _LoginBottomSheetState extends State<LoginBottomSheet> {
   @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
-      initialChildSize: _showEmailLogin ? 0.8 : 0.6,
-      minChildSize: 0.5,
+      initialChildSize: _showEmailLogin ? 0.8 : 0.35,
+      minChildSize: 0.3,
       maxChildSize: 0.9,
       expand: false,
       builder: (context, scrollController) {
@@ -196,37 +196,11 @@ class _LoginBottomSheetState extends State<LoginBottomSheet> {
                 ),
               ),
               
-              // ヘッダー
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                child: Row(
-                  children: [
-                    ShaderMask(
-                      shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
-                      child: const Icon(
-                        Icons.login,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'ログイン',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
               // コンテンツ
               Expanded(
                 child: SingleChildScrollView(
                   controller: scrollController,
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
                   child: _showEmailLogin ? _buildEmailLoginForm() : _buildLoginOptions(),
                 ),
               ),
@@ -280,114 +254,89 @@ class _LoginBottomSheetState extends State<LoginBottomSheet> {
             ),
           ),
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 16),
         
-        // OR区切り
-        Row(
-          children: [
-            Expanded(child: Divider(color: Colors.grey[600])),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'または',
-                style: TextStyle(
-                  color: Colors.grey[400],
-                  fontSize: 14,
-                ),
+        // Googleログインボタン
+        Container(
+          width: double.infinity,
+          height: 56,
+          decoration: BoxDecoration(
+            color: const Color(0xFF3A3A3A),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[600]!),
+          ),
+          child: ElevatedButton(
+            onPressed: _isLoading ? null : _loginWithGoogle,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
-            Expanded(child: Divider(color: Colors.grey[600])),
-          ],
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.g_mobiledata,
+                  color: Colors.grey[300],
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Googleでログイン',
+                  style: TextStyle(
+                    color: Colors.grey[300],
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 16),
         
-        // ソーシャルログインボタン
-        Row(
-          children: [
-            // Google
-            Expanded(
-              child: Container(
-                height: 56,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF3A3A3A),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey[600]!),
-                ),
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _loginWithGoogle,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.g_mobiledata,
-                        color: Colors.grey[300],
-                        size: 24,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Google',
-                        style: TextStyle(
-                          color: Colors.grey[300],
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+        // Xログインボタン
+        Container(
+          width: double.infinity,
+          height: 56,
+          decoration: BoxDecoration(
+            color: const Color(0xFF3A3A3A),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[600]!),
+          ),
+          child: ElevatedButton(
+            onPressed: _isLoading ? null : _loginWithX,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
-            const SizedBox(width: 16),
-            // X
-            Expanded(
-              child: Container(
-                height: 56,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF3A3A3A),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey[600]!),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.close,
+                  color: Colors.grey[300],
+                  size: 20,
                 ),
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _loginWithX,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.close,
-                        color: Colors.grey[300],
-                        size: 20,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'X',
-                        style: TextStyle(
-                          color: Colors.grey[300],
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+                const SizedBox(width: 12),
+                Text(
+                  'Xでログイン',
+                  style: TextStyle(
+                    color: Colors.grey[300],
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
-        const SizedBox(height: 40),
+        const SizedBox(height: 12),
       ],
     );
   }
@@ -537,7 +486,7 @@ class _LoginBottomSheetState extends State<LoginBottomSheet> {
             ),
           ),
         ),
-        const SizedBox(height: 40),
+        const SizedBox(height: 20),
       ],
     );
   }
