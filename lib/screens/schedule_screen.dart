@@ -514,81 +514,106 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                 margin: const EdgeInsets.only(bottom: 8),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFF3A3A3A),
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: BorderRadius.circular(12),
                                   border: Border.all(color: Colors.grey[700]!),
                                 ),
-                                child: ListTile(
-                                  dense: true,
-                                  leading: Row(
-                                    mainAxisSize: MainAxisSize.min,
+                                child: IntrinsicHeight(
+                                  child: Row(
                                     children: [
-                                      // 色ラベル
+                                      // 左側の色バー（メモと同じスタイル）
                                       Container(
-                                        width: 4,
-                                        height: 40,
+                                        width: 8,
+                                        height: double.infinity,
                                         decoration: BoxDecoration(
                                           color: scheduleColor,
-                                          borderRadius: BorderRadius.circular(2),
+                                          borderRadius: const BorderRadius.only(
+                                            topLeft: Radius.circular(12),
+                                            bottomLeft: Radius.circular(12),
+                                          ),
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
-                                      // 時間表示
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: scheduleColor.withValues(alpha: 0.2),
-                                          borderRadius: BorderRadius.circular(6),
-                                          border: Border.all(color: scheduleColor.withValues(alpha: 0.5)),
-                                        ),
-                                        child: Text(
-                                          isAllDay
-                                              ? '終日'
-                                              : startTime != null
-                                                  ? endTime != null
-                                                      ? '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}-${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}'
-                                                      : '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}'
-                                                  : '--:--',
-                                          style: TextStyle(
-                                            color: scheduleColor,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600,
+                                      // スケジュール本体部分
+                                      Expanded(
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(6),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              // タイトル行
+                                              Row(
+                                                children: [
+                                                  // 時間表示（大きくする）
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                    decoration: BoxDecoration(
+                                                      color: scheduleColor.withValues(alpha: 0.2),
+                                                      borderRadius: BorderRadius.circular(8),
+                                                      border: Border.all(color: scheduleColor.withValues(alpha: 0.5)),
+                                                    ),
+                                                    child: Text(
+                                                      isAllDay
+                                                          ? '終日'
+                                                          : startTime != null
+                                                              ? endTime != null
+                                                                  ? '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}-${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}'
+                                                                  : '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}'
+                                                              : '--:--',
+                                                      style: TextStyle(
+                                                        color: scheduleColor,
+                                                        fontSize: 14, // 10から14に変更
+                                                        fontWeight: FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  Expanded(
+                                                    child: Text(
+                                                      schedule['title'],
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 16,
+                                                        fontWeight: FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  // 通知アイコン
+                                                  if (isNotificationEnabled)
+                                                    Icon(
+                                                      Icons.notifications,
+                                                      color: Colors.grey[500],
+                                                      size: 18,
+                                                    ),
+                                                  const SizedBox(width: 4),
+                                                  // 削除ボタン
+                                                  IconButton(
+                                                    onPressed: () => _deleteSchedule(schedule),
+                                                    icon: Icon(
+                                                      Icons.delete_outline,
+                                                      color: Colors.grey[500],
+                                                      size: 20,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              // 説明文（ある場合のみ表示）
+                                              if (schedule['description']?.isNotEmpty == true) ...[
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  schedule['description'],
+                                                  style: TextStyle(
+                                                    color: Colors.grey[400],
+                                                    fontSize: 14,
+                                                    height: 1.4,
+                                                  ),
+                                                  maxLines: 2,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ],
+                                            ],
                                           ),
                                         ),
                                       ),
                                     ],
-                                  ),
-                                  title: Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          schedule['title'],
-                                          style: const TextStyle(color: Colors.white, fontSize: 14),
-                                        ),
-                                      ),
-                                      // 通知アイコン
-                                      if (isNotificationEnabled)
-                                        Icon(
-                                          Icons.notifications,
-                                          color: Colors.grey[500],
-                                          size: 16,
-                                        ),
-                                    ],
-                                  ),
-                                  subtitle: schedule['description']?.isNotEmpty == true
-                                      ? Text(
-                                          schedule['description'],
-                                          style: TextStyle(color: Colors.grey[400], fontSize: 12),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        )
-                                      : null,
-                                  trailing: IconButton(
-                                    onPressed: () => _deleteSchedule(schedule),
-                                    icon: Icon(
-                                      Icons.delete_outline,
-                                      color: Colors.grey[500],
-                                      size: 18,
-                                    ),
                                   ),
                                 ),
                               );
