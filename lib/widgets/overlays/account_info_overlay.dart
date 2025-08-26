@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../gradients.dart';
 import '../../services/supabase_service.dart';
-import '../../screens/auth_screen.dart';
+import '../../screens/unified_auth_screen.dart';
 import '../../screens/account_screen.dart';
 
 class AccountInfoOverlay {
@@ -233,7 +233,7 @@ class AccountInfoOverlay {
       // 未ログインの場合は認証画面に移動
       final result = await Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const AuthScreen()),
+        MaterialPageRoute(builder: (context) => const UnifiedAuthScreen()),
       );
       
       // 認証画面から戻った時にタスクを再読み込み

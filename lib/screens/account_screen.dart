@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../gradients.dart';
 import '../services/supabase_service.dart';
-import 'auth_screen.dart';
+import 'unified_auth_screen.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
@@ -206,7 +206,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 onPressed: () async {
                   final result = await Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const AuthScreen()),
+                    MaterialPageRoute(builder: (context) => const UnifiedAuthScreen()),
                   );
                   
                   if (result == true) {

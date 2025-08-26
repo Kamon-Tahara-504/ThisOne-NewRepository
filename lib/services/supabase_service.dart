@@ -666,6 +666,34 @@ class SupabaseService {
     }
   }
 
+  /// Google認証でサインアップ/ログイン
+  Future<bool> signInWithGoogle() async {
+    try {
+      final result = await supabase.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: null, // アプリの設定に応じて調整
+      );
+      return result;
+    } catch (e) {
+      debugPrint('Google認証エラー: $e');
+      rethrow;
+    }
+  }
+
+  /// X(Twitter)認証でサインアップ/ログイン
+  Future<bool> signInWithTwitter() async {
+    try {
+      final result = await supabase.auth.signInWithOAuth(
+        OAuthProvider.twitter,
+        redirectTo: null, // アプリの設定に応じて調整
+      );
+      return result;
+    } catch (e) {
+      debugPrint('X認証エラー: $e');
+      rethrow;
+    }
+  }
+
   /// データベースのスケジュールデータをアプリ用に変換
   Map<String, dynamic> convertDatabaseScheduleToApp(Map<String, dynamic> dbSchedule) {
     final startTimeString = dbSchedule['start_time'] as String?;
