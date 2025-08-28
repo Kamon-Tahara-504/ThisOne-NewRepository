@@ -57,11 +57,18 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                       ),
                     ),
                   ),
-                  // グラデーションガイドライン
+                  // グラデーションガイドライン（黒い影）
                   Container(
                     height: 2,
                     decoration: BoxDecoration(
                       gradient: createHorizontalOrangeYellowGradient(),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2), // ナビゲーションバーと同じ黒い影
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                   ),
                 ],
