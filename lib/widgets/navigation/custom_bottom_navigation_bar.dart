@@ -50,16 +50,19 @@ class CustomBottomNavigationBar extends StatelessWidget {
           Container(
             color: const Color(0xFF2B2B2B),
             child: SafeArea(
-              child: SizedBox(
-                height: 60,
-                child: Row(
-                  children: [
-                    _buildNavItem(context, 0, Icons.task_alt, 'タスク'),
-                    _buildNavItem(context, 1, Icons.calendar_today, 'カレンダー'),
-                    _buildCreateButton(context),
-                    _buildNavItem(context, 3, Icons.note_alt, 'メモ'),
-                    _buildNavItem(context, 4, Icons.settings, '設定'),
-                  ],
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 20), // 下部に余白を追加して上に上げる効果
+                child: SizedBox(
+                  height: 60,
+                  child: Row(
+                    children: [
+                      _buildNavItem(context, 0, Icons.task_alt, 'タスク'),
+                      _buildNavItem(context, 1, Icons.calendar_today, 'カレンダー'),
+                      _buildCreateButton(context),
+                      _buildNavItem(context, 3, Icons.note_alt, 'メモ'),
+                      _buildNavItem(context, 4, Icons.settings, '設定'),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -72,77 +75,80 @@ class CustomBottomNavigationBar extends StatelessWidget {
   Widget _buildNavItem(BuildContext context, int index, IconData icon, String label) {
     final isSelected = currentIndex == index;
     return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          // 作成ボタン（index 2）の場合はページ遷移しない
-          if (index == 2) {
-            return;
-          }
-          
-          // _currentIndexからPageViewのインデックスに変換
-          // _currentIndex: 0=タスク, 1=カレンダー, 2=作成ボタン, 3=メモ, 4=設定
-          // PageView: 0=タスク, 1=カレンダー, 2=メモ, 3=設定
-          int pageIndex;
-          switch (index) {
-            case 0: // タスク
-              pageIndex = 0;
-              break;
-            case 1: // カレンダー
-              pageIndex = 1;
-              break;
-            case 3: // メモ
-              pageIndex = 2;
-              break;
-            case 4: // 設定
-              pageIndex = 3;
-              break;
-            default:
-              pageIndex = 0;
-          }
-          
-          // PageViewをアニメーション付きで移動
-          pageController.animateToPage(
-            pageIndex,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-          );
-          
-          onTabChanged(index);
-        },
-        child: Container(
-          color: Colors.transparent,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ShaderMask(
-                shaderCallback: (bounds) => isSelected
-                    ? createHorizontalOrangeYellowGradient().createShader(bounds)
-                    : LinearGradient(
-                        colors: [Colors.grey[500]!, Colors.grey[500]!],
-                      ).createShader(bounds),
-                child: Icon(
-                  icon,
-                  size: 24,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 4),
-              ShaderMask(
-                shaderCallback: (bounds) => isSelected
-                    ? createHorizontalOrangeYellowGradient().createShader(bounds)
-                    : LinearGradient(
-                        colors: [Colors.grey[500]!, Colors.grey[500]!],
-                      ).createShader(bounds),
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
+      child: Transform.translate(
+        offset: const Offset(0, 8), // ページボタンを8px下に移動
+        child: GestureDetector(
+          onTap: () {
+            // 作成ボタン（index 2）の場合はページ遷移しない
+            if (index == 2) {
+              return;
+            }
+            
+            // _currentIndexからPageViewのインデックスに変換
+            // _currentIndex: 0=タスク, 1=カレンダー, 2=作成ボタン, 3=メモ, 4=設定
+            // PageView: 0=タスク, 1=カレンダー, 2=メモ, 3=設定
+            int pageIndex;
+            switch (index) {
+              case 0: // タスク
+                pageIndex = 0;
+                break;
+              case 1: // カレンダー
+                pageIndex = 1;
+                break;
+              case 3: // メモ
+                pageIndex = 2;
+                break;
+              case 4: // 設定
+                pageIndex = 3;
+                break;
+              default:
+                pageIndex = 0;
+            }
+            
+            // PageViewをアニメーション付きで移動
+            pageController.animateToPage(
+              pageIndex,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
+            
+            onTabChanged(index);
+          },
+          child: Container(
+            color: Colors.transparent,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ShaderMask(
+                  shaderCallback: (bounds) => isSelected
+                      ? createHorizontalOrangeYellowGradient().createShader(bounds)
+                      : LinearGradient(
+                          colors: [Colors.grey[500]!, Colors.grey[500]!],
+                        ).createShader(bounds),
+                  child: Icon(
+                    icon,
+                    size: 24,
                     color: Colors.white,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 4),
+                ShaderMask(
+                  shaderCallback: (bounds) => isSelected
+                      ? createHorizontalOrangeYellowGradient().createShader(bounds)
+                      : LinearGradient(
+                          colors: [Colors.grey[500]!, Colors.grey[500]!],
+                        ).createShader(bounds),
+                  child: Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -152,7 +158,7 @@ class CustomBottomNavigationBar extends StatelessWidget {
   Widget _buildCreateButton(BuildContext context) {
     return Expanded(
       child: Transform.translate(
-        offset: const Offset(0, 5), // 上に移動から下に移動に変更
+        offset: const Offset(0, 8), // 作成ボタンの位置を調整
         child: GestureDetector(
           onTap: () {
             // 作成ボタンのアクション（現在アクティブなタブに応じて）
