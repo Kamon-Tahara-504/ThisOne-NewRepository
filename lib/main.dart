@@ -112,10 +112,11 @@ class _MainScreenState extends State<MainScreen> {
   // GlobalKey for ScheduleScreen
   final GlobalKey _scheduleScreenKey = GlobalKey();
 
-  // スクロール管理のための変数
+  // ヘッダー制御システム
   final Map<int, ScrollController> _scrollControllers = {};
-  double _headerScrollProgress = 0.0; // 0.0=完全表示, 1.0=完全隠れ
-  final double _maxScrollDistance = 100.0; // この距離をスクロールすると完全に隠れる
+  bool _isHeaderVisible = true; // true=表示, false=非表示
+  double _lastScrollPosition = 0.0; // 前回のスクロール位置
+  final double _scrollSensitivity = 10.0; // スクロール感度
 
   @override
   void initState() {
@@ -144,7 +145,7 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  // スクロール監視関数（段階的な変化）
+  // スクロール制御
   void _onScroll(int pageIndex) {
     final controller = _scrollControllers[pageIndex];
     if (controller == null || !controller.hasClients) return;
@@ -154,19 +155,34 @@ class _MainScreenState extends State<MainScreen> {
     if (pageIndex != currentPageIndex) return;
     
     final currentPosition = controller.offset;
+    final scrollDelta = currentPosition - _lastScrollPosition;
     
-    // スクロール進行度を計算（0.0〜1.0）
-    final newProgress = (currentPosition / _maxScrollDistance).clamp(0.0, 1.0);
-    
-    // 進行度が変わった場合のみ更新
-    if ((_headerScrollProgress - newProgress).abs() > 0.01) {
-      setState(() {
-        _headerScrollProgress = newProgress;
-      });
+    // 最小スクロール量のフィルタ
+    if (scrollDelta.abs() > _scrollSensitivity) {
+      bool shouldChangeState = false;
       
-      // デバッグ出力
-      print('📊 ヘッダー進行度: ${(_headerScrollProgress * 100).toStringAsFixed(1)}% (スクロール: ${currentPosition.toStringAsFixed(1)}px)');
+      if (scrollDelta > 0) {
+        // 下スクロール：ヘッダーを隠す
+        if (_isHeaderVisible && scrollDelta > _scrollSensitivity) {
+          shouldChangeState = true;
+          _isHeaderVisible = false;
+        }
+      } else {
+        // 上スクロール：ヘッダーを表示
+        if (!_isHeaderVisible && (-scrollDelta) > 5.0) {
+          shouldChangeState = true;
+          _isHeaderVisible = true;
+        }
+      }
+      
+      // 状態変更をアニメーション付きで実行
+      if (shouldChangeState) {
+        setState(() {});
+      }
     }
+    
+    // 前回位置を更新
+    _lastScrollPosition = currentPosition;
   }
 
   // 現在のPageViewインデックスを取得
@@ -180,25 +196,30 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  // ヘッダーの隠れ具合に応じて動的にトップパディングを計算
+  // 動的トップパディング計算
   double _calculateDynamicTopPadding(BuildContext context) {
     final statusBarHeight = MediaQuery.of(context).padding.top;
-    final baseHeaderHeight = 40.0 + 2.0; // AppBar高さ + ガイドライン高さ
-    final totalHeaderHeight = statusBarHeight + baseHeaderHeight + 12.0; // 基本オフセット含む
+    final headerHeight = 54.0; // ヘッダー高さ
+    final baseTop = statusBarHeight + 4; // 基本位置
     
-    // ヘッダーが隠れた分だけコンテンツを上に詰める
-    final hiddenAmount = _headerScrollProgress * (statusBarHeight - 10); // ヘッダーの隠れた分
-    final adjustedPadding = totalHeaderHeight - hiddenAmount;
-    
-    // 最小値として statusBarHeight を保持（完全に上に行きすぎないように）
-    final finalPadding = adjustedPadding.clamp(statusBarHeight, totalHeaderHeight);
-    
-    // デバッグ出力
-    if (_headerScrollProgress > 0) {
-      print('🔧 パディング調整 - 進行度: ${(_headerScrollProgress * 100).toInt()}%, 隠れた量: ${hiddenAmount.toStringAsFixed(1)}px, パディング: ${finalPadding.toStringAsFixed(1)}px');
-    }
+    // 表示時は通常、非表示時は詰める
+    final finalPadding = _isHeaderVisible 
+        ? baseTop + headerHeight 
+        : statusBarHeight;
     
     return finalPadding;
+  }
+
+  // ヘッダー位置制御
+  double _calculateHeaderTop(BuildContext context) {
+    final statusBarHeight = MediaQuery.of(context).padding.top;
+    final baseTop = statusBarHeight + 4; // 基本位置
+    final headerHeight = 54.0; // ヘッダー高さ
+    
+    // 表示/非表示の切り替え
+    final targetTop = _isHeaderVisible ? baseTop : baseTop - headerHeight;
+    
+    return targetTop;
   }
 
   // AccountInfoOverlayの遅延初期化
@@ -435,81 +456,61 @@ class _MainScreenState extends State<MainScreen> {
               ),
             ),
           ),
-          // ヘッダーを配置（シンプル構造）
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 12, // ステータスバー下に配置
+          // アニメーションヘッダー
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            top: _calculateHeaderTop(context),
             left: 0,
             right: 0,
-            child: ClipRect( // 見切れライン制御
-              child: CollapsibleAppBar(
-                onAccountButtonPressed: () => accountInfoOverlay.handleAccountButtonPressed(),
-                scrollProgress: _headerScrollProgress,
-              ),
-            ),
-          ),
-          // ステータスバー領域のオーバーレイ（境界線なし）
-          if (_headerScrollProgress < 0.95) // 95%以上で完全非表示
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: IgnorePointer(
-                child: Container(
-                  height: MediaQuery.of(context).padding.top,
-                  color: const Color(0xFF2B2B2B), // グラデーション削除で境界線回避
-                  child: _headerScrollProgress > 0.1 ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '${(_headerScrollProgress * 100).toInt()}%', // 進行度表示
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.5),
-                            fontSize: 9,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        if (_headerScrollProgress > 0.2)
-                          Text(
-                            '🚀', // 最適化ヘッダーアイコン
-                            style: TextStyle(fontSize: 8),
-                          ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ヘッダー
+                CollapsibleAppBar(
+                  onAccountButtonPressed: () => accountInfoOverlay.handleAccountButtonPressed(),
+                  scrollProgress: _isHeaderVisible ? 0.0 : 1.0,
+                ),
+                // ガイドライン
+                Container(
+                  height: 2,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFFE85A3B),
+                        const Color(0xFFFFA726),
                       ],
                     ),
-                  ) : null,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // ヘッダー文字マスク
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: IgnorePointer(
+              child: Container(
+                height: MediaQuery.of(context).padding.top + 15,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      const Color(0xFF2B2B2B),
+                      const Color(0xFF2B2B2B),
+                      const Color(0xFF2B2B2B).withValues(alpha: 0.0),
+                      const Color(0xFF2B2B2B).withValues(alpha: 0.0),
+                    ],
+                    stops: [0.0, 0.6, 0.85, 1.0],
+                  ),
                 ),
               ),
             ),
-          // テスト用のボタン（右下に配置）
-          Positioned(
-            right: 16,
-            top: 100,
-            child: FloatingActionButton(
-              mini: true,
-              backgroundColor: Colors.red,
-              onPressed: () {
-                // 段階的テスト：0% → 50% → 100% → 0%の順でテスト
-                double newProgress;
-                if (_headerScrollProgress < 0.25) {
-                  newProgress = 0.5; // 50%に
-                } else if (_headerScrollProgress < 0.75) {
-                  newProgress = 1.0; // 100%に
-                } else {
-                  newProgress = 0.0; // 0%に戻す
-                }
-                
-                final currentPadding = _calculateDynamicTopPadding(context);
-                print('🔧 最適化ヘッダーテスト - ${(_headerScrollProgress * 100).toInt()}% → ${(newProgress * 100).toInt()}%');
-                print('🔧 現在のページインデックス: $_currentIndex');
-                print('🔧 現在のトップパディング: ${currentPadding.toStringAsFixed(1)}px');
-                print('🔧 最適化完了: シンプル構造で確実な動作');
-                setState(() {
-                  _headerScrollProgress = newProgress;
-                });
-              },
-              child: Icon(_headerScrollProgress > 0.5 ? Icons.expand_more : Icons.expand_less),
-            ),
           ),
+
         ],
       ),
       bottomNavigationBar: CustomBottomNavigationBar(
