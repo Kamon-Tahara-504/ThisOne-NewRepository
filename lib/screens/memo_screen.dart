@@ -14,6 +14,7 @@ class MemoScreen extends StatefulWidget {
   final Function(List<Map<String, dynamic>>) onMemosChanged;
   final String? newlyCreatedMemoId; // 新しく作成されたメモのID
   final VoidCallback? onPopAnimationComplete; // ポップアニメーション完了時のコールバック
+  final ScrollController? scrollController;
 
   const MemoScreen({
     super.key,
@@ -21,6 +22,7 @@ class MemoScreen extends StatefulWidget {
     required this.onMemosChanged,
     this.newlyCreatedMemoId,
     this.onPopAnimationComplete,
+    this.scrollController,
   });
 
   @override
@@ -311,7 +313,8 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
                   backgroundColor: const Color(0xFF2B2B2B),
                     onRefresh: _loadMemos,
                     child: ListView.builder(
-                    padding: const EdgeInsets.only(top: 60, left: 16, right: 16, bottom: 16),
+                      controller: widget.scrollController,
+                      padding: const EdgeInsets.only(top: 60, left: 16, right: 16, bottom: 16),
                       itemCount: filteredMemos.length,
                       itemBuilder: (context, index) {
                       final memo = filteredMemos[index];

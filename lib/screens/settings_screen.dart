@@ -3,7 +3,9 @@ import '../gradients.dart';
 import 'account_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  final ScrollController? scrollController;
+  
+  const SettingsScreen({super.key, this.scrollController});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -47,6 +49,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // 設定リスト
           Expanded(
             child: ListView(
+              controller: widget.scrollController,
               padding: const EdgeInsets.all(16),
               children: [
                 _buildSettingItem(

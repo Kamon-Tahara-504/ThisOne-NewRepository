@@ -5,8 +5,9 @@ import '../services/supabase_service.dart';
 class TaskScreen extends StatefulWidget {
   final List<Map<String, dynamic>>? tasks;
   final Function(List<Map<String, dynamic>>)? onTasksChanged;
+  final ScrollController? scrollController;
   
-  const TaskScreen({super.key, this.tasks, this.onTasksChanged});
+  const TaskScreen({super.key, this.tasks, this.onTasksChanged, this.scrollController});
 
   @override
   State<TaskScreen> createState() => _TaskScreenState();
@@ -151,6 +152,7 @@ class _TaskScreenState extends State<TaskScreen> {
                     ),
                   )
                 : ListView.builder(
+                    controller: widget.scrollController,
                     padding: const EdgeInsets.all(16),
                     itemCount: _tasks.length,
                     itemBuilder: (context, index) {

@@ -5,7 +5,9 @@ import '../widgets/schedule/add_schedule_bottom_sheet.dart';
 import '../services/supabase_service.dart';
 
 class ScheduleScreen extends StatefulWidget {
-  const ScheduleScreen({super.key});
+  final ScrollController? scrollController;
+  
+  const ScheduleScreen({super.key, this.scrollController});
 
   @override
   State<ScheduleScreen> createState() => _ScheduleScreenState();
@@ -219,6 +221,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               ),
             )
           : CustomScrollView(
+              controller: widget.scrollController,
               slivers: [
                 // カレンダー部分
                 SliverToBoxAdapter(
