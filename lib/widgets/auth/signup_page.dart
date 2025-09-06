@@ -187,14 +187,18 @@ class _SignupPageState extends State<SignupPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF2B2B2B),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // ヘッダー
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(56.0),
+        child: Container(
+          color: const Color(0xFF2B2B2B),
+          child: SafeArea(
+            bottom: false,
+            child: Container(
+              height: 56,
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Row(
                 children: [
+                  // 戻るボタン
                   IconButton(
                     onPressed: () => Navigator.pop(context),
                     padding: const EdgeInsets.all(4),
@@ -209,6 +213,7 @@ class _SignupPageState extends State<SignupPage> {
                     ),
                   ),
                   const SizedBox(width: 8),
+                  // タイトル
                   const Text(
                     '新規会員登録',
                     style: TextStyle(
@@ -218,24 +223,30 @@ class _SignupPageState extends State<SignupPage> {
                       letterSpacing: 0.5,
                     ),
                   ),
+                  const Spacer(),
                 ],
               ),
             ),
-            // グラデーションライン
-            Container(
-              height: 2,
-              decoration: BoxDecoration(
-                gradient: createHorizontalOrangeYellowGradient(),
-              ),
+          ),
+        ),
+      ),
+      body: Column(
+        children: [
+          // グラデーションガイドライン
+          Container(
+            height: 2,
+            decoration: BoxDecoration(
+              gradient: createHorizontalOrangeYellowGradient(),
             ),
+          ),
             
-            // メインコンテンツ
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+          // メインコンテンツ
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                     const SizedBox(height: 20),
                     
                     // メールアドレス入力
@@ -490,12 +501,11 @@ class _SignupPageState extends State<SignupPage> {
                       ],
                     ),
                     const SizedBox(height: 40),
-                  ],
-                ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

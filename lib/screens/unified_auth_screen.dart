@@ -42,14 +42,18 @@ class _UnifiedAuthScreenState extends State<UnifiedAuthScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF2B2B2B),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // ヘッダー
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(56.0),
+        child: Container(
+          color: const Color(0xFF2B2B2B),
+          child: SafeArea(
+            bottom: false,
+            child: Container(
+              height: 56,
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Row(
                 children: [
+                  // 戻るボタン
                   IconButton(
                     onPressed: () => Navigator.pop(context),
                     padding: const EdgeInsets.all(4),
@@ -64,6 +68,7 @@ class _UnifiedAuthScreenState extends State<UnifiedAuthScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
+                  // タイトル
                   const Text(
                     'アカウント',
                     style: TextStyle(
@@ -73,24 +78,30 @@ class _UnifiedAuthScreenState extends State<UnifiedAuthScreen> {
                       letterSpacing: 0.5,
                     ),
                   ),
+                  const Spacer(),
                 ],
               ),
             ),
-            // グラデーションライン
-            Container(
-              height: 2,
-              decoration: BoxDecoration(
-                gradient: createHorizontalOrangeYellowGradient(),
-              ),
+          ),
+        ),
+      ),
+      body: Column(
+        children: [
+          // グラデーションガイドライン
+          Container(
+            height: 2,
+            decoration: BoxDecoration(
+              gradient: createHorizontalOrangeYellowGradient(),
             ),
+          ),
             
-            // メインコンテンツ
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
+          // メインコンテンツ
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
                     // ロゴ/アイコン部分
                     Container(
                       padding: const EdgeInsets.all(20),
@@ -229,12 +240,11 @@ class _UnifiedAuthScreenState extends State<UnifiedAuthScreen> {
                         height: 1.4,
                       ),
                     ),
-                  ],
-                ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
