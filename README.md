@@ -1,17 +1,17 @@
 # ThisOne - 生産性向上アプリ
 
 **ThisOne**は、タスク管理・スケジュール管理・メモ機能を統合したFlutter製の生産性向上アプリです。  
-モダンなダークテーマとオレンジ-イエローのカスタムグラデーションが特徴的なUIを持ち、Supabaseをバックエンドとして使用します。
+モダンなダークテーマとオレンジ-イエローのカスタムグラデーションが特徴的なUIを持ち、Supabaseをバックエンドとして使用しています。
 
 ##  主要機能
 
 ###  アプリ機能
-- **タスク管理** ✅: タスクの追加・完了・削除・更新（Supabase連携済み）
-- **メモ機能** ✅: リッチテキストエディタ搭載、自動保存機能、Supabase連携済み
+- **タスク管理** ✅: タスクの追加・完了・削除・更新（Supabase完全連携済み）
+- **メモ機能** ✅: リッチテキストエディタ搭載、自動保存機能 (Supabase完全連携済み)
 - **ユーザー認証** ✅: サインアップ・ログイン・ログアウト（Supabase Auth完全連携）
-- **アカウント管理** ✅: プロフィール編集、ユーザー情報管理
-- **スケジュール管理** 🚧: カレンダー表示での予定管理（ローカル動作）
-- **設定画面** 🚧: アプリケーション設定管理
+- **アカウント管理** ✅: プロフィール編集、ユーザー情報管理（Supabase完全連携済み）
+- **スケジュール管理** : カレンダー表示での予定管理（Supabase完全連携済み）
+- **設定画面** : アプリケーション設定管理（基本UI実装済み）
 
 ###  UI/UX
 - **カスタムテーマ**: オレンジ→黄色のグラデーション
@@ -21,42 +21,73 @@
 - **レスポンシブデザイン**: 各種画面サイズに対応
 - **リッチテキストエディタ**: Flutter Quillによる高機能メモエディタ
 - **国際化対応**: 日本語ロケール設定済み
+- **アニメーション**: スムーズなページ遷移とヘッダー制御
+- **カスタムスクロール**: ページスワイプとヘッダー表示制御
 
 ###  データ管理
 - **Supabaseバックエンド**: PostgreSQLデータベース
 - **認証システム**: Supabase Auth統合済み
 - **セキュリティ**: Row Level Security (RLS) 実装済み
-- **自動保存**: メモの変更内容を自動的に保存
+- **自動保存**: メモの変更内容を自動的に保存（デバウンス機能付き）
 - **リアルタイムデータ同期**: 基盤実装済み
+- **スマートトリガー**: メモの実際の内容変更時のみ更新時刻を更新
+- **データベースマイグレーション**: 段階的な機能追加に対応
 
 ##  プロジェクト構造
 
 ```
 lib/
-├── main.dart                    # アプリエントリーポイント・ナビゲーション
-├── gradients.dart              # カスタムグラデーション関数群
-├── supabase_config.dart        # Supabase接続設定
+├── main.dart                          # アプリエントリーポイント・ナビゲーション
+├── gradients.dart                     # カスタムグラデーション関数群
+├── supabase_config.dart               # Supabase接続設定
+├── examples/
+│   └── gradient_showcase.dart         # グラデーション表示例
 ├── services/
-│   └── supabase_service.dart   # データベース操作サービス（認証・タスク・メモ）
+│   └── supabase_service.dart          # データベース操作サービス（認証・タスク・メモ・スケジュール）
 ├── screens/
-│   ├── task_screen.dart        # タスク管理画面
-│   ├── schedule_screen.dart    # スケジュール管理画面
-│   ├── memo_screen.dart        # メモ一覧画面
-│   ├── memo_detail_screen.dart # メモ詳細・編集画面
-│   ├── auth_screen.dart        # 認証画面
-│   ├── account_screen.dart     # アカウント管理画面
-│   └── settings_screen.dart    # 設定画面
+│   ├── task_screen.dart               # タスク管理画面
+│   ├── schedule_screen.dart           # スケジュール管理画面
+│   ├── memo_screen.dart               # メモ一覧画面
+│   ├── memo_detail_screen.dart        # メモ詳細・編集画面
+│   ├── auth_screen.dart               # 認証画面（レガシー）
+│   ├── unified_auth_screen.dart       # 統合認証画面
+│   ├── account_screen.dart            # アカウント管理画面
+│   └── settings_screen.dart           # 設定画面
 ├── widgets/
-│   ├── memo_back_header.dart   # メモ画面ヘッダー
-│   ├── memo_save_manager.dart  # メモ自動保存管理
-│   ├── quill_color_panel.dart  # カラーパネル
-│   ├── quill_rich_editor.dart  # リッチテキストエディタ
-│   └── quill_toolbar.dart      # エディタツールバー
+│   ├── app_bars/
+│   │   ├── collapsible_app_bar.dart   # 折りたたみ可能なアプリバー
+│   │   └── custom_app_bar.dart        # カスタムアプリバー
+│   ├── auth/
+│   │   ├── login_bottom_sheet.dart    # ログインボトムシート
+│   │   └── signup_page.dart           # サインアップページ
+│   ├── navigation/
+│   │   └── custom_bottom_navigation_bar.dart # カスタムボトムナビゲーション
+│   ├── overlays/
+│   │   └── account_info_overlay.dart  # アカウント情報オーバーレイ
+│   ├── schedule/
+│   │   └── add_schedule_bottom_sheet.dart # スケジュール追加ボトムシート
+│   ├── memo_back_header.dart          # メモ画面ヘッダー
+│   ├── memo_filter_header.dart        # メモフィルターヘッダー
+│   ├── memo_item_card.dart            # メモアイテムカード
+│   ├── memo_save_manager.dart         # メモ自動保存管理
+│   ├── empty_memo_state.dart          # 空のメモ状態表示
+│   ├── color_palette.dart             # カラーパレット
+│   ├── quill_color_panel.dart         # Quillカラーパネル
+│   ├── quill_rich_editor.dart         # リッチテキストエディタ
+│   └── quill_toolbar.dart             # エディタツールバー
 └── utils/
-    └── color_utils.dart        # カラーユーティリティ
+    ├── calculator_utils.dart          # 計算ユーティリティ
+    └── color_utils.dart               # カラーユーティリティ
 
-supabase_schema.sql             # データベーススキーマ定義
-supabase_*_migration.sql        # データベースマイグレーションファイル
+database/
+├── schema/
+│   └── initial_schema.sql             # データベーススキーマ定義
+└── migrations/
+    ├── 001_memo_mode.sql              # メモモード追加
+    ├── 002_phone_field.sql            # 電話番号フィールド追加
+    ├── 003_rich_content.sql           # リッチコンテンツ対応
+    ├── 004_smart_trigger.sql          # スマートトリガー実装
+    └── 005_add_schedule_color.sql     # スケジュール色設定追加
 ```
 
 ##  データベース構造
@@ -72,8 +103,8 @@ tasks (id, user_id, title, description, is_completed, priority, due_date, create
 -- メモ機能（完全実装済み）
 memos (id, user_id, title, content, mode, rich_content, is_pinned, color_tag, created_at, updated_at)
 
--- スケジュール管理（準備済み）
-schedules (id, user_id, title, description, schedule_date, start_time, end_time, is_all_day, location, reminder_minutes, created_at, updated_at)
+-- スケジュール管理（完全実装済み）
+schedules (id, user_id, title, description, schedule_date, start_time, end_time, is_all_day, location, reminder_minutes, color_hex, created_at, updated_at)
 
 -- ユーザー設定（準備済み）
 user_settings (id, user_id, theme_mode, notification_enabled, default_reminder_minutes, first_day_of_week, created_at, updated_at)
@@ -97,11 +128,13 @@ flutter pub get
 ### 3. データベーススキーマの作成
 
 1. Supabaseダッシュボードの「SQL Editor」を開く
-2. `supabase_schema.sql`の内容をコピー&実行
+2. `database/schema/initial_schema.sql`の内容をコピー&実行
 3. 必要に応じてマイグレーションファイルも実行：
-   - `supabase_memo_mode_migration.sql`
-   - `supabase_phone_migration.sql`
-   - `supabase_rich_content_migration.sql`
+   - `database/migrations/001_memo_mode.sql`
+   - `database/migrations/002_phone_field.sql`
+   - `database/migrations/003_rich_content.sql`
+   - `database/migrations/004_smart_trigger.sql`
+   - `database/migrations/005_add_schedule_color.sql`
 
 ### 4. 設定ファイルの更新
 
@@ -129,40 +162,59 @@ flutter run
   - [x] サインアップ・ログイン・ログアウト
   - [x] 認証状態管理
   - [x] エラーハンドリング
+  - [x] 統合認証画面（サインアップ・ログイン統合）
 - [x] **タスク管理（Supabase完全連携）**
   - [x] タスクの追加・完了・削除・更新
   - [x] 優先度・期日管理
   - [x] リアルタイム同期
 - [x] **メモ機能（Supabase完全連携）**
   - [x] リッチテキストエディタ（Flutter Quill）
-  - [x] 自動保存機能
+  - [x] 自動保存機能（デバウンス機能付き）
   - [x] メモの追加・編集・削除
   - [x] リッチコンテンツ保存（JSON Delta形式）
-- [x] **アカウント管理**
+  - [x] カラータグ・ピン留め機能
+  - [x] メモモード（memo/note）対応
+- [x] **スケジュール管理（Supabase完全連携）**
+  - [x] カレンダー表示（table_calendar）
+  - [x] スケジュールの追加・編集・削除
+  - [x] 日時指定・終日設定
+  - [x] リマインダー設定
+  - [x] カラーテーマ対応
+- [x] **アカウント管理（Supabase完全連携）**
   - [x] ユーザープロフィール編集
   - [x] 表示名・電話番号管理
   - [x] プロフィール自動作成
+- [x] **設定画面（基本UI実装）**
+  - [x] アカウント設定への遷移
+  - [x] 通知・テーマ・データ・プライバシー設定項目
+  - [x] ヘルプ・アプリ情報項目
 - [x] Supabase設定・サービス層
 - [x] データベーススキーマ設計・作成
 - [x] RLSセキュリティ設定
 - [x] 国際化設定（日本語対応）
+- [x] アニメーション・UI/UX改善
+- [x] カスタムスクロール制御
 
 ### 🚧 開発中・今後の予定
-- [ ] **スケジュール管理のSupabase連携**
-  - [x] UI・カレンダー表示（ローカル動作）
-  - [ ] Supabaseとのデータ連携
-- [ ] **設定画面の実装**
-  - [ ] テーマ設定
-  - [ ] 通知設定
-  - [ ] ユーザー設定管理
+- [ ] **設定画面の機能実装**
+  - [ ] テーマ設定（ダーク/ライト/システム）
+  - [ ] 通知設定（リマインダー・プッシュ通知）
+  - [ ] データ設定（バックアップ・エクスポート）
+  - [ ] プライバシー設定
+  - [ ] ヘルプ・サポート機能
 - [ ] **追加機能**
   - [ ] プッシュ通知機能
-  - [ ] データエクスポート機能
+  - [ ] データエクスポート・インポート機能
   - [ ] オフライン対応
-  - [ ] タスクとカレンダーの連携機能
+  - [ ] タスクとスケジュールの連携機能
   - [ ] モバイル通知欄でのタスク表示
   - [ ] 他言語対応（英語）
-  - [ ] データインポート機能
+  - [ ] データ同期の最適化
+  - [ ] パフォーマンス向上
+  - [ ] タスクの機能改善
+  - [ ] タスク作成画面のUI/UX作成
+  - [ ] タスクでのアラーム機能実装
+  - [ ] 設定画面の実装
 
 ##  技術スタック
 
@@ -175,6 +227,8 @@ flutter run
 - **リッチテキスト**: flutter_quill パッケージ
 - **国際化**: intl + flutter_localizations
 - **フォント**: google_fonts パッケージ
+- **アニメーション**: Flutter Animation Framework
+- **データベース**: PostgreSQL with RLS
 
 ##  主要な依存関係
 
@@ -215,20 +269,36 @@ dependencies:
 - **自動ログアウト**: セッション管理による安全な認証状態管理
 
 ### 自動保存システム
-- メモ編集中の内容を自動的に保存
+- メモ編集中の内容を自動的に保存（デバウンス機能付き）
 - ネットワーク接続状態を考慮した堅牢な保存機能
 - 保存状態の視覚的フィードバック
+- スマートトリガーによる効率的な更新時刻管理
 
 ### リッチテキストエディタ
 - 太字、斜体、下線などの基本的なテキスト装飾
 - カラーパレットによる文字色・背景色変更
 - インデント・リスト機能
 - JSON Delta形式での効率的なデータ保存
+- カスタムツールバーとカラーパネル
 
 ### 統合認証システム
 - Supabase Authによる安全な認証
 - 自動プロフィール作成
 - 認証状態の監視とリアルタイム更新
+- 統合認証画面（サインアップ・ログイン統合）
+
+### スケジュール管理システム
+- カレンダー表示による直感的な予定管理
+- 日時指定・終日設定対応
+- リマインダー機能
+- カラーテーマによる視覚的分類
+- Supabase完全連携によるデータ同期
+
+### UI/UX改善
+- スムーズなページ遷移アニメーション
+- カスタムスクロール制御
+- ヘッダーの動的表示/非表示
+- レスポンシブデザイン対応
 
 ##  参考リソース
 
@@ -256,5 +326,5 @@ dependencies:
 プロジェクトへの貢献は歓迎します！  
 新しい機能の提案やバグ報告は、GitHubのIssueでお知らせください。
 
-*README最終更新: 2024年12月*  
-*AIによる分析と現在の実装状況に基づく生成*
+*README最終更新: 2025年 9月6日*  
+*これらのREADME.MDはAIによる分析と現在の実装状況に基づく生成です*
