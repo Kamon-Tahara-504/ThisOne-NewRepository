@@ -45,6 +45,7 @@ class _QuillToolbarState extends State<QuillToolbar> {
   @override
   Widget build(BuildContext context) {
     return Container(
+      height: 48, // Androidシミュレーター対応：固定高さを設定
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: const Color(0xFF4A4A4A),

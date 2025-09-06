@@ -284,7 +284,8 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
         },
         child: Scaffold(
           backgroundColor: const Color(0xFF2B2B2B),
-          body: Stack(
+          body: SafeArea(
+            child: Stack(
             children: [
               // メモバックヘッダー
               Positioned(
@@ -308,10 +309,10 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
               AnimatedPositioned(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeInOut,
-                top: _isMemoFocused ? 120 : 180,
+                top: _isMemoFocused ? 60 : 120, // この60と120の値は変えちゃダメよん僕
                 left: 16,
                 right: 16,
-                bottom: 16,
+                bottom: _isMemoFocused ? 20 : 16,
                 child: Container(
                   decoration: BoxDecoration(
                     color: const Color(0xFF3A3A3A), // メモ入力欄と同じ背景色
@@ -354,6 +355,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
                 ),
               ),
             ],
+          ),
           ),
         ),
       ),

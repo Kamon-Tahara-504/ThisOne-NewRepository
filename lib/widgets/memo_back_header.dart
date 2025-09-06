@@ -79,84 +79,97 @@ class MemoBackHeader extends StatelessWidget {
         // タイトル編集エリア
         Container(
           color: const Color(0xFF2B2B2B),
-          padding: const EdgeInsets.fromLTRB(22, 0, 12, 10), //メモ全体の高さ調整
-          child: IntrinsicHeight(
-            child: Row(
-              children: [
-                // 左端の小テープ（位置調整）
-                Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Container(
-                    width: 6,
-                    height: 46, // 固定高さで確実にサイズ調整
-                    decoration: BoxDecoration(
-                      gradient: ColorUtils.isGradientColor(colorHex ?? ColorUtils.defaultColorHex)
-                          ? ColorUtils.getGradientFromHex(colorHex ?? ColorUtils.defaultColorHex)
-                          : null,
-                      color: ColorUtils.isGradientColor(colorHex ?? ColorUtils.defaultColorHex)
-                          ? null
-                          : ColorUtils.getColorFromHex(colorHex ?? ColorUtils.defaultColorHex),
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  ),
+          padding: const EdgeInsets.fromLTRB(22, 0, 12, 12), // 下部パディングを増加
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start, // 上部揃えに変更
+            children: [
+              // 左端の小テープ（位置調整）
+              Container(
+                margin: const EdgeInsets.only(top: 8), // 上部マージンで位置調整
+                width: 6,
+                height: 38, // 高さを短縮
+                decoration: BoxDecoration(
+                  gradient: ColorUtils.isGradientColor(colorHex ?? ColorUtils.defaultColorHex)
+                      ? ColorUtils.getGradientFromHex(colorHex ?? ColorUtils.defaultColorHex)
+                      : null,
+                  color: ColorUtils.isGradientColor(colorHex ?? ColorUtils.defaultColorHex)
+                      ? null
+                      : ColorUtils.getColorFromHex(colorHex ?? ColorUtils.defaultColorHex),
+                  borderRadius: BorderRadius.circular(3),
                 ),
-                const SizedBox(width: 8),
-                // タイトル入力とメタ情報
-                Expanded(
+              ),
+              const SizedBox(width: 8),
+              // タイトル入力とメタ情報（Androidシミュレーター対応：固定高さ）
+              Expanded(
+                child: Container(
+                  height: 54, // 固定高さでオーバーフロー防止
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      TextField(
-                        controller: titleController,
-                        focusNode: titleFocusNode,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        decoration: const InputDecoration(
-                          hintText: 'タイトルを入力...',
-                          hintStyle: TextStyle(color: Colors.grey, fontSize: 16),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(vertical: 8),
-                          isDense: true,
+                      // タイトル入力フィールド
+                      SizedBox(
+                        height: 32, // タイトルフィールドの固定高さ
+                        child: TextField(
+                          controller: titleController,
+                          focusNode: titleFocusNode,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          decoration: const InputDecoration(
+                            hintText: 'タイトルを入力...',
+                            hintStyle: TextStyle(color: Colors.grey, fontSize: 16),
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(vertical: 6),
+                            isDense: true,
+                          ),
                         ),
                       ),
-                      // モードラベルと更新時刻を横並びに
-                      Row(
-                        children: [
-                          // モード表示ラベル
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[600]!.withValues(alpha: 0.3),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              mode == 'memo' ? 'メモ' : (mode == 'calculator' || mode == 'rich') ? '計算機' : mode,
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
+                      const SizedBox(height: 4), // 間隔を調整
+                      // モードラベルと更新時刻を横並びに（Androidシミュレーター対応：最小高さ）
+                      SizedBox(
+                        height: 18, // 固定高さでオーバーフロー防止
+                        child: Row(
+                          children: [
+                            // モード表示ラベル
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[600]!.withValues(alpha: 0.3),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                mode == 'memo' ? 'メモ' : (mode == 'calculator' || mode == 'rich') ? '計算機' : mode,
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          // 更新時刻
-                          Text(
-                            _getLastUpdatedText(),
-                            style: TextStyle(
-                              color: Colors.grey[500],
-                              fontSize: 11,
+                            const SizedBox(width: 8),
+                            // 更新時刻（Androidシミュレーター対応：Flexibleでオーバーフロー防止）
+                            Flexible(
+                              child: Text(
+                                _getLastUpdatedText(),
+                                style: TextStyle(
+                                  color: Colors.grey[500],
+                                  fontSize: 11,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ],

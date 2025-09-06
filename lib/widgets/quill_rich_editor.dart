@@ -73,10 +73,24 @@ class _QuillRichEditorState extends State<QuillRichEditor>
   void didChangeMetrics() {
     super.didChangeMetrics();
     
-    // カラーパネルが表示されている場合のみキーボード状態を監視
+    // Androidシミュレーター対応：キーボード状態を監視
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    
+    // カラーパネルが表示されている場合の処理
     if (keyboardHeight == 0 && _colorPanelOverlay != null) {
       _hideColorPanel();
+    }
+    
+    // Android対応：キーボードが閉じられた時にフォーカス状態をリセット
+    if (keyboardHeight == 0 && _memoFocusNode.hasFocus) {
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted && !_memoFocusNode.hasFocus) {
+          setState(() {
+            _showToolbar = false;
+          });
+          widget.onFocusChanged?.call(false);
+        }
+      });
     }
   }
 
