@@ -52,24 +52,30 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
     
     _titleController = TextEditingController(text: widget.title);
     
-    // QuillControllerを初期化
+    // QuillControllerを初期化（Androidシミュレーター対応）
     Document document;
-    if (widget.richContent != null && widget.richContent!.isNotEmpty) {
-      try {
-        final deltaJson = jsonDecode(widget.richContent!);
-        List<dynamic> ops;
-        if (deltaJson is Map<String, dynamic> && deltaJson.containsKey('ops')) {
-          ops = deltaJson['ops'] as List<dynamic>;
-        } else if (deltaJson is List<dynamic>) {
-          ops = deltaJson;
-        } else {
-          throw Exception('不正なDelta形式: $deltaJson');
+    try {
+      if (widget.richContent != null && widget.richContent!.isNotEmpty) {
+        try {
+          final deltaJson = jsonDecode(widget.richContent!);
+          List<dynamic> ops;
+          if (deltaJson is Map<String, dynamic> && deltaJson.containsKey('ops')) {
+            ops = deltaJson['ops'] as List<dynamic>;
+          } else if (deltaJson is List<dynamic>) {
+            ops = deltaJson;
+          } else {
+            throw Exception('不正なDelta形式: $deltaJson');
+          }
+          document = Document.fromJson(ops);
+        } catch (e) {
+          // JSONパースエラーの場合はプレーンテキストで初期化
+          document = Document()..insert(0, widget.content);
         }
-        document = Document.fromJson(ops);
-      } catch (e) {
+      } else {
         document = Document()..insert(0, widget.content);
       }
-    } else {
+    } catch (e) {
+      // Androidシミュレーターでの初期化エラーを回避
       document = Document()..insert(0, widget.content);
     }
     

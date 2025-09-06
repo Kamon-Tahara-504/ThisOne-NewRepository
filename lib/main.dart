@@ -82,6 +82,8 @@ class MyApp extends StatelessWidget {
           backgroundColor: Color(0xFFE85A3B), // FABを程よいオレンジに
           foregroundColor: Colors.white, // FABのアイコン色
         ),
+        // Androidシミュレーター対応：フォントファミリーを明示的に設定
+        fontFamily: 'Roboto',
         useMaterial3: true,
       ),
       home: const MainScreen(),

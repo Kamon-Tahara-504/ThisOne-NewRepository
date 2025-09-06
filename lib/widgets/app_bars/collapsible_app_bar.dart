@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../services/supabase_service.dart';
 
 class CollapsibleAppBar extends StatelessWidget {
@@ -29,11 +28,12 @@ class CollapsibleAppBar extends StatelessWidget {
               offset: const Offset(0, -3),
               child: Text(
                 'ThisOne',
-                style: GoogleFonts.montserrat(
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 24,
                   fontWeight: FontWeight.w500,
                   letterSpacing: 1.2,
+                  fontFamily: 'Roboto',
                 ),
               ),
             ),

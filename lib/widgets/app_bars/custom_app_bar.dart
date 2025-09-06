@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../gradients.dart';
 import '../../services/supabase_service.dart';
 
@@ -44,11 +43,12 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                               offset: const Offset(0, -6), // 2px上に移動
                               child: Text(
                                 'ThisOne',
-                                style: GoogleFonts.montserrat(
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 24,
                                   fontWeight: FontWeight.w500, // 文字の太さ
                                   letterSpacing: 1.2,
+                                  fontFamily: 'Roboto',
                                 ),
                               ),
                             ),
