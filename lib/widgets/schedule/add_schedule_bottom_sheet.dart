@@ -887,7 +887,7 @@ class _CustomReminderDialogState extends State<_CustomReminderDialog> {
               Expanded(
                 flex: 3,
                 child: DropdownButtonFormField<String>(
-                  value: _unit,
+                  initialValue: _unit,
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: const Color(0xFF2B2B2B),

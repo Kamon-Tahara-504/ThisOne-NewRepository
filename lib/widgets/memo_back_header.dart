@@ -101,7 +101,7 @@ class MemoBackHeader extends StatelessWidget {
               const SizedBox(width: 8),
               // タイトル入力とメタ情報（Androidシミュレーター対応：固定高さ）
               Expanded(
-                child: Container(
+                child: SizedBox(
                   height: 54, // 固定高さでオーバーフロー防止
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
