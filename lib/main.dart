@@ -12,7 +12,7 @@ import 'screens/schedule_screen.dart';
 import 'screens/memo_screen.dart';
 import 'screens/settings_screen.dart';
 
-// カスタムScrollPhysics for スワイプアニメーション速度調整
+// カスタムScrollPhysics for スワイプアニメーション速度調整/
 class CustomPageScrollPhysics extends ScrollPhysics {
   final double speedMultiplier;
   
