@@ -416,54 +416,51 @@ class _SignupPageState extends State<SignupPage> {
                     const SizedBox(height: 32),
                     
                     // ソーシャル登録ボタン
-                    Row(
+                    Column(
                       children: [
                         // Google登録 - ブランディングガイドライン準拠
-                        Expanded(
-                          child: GoogleSignInButton(
-                            onPressed: _isLoading ? null : _signUpWithGoogle,
-                            text: "Googleで登録",
-                            borderRadius: 12.0,
-                          ),
+                        GoogleSignInButton(
+                          onPressed: _isLoading ? null : _signUpWithGoogle,
+                          text: "Googleで新規会員登録",
+                          borderRadius: 12.0,
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(height: 16),
                         // X登録
-                        Expanded(
-                          child: Container(
-                            height: 56,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF3A3A3A),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey[600]!),
+                        Container(
+                          width: double.infinity,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF3A3A3A),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[600]!),
+                          ),
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _signUpWithX,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
-                            child: ElevatedButton(
-                              onPressed: _isLoading ? null : _signUpWithX,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                shadowColor: Colors.transparent,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.close,
+                                  color: Colors.grey[300],
+                                  size: 20,
                                 ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.close,
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Xで登録',
+                                  style: TextStyle(
                                     color: Colors.grey[300],
-                                    size: 20,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
                                   ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'X',
-                                    style: TextStyle(
-                                      color: Colors.grey[300],
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
