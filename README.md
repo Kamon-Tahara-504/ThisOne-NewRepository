@@ -150,7 +150,7 @@ class SupabaseConfig {
 ### 5. アプリの実行
 
 ```bash
-flutter run
+flutter run --verbose
 ```
 
 ##  現在の実装状況
@@ -310,6 +310,7 @@ dependencies:
 
 ##  commitメッセージ
 
+- feat：新機能追加
 - fix：バグ修正
 - hotfix：クリティカルなバグ修正
 - add：新規（ファイル）機能追加
@@ -320,11 +321,19 @@ dependencies:
 - remove：削除（ファイル）
 - upgrade：バージョンアップ
 - revert：変更取り消し
+- docs：ドキュメント修正（README、コメント等）
+- tyle：コードフォーマット修正（インデント、スペース等）
+- perf：パフォーマンス改善
+- test：テストコード追加・修正
+- ci：CI/CD 設定変更（GitHub Actions 等）
+- build：ビルド関連変更（依存関係、ビルドツール設定等）
+- chore：雑務的変更（ユーザーに直接影響なし）
+ 
 
 ##  Contributing
 
 プロジェクトへの貢献は歓迎します！  
 新しい機能の提案やバグ報告は、GitHubのIssueでお知らせください。
 
-*README最終更新: 2025年 9月6日*  
-*これらのREADME.MDはAIによる分析と現在の実装状況に基づく生成です*
+*README最終更新: 2025年 9月8日*  
+*これらのREADME.mdはAIによる分析と現在の実装状況に基づく生成です*
