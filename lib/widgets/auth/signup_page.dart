@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/supabase_service.dart';
 import '../../gradients.dart';
 import 'google_signin_button.dart';
+import 'x_signin_button.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -425,44 +426,11 @@ class _SignupPageState extends State<SignupPage> {
                           borderRadius: 12.0,
                         ),
                         const SizedBox(height: 16),
-                        // X登録
-                        Container(
-                          width: double.infinity,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF3A3A3A),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey[600]!),
-                          ),
-                          child: ElevatedButton(
-                            onPressed: _isLoading ? null : _signUpWithX,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.close,
-                                  color: Colors.grey[300],
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Xで登録',
-                                  style: TextStyle(
-                                    color: Colors.grey[300],
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                        // X登録 - ブランディングガイドライン準拠
+                        XSignInButton(
+                          onPressed: _isLoading ? null : _signUpWithX,
+                          text: "Xで新規会員登録",
+                          borderRadius: 12.0,
                         ),
                       ],
                     ),

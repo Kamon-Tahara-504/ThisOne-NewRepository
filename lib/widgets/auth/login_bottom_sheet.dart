@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/supabase_service.dart';
 import '../../gradients.dart';
 import 'google_signin_button.dart';
+import 'x_signin_button.dart';
 
 class LoginBottomSheet extends StatefulWidget {
   final VoidCallback? onLoginSuccess;
@@ -265,44 +266,11 @@ class _LoginBottomSheetState extends State<LoginBottomSheet> {
         ),
         const SizedBox(height: 16),
         
-        // Xログインボタン
-        Container(
-          width: double.infinity,
-          height: 56,
-          decoration: BoxDecoration(
-            color: const Color(0xFF3A3A3A),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[600]!),
-          ),
-          child: ElevatedButton(
-            onPressed: _isLoading ? null : _loginWithX,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              shadowColor: Colors.transparent,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.close,
-                  color: Colors.grey[300],
-                  size: 20,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Xでログイン',
-                  style: TextStyle(
-                    color: Colors.grey[300],
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
+        // Xログインボタン - ブランディングガイドライン準拠
+        XSignInButton(
+          onPressed: _isLoading ? null : _loginWithX,
+          text: "Xでログイン",
+          borderRadius: 12.0,
         ),
         const SizedBox(height: 12),
       ],

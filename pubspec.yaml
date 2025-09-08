@@ -55,6 +55,9 @@ dependencies:
   
   # Google Sign-In button with branding guidelines compliance
   flutter_signin_button: ^2.0.0
+  
+  # SVG support for official logos
+  flutter_svg: ^2.0.10
 
 dev_dependencies:
   flutter_test:
@@ -85,6 +88,7 @@ flutter:
   assets:
     - assets/icons/
     - assets/
+    - assets/x_logo_white.svg
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
