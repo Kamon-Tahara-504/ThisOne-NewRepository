@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/supabase_service.dart';
 import '../../gradients.dart';
+import 'google_signin_button.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -417,44 +418,12 @@ class _SignupPageState extends State<SignupPage> {
                     // ソーシャル登録ボタン
                     Row(
                       children: [
-                        // Google登録
+                        // Google登録 - ブランディングガイドライン準拠
                         Expanded(
-                          child: Container(
-                            height: 56,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF3A3A3A),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey[600]!),
-                            ),
-                            child: ElevatedButton(
-                              onPressed: _isLoading ? null : _signUpWithGoogle,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                shadowColor: Colors.transparent,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.g_mobiledata,
-                                    color: Colors.grey[300],
-                                    size: 24,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Google',
-                                    style: TextStyle(
-                                      color: Colors.grey[300],
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                          child: GoogleSignInButton(
+                            onPressed: _isLoading ? null : _signUpWithGoogle,
+                            text: "Googleで登録",
+                            borderRadius: 12.0,
                           ),
                         ),
                         const SizedBox(width: 16),

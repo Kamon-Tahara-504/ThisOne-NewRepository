@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_signin_button/flutter_signin_button.dart';
 import '../services/supabase_service.dart';
 import '../gradients.dart';
 
@@ -93,6 +94,46 @@ class _AuthScreenState extends State<AuthScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('予期しないエラーが発生しました: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final success = await _supabaseService.signInWithGoogle();
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Googleでログインしました！')),
+          );
+          Navigator.pop(context, true);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Google認証がキャンセルされました'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Google認証エラー: $error'),
             backgroundColor: Colors.red,
           ),
         );
@@ -224,6 +265,38 @@ class _AuthScreenState extends State<AuthScreen> {
                       style: TextStyle(color: Theme.of(context).colorScheme.primary),
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  
+                  // OR区切り
+                  Row(
+                    children: [
+                      Expanded(child: Divider(color: Colors.grey[600])),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          'または',
+                          style: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      Expanded(child: Divider(color: Colors.grey[600])),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Google Sign-In ボタン
+                  SignInButton(
+                    Buttons.Google,
+                    onPressed: _isLoading ? null : _signInWithGoogle,
+                    text: "Googleでログイン",
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  
                   if (!_isSignUp) ...[
                     const SizedBox(height: 16),
                     const Text(

@@ -52,7 +52,9 @@ dependencies:
   flutter_quill_extensions: ^11.0.0
   
   # Color picker
-
+  
+  # Google Sign-In button with branding guidelines compliance
+  flutter_signin_button: ^2.0.0
 
 dev_dependencies:
   flutter_test:
