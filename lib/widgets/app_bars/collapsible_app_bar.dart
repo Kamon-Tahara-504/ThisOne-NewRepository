@@ -14,7 +14,7 @@ class CollapsibleAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final headerHeight = 52.0;
-    
+
     return Container(
       height: headerHeight,
       color: const Color(0xFF2B2B2B),
@@ -51,21 +51,18 @@ class CollapsibleAppBar extends StatelessWidget {
       builder: (context) {
         final supabaseService = SupabaseService();
         final user = supabaseService.getCurrentUser();
-        
+
         return IconButton(
           onPressed: onAccountButtonPressed,
           padding: const EdgeInsets.all(4),
-          constraints: const BoxConstraints(
-            minWidth: 32,
-            minHeight: 32,
-          ),
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           icon: Icon(
             user != null ? Icons.person : Icons.person_outline,
             color: user != null ? const Color(0xFFE85A3B) : Colors.white,
             size: 26,
           ),
         );
-      }
+      },
     );
   }
 }
