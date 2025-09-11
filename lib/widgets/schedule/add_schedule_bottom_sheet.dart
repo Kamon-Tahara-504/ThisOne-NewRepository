@@ -155,7 +155,7 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.75,
+      height: MediaQuery.of(context).size.height * 0.70,
       decoration: const BoxDecoration(
         color: Color(0xFF2B2B2B),
         borderRadius: BorderRadius.only(
@@ -510,7 +510,7 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
           children: [
             Expanded(
               child: Container(
-                height: 44,
+                height: 56, // メモボトムシートと同じ高さに調整
                 decoration: BoxDecoration(
                   color: const Color(0xFF3A3A3A),
                   borderRadius: BorderRadius.circular(12),
@@ -539,7 +539,7 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
             Expanded(
               flex: 2,
               child: Container(
-                height: 44,
+                height: 56, // メモボトムシートと同じ高さに調整
                 decoration: BoxDecoration(
                   gradient: createHorizontalOrangeYellowGradient(),
                   borderRadius: BorderRadius.circular(12),
@@ -781,7 +781,7 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
           children: [
             Expanded(
               child: Container(
-                height: 44,
+                height: 56, // メモボトムシートと同じ高さに調整
                 decoration: BoxDecoration(
                   color: const Color(0xFF3A3A3A),
                   borderRadius: BorderRadius.circular(12),
@@ -810,7 +810,7 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
             Expanded(
               flex: 2,
               child: Container(
-                height: 44,
+                height: 56, // メモボトムシートと同じ高さに調整
                 decoration: BoxDecoration(
                   gradient: createHorizontalOrangeYellowGradient(),
                   borderRadius: BorderRadius.circular(12),
