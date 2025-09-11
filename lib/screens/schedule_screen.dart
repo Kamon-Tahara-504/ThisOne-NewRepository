@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../gradients.dart';
 import '../widgets/schedule/add_schedule_bottom_sheet.dart';
+import '../widgets/overlays/custom_bottom_sheet.dart';
 import '../services/supabase_service.dart';
 
 class ScheduleScreen extends StatefulWidget {
@@ -198,18 +199,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   // 外部（MainScreenなど）から呼び出すためのpublicメソッド
   void addScheduleFromExternal() {
-    showModalBottomSheet(
+    showCustomBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      enableDrag: false, // ドラッグを無効化
-      isDismissible: true,
-      useSafeArea: true,
-      builder:
-          (context) => AddScheduleBottomSheet(
-            selectedDate: _selectedDate,
-            onAdd: _addSchedule,
-          ),
+      initialHeight: 0.75, // 0.7から0.75に変更
+      minHeight: 0.3,
+      maxHeight: 0.95,
+      enableDrag: true,
+      snapToInitial: true,
+      child: AddScheduleBottomSheet(
+        selectedDate: _selectedDate,
+        onAdd: _addSchedule,
+      ),
     );
   }
 

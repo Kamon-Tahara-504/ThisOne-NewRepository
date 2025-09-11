@@ -154,65 +154,55 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.70,
-      decoration: const BoxDecoration(
-        color: Color(0xFF2B2B2B),
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-      ),
-      child: GestureDetector(
-        onTap: () {
-          // 入力欄以外をタップした時にキーボードを格納
-          FocusScope.of(context).unfocus();
-        },
-        behavior: HitTestBehavior.opaque,
-        child: Column(
-          children: [
-            // ハンドル
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              width: 60,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[600],
-                borderRadius: BorderRadius.circular(2),
-              ),
+    return GestureDetector(
+      onTap: () {
+        // 入力欄以外をタップした時にキーボードを格納
+        FocusScope.of(context).unfocus();
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        children: [
+          // ハンドル
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            width: 60,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[600],
+              borderRadius: BorderRadius.circular(2),
             ),
+          ),
 
-            Expanded(
-              child: PageView(
-                controller: _pageController,
-                physics: const PageScrollPhysics(),
-                onPageChanged: (index) {
-                  // ページ変更時の処理（必要に応じて追加）
-                },
-                children: [
-                  SingleChildScrollView(
-                    padding: const EdgeInsets.only(
-                      left: 20,
-                      right: 20,
-                      top: 8,
-                      bottom: 16,
-                    ),
-                    child: _buildBasicSettings(),
+          Expanded(
+            child: PageView(
+              controller: _pageController,
+              physics: const PageScrollPhysics(),
+              onPageChanged: (index) {
+                // ページ変更時の処理（必要に応じて追加）
+              },
+              children: [
+                SingleChildScrollView(
+                  padding: const EdgeInsets.only(
+                    left: 20,
+                    right: 20,
+                    top: 8,
+                    bottom: 16,
                   ),
-                  SingleChildScrollView(
-                    padding: const EdgeInsets.only(
-                      left: 20,
-                      right: 20,
-                      top: 8,
-                      bottom: 16,
-                    ),
-                    child: _buildDetailedSettings(),
+                  child: _buildBasicSettings(),
+                ),
+                SingleChildScrollView(
+                  padding: const EdgeInsets.only(
+                    left: 20,
+                    right: 20,
+                    top: 8,
+                    bottom: 16,
                   ),
-                ],
-              ),
+                  child: _buildDetailedSettings(),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
