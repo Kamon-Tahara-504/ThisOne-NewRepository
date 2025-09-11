@@ -4,7 +4,7 @@ import 'account_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final ScrollController? scrollController;
-  
+
   const SettingsScreen({super.key, this.scrollController});
 
   @override
@@ -129,11 +129,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             gradient: createOrangeYellowGradient(),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(
-            icon,
-            color: Colors.white,
-            size: 20,
-          ),
+          child: Icon(icon, color: Colors.white, size: 20),
         ),
         title: Text(
           title,
@@ -145,17 +141,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         subtitle: Text(
           subtitle,
-          style: TextStyle(
-            color: Colors.grey[400],
-            fontSize: 14,
-          ),
+          style: TextStyle(color: Colors.grey[400], fontSize: 14),
         ),
-        trailing: Icon(
-          Icons.chevron_right,
-          color: Colors.grey[500],
-        ),
+        trailing: Icon(Icons.chevron_right, color: Colors.grey[500]),
         onTap: onTap,
       ),
     );
   }
-} 
+}

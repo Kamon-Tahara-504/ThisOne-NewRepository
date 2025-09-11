@@ -20,7 +20,10 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   TimeOfDay _startTime = TimeOfDay.now();
-  TimeOfDay _endTime = TimeOfDay(hour: TimeOfDay.now().hour + 1, minute: TimeOfDay.now().minute);
+  TimeOfDay _endTime = TimeOfDay(
+    hour: TimeOfDay.now().hour + 1,
+    minute: TimeOfDay.now().minute,
+  );
   bool _isAllDay = false;
   String _selectedColorHex = '#9E9E9E';
   bool _isNotificationEnabled = false;
@@ -72,12 +75,13 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
   void _showCustomReminderDialog() async {
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (context) => _CustomReminderDialog(
-        initialValue: _customValue,
-        initialUnit: _customUnit,
-      ),
+      builder:
+          (context) => _CustomReminderDialog(
+            initialValue: _customValue,
+            initialUnit: _customUnit,
+          ),
     );
-    
+
     if (result != null) {
       setState(() {
         _customValue = result['value'];
@@ -90,10 +94,9 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
 
   void _addSchedule() {
     if (_titleController.text.trim().isNotEmpty) {
-      final finalReminderMinutes = _isCustomReminder 
-          ? _getCustomReminderMinutes()
-          : _reminderMinutes;
-          
+      final finalReminderMinutes =
+          _isCustomReminder ? _getCustomReminderMinutes() : _reminderMinutes;
+
       widget.onAdd({
         'id': DateTime.now().millisecondsSinceEpoch,
         'title': _titleController.text.trim(),
@@ -116,7 +119,7 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
     final isSelected = _selectedColorHex == colorOption['hex'];
     final colorHex = colorOption['hex'] as String;
     final isGradient = colorOption['isGradient'] as bool;
-    
+
     return GestureDetector(
       onTap: () => setState(() => _selectedColorHex = colorHex),
       child: Container(
@@ -130,87 +133,87 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
             color: isSelected ? Colors.white : Colors.transparent,
             width: 3,
           ),
-          boxShadow: isSelected ? [
-            BoxShadow(
-              color: Colors.white.withValues(alpha: 0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ] : null,
+          boxShadow:
+              isSelected
+                  ? [
+                    BoxShadow(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                  : null,
         ),
-        child: isSelected
-            ? const Icon(
-                Icons.check,
-                color: Colors.white,
-                size: 14,
-              )
-            : null,
+        child:
+            isSelected
+                ? const Icon(Icons.check, color: Colors.white, size: 14)
+                : null,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.75,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Color(0xFF2B2B2B),
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
-          ),
-          child: GestureDetector(
-            onTap: () {
-              // 入力欄以外をタップした時にキーボードを格納
-              FocusScope.of(context).unfocus();
-            },
-            behavior: HitTestBehavior.opaque,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-              // ハンドル
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                width: 60,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[600],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              
-              Expanded(
-                child: PageView(
-                  controller: _pageController,
-                  physics: const PageScrollPhysics(),
-                  onPageChanged: (index) {
-                    // ページ変更時の処理（必要に応じて追加）
-                  },
-                  children: [
-                    SingleChildScrollView(
-                      controller: scrollController,
-                      padding: const EdgeInsets.only(left: 20, right: 20, top: 8, bottom: 16),
-                      child: _buildBasicSettings(),
-                    ),
-                    SingleChildScrollView(
-                      controller: scrollController,
-                      padding: const EdgeInsets.only(left: 20, right: 20, top: 8, bottom: 16),
-                      child: _buildDetailedSettings(),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.75,
+      decoration: const BoxDecoration(
+        color: Color(0xFF2B2B2B),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
         ),
-      );
-      },
+      ),
+      child: GestureDetector(
+        onTap: () {
+          // 入力欄以外をタップした時にキーボードを格納
+          FocusScope.of(context).unfocus();
+        },
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          children: [
+            // ハンドル
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: 60,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[600],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                physics: const PageScrollPhysics(),
+                onPageChanged: (index) {
+                  // ページ変更時の処理（必要に応じて追加）
+                },
+                children: [
+                  SingleChildScrollView(
+                    padding: const EdgeInsets.only(
+                      left: 20,
+                      right: 20,
+                      top: 8,
+                      bottom: 16,
+                    ),
+                    child: _buildBasicSettings(),
+                  ),
+                  SingleChildScrollView(
+                    padding: const EdgeInsets.only(
+                      left: 20,
+                      right: 20,
+                      top: 8,
+                      bottom: 16,
+                    ),
+                    child: _buildDetailedSettings(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -222,17 +225,15 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
         // 日付表示
         Text(
           '${widget.selectedDate.year}年${widget.selectedDate.month}月${widget.selectedDate.day}日',
-          style: TextStyle(
-            color: Colors.grey[400],
-            fontSize: 14,
-          ),
+          style: TextStyle(color: Colors.grey[400], fontSize: 14),
         ),
         const SizedBox(height: 8),
         // タイトル
         Row(
           children: [
             ShaderMask(
-              shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
+              shaderCallback:
+                  (bounds) => createOrangeYellowGradient().createShader(bounds),
               child: const Icon(
                 Icons.event_note,
                 color: Colors.white,
@@ -251,7 +252,7 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
           ],
         ),
         const SizedBox(height: 16),
-        
+
         // タイトル入力
         Container(
           decoration: BoxDecoration(
@@ -294,7 +295,7 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
           ),
         ),
         const SizedBox(height: 10),
-        
+
         // 時間設定
         Container(
           decoration: BoxDecoration(
@@ -328,7 +329,7 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                
+
                 // 時間設定
                 AnimatedOpacity(
                   opacity: _isAllDay ? 0.3 : 1.0,
@@ -365,16 +366,25 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
                                   decoration: BoxDecoration(
                                     color: const Color(0xFF3A3A3A),
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Colors.grey[600]!),
+                                    border: Border.all(
+                                      color: Colors.grey[600]!,
+                                    ),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.access_time, color: Colors.grey[400], size: 16),
+                                      Icon(
+                                        Icons.access_time,
+                                        color: Colors.grey[400],
+                                        size: 16,
+                                      ),
                                       const SizedBox(width: 8),
                                       Text(
                                         '${_startTime.hour.toString().padLeft(2, '0')}:${_startTime.minute.toString().padLeft(2, '0')}',
-                                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -412,16 +422,25 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
                                   decoration: BoxDecoration(
                                     color: const Color(0xFF3A3A3A),
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Colors.grey[600]!),
+                                    border: Border.all(
+                                      color: Colors.grey[600]!,
+                                    ),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.access_time, color: Colors.grey[400], size: 16),
+                                      Icon(
+                                        Icons.access_time,
+                                        color: Colors.grey[400],
+                                        size: 16,
+                                      ),
                                       const SizedBox(width: 8),
                                       Text(
                                         '${_endTime.hour.toString().padLeft(2, '0')}:${_endTime.minute.toString().padLeft(2, '0')}',
-                                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -439,7 +458,7 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
           ),
         ),
         const SizedBox(height: 10),
-        
+
         // 色設定
         Container(
           decoration: BoxDecoration(
@@ -466,7 +485,11 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
                   child: Row(
                     children: [
                       const SizedBox(width: 8), // 左端の余白
-                      for (int i = 0; i < ColorUtils.colorLabelPalette.length; i++) ...[
+                      for (
+                        int i = 0;
+                        i < ColorUtils.colorLabelPalette.length;
+                        i++
+                      ) ...[
                         _buildColorOption(ColorUtils.colorLabelPalette[i]),
                         if (i < ColorUtils.colorLabelPalette.length - 1)
                           const SizedBox(width: 12), // アイテム間の間隔
@@ -479,9 +502,9 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
             ),
           ),
         ),
-        
+
         const SizedBox(height: 8),
-        
+
         // ボタン
         Row(
           children: [
@@ -555,22 +578,16 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
         // 日付表示
         Text(
           '${widget.selectedDate.year}年${widget.selectedDate.month}月${widget.selectedDate.day}日',
-          style: TextStyle(
-            color: Colors.grey[400],
-            fontSize: 14,
-          ),
+          style: TextStyle(color: Colors.grey[400], fontSize: 14),
         ),
         const SizedBox(height: 8),
         // タイトル
         Row(
           children: [
             ShaderMask(
-              shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
-              child: const Icon(
-                Icons.settings,
-                color: Colors.white,
-                size: 28,
-              ),
+              shaderCallback:
+                  (bounds) => createOrangeYellowGradient().createShader(bounds),
+              child: const Icon(Icons.settings, color: Colors.white, size: 28),
             ),
             const SizedBox(width: 12),
             const Text(
@@ -584,7 +601,7 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
           ],
         ),
         const SizedBox(height: 16),
-        
+
         // 説明入力
         Container(
           decoration: BoxDecoration(
@@ -628,7 +645,7 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
           ),
         ),
         const SizedBox(height: 10),
-        
+
         // 通知設定
         Container(
           decoration: BoxDecoration(
@@ -660,14 +677,16 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
                     const SizedBox(width: 12),
                     Switch(
                       value: _isNotificationEnabled,
-                      onChanged: (value) => setState(() => _isNotificationEnabled = value),
+                      onChanged:
+                          (value) =>
+                              setState(() => _isNotificationEnabled = value),
                       activeThumbColor: const Color(0xFFE85A3B),
                       inactiveThumbColor: Colors.grey[400],
                       inactiveTrackColor: Colors.grey[700],
                     ),
                   ],
                 ),
-                
+
                 // 通知設定詳細
                 AnimatedOpacity(
                   opacity: _isNotificationEnabled ? 1.0 : 0.3,
@@ -690,44 +709,61 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
-                          children: _reminderOptions.map((option) {
-                            final isCustomOption = option['minutes'] == -1;
-                            final isSelected = isCustomOption 
-                                ? _isCustomReminder 
-                                : _reminderMinutes == option['minutes'] && !_isCustomReminder;
-                            
-                            return GestureDetector(
-                              onTap: () {
-                                if (isCustomOption) {
-                                  _showCustomReminderDialog();
-                                } else {
-                                  setState(() {
-                                    _isCustomReminder = false;
-                                    _reminderMinutes = option['minutes'];
-                                  });
-                                }
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: isSelected ? const Color(0xFFE85A3B) : const Color(0xFF3A3A3A),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: isSelected ? Colors.transparent : Colors.grey[600]!,
+                          children:
+                              _reminderOptions.map((option) {
+                                final isCustomOption = option['minutes'] == -1;
+                                final isSelected =
+                                    isCustomOption
+                                        ? _isCustomReminder
+                                        : _reminderMinutes ==
+                                                option['minutes'] &&
+                                            !_isCustomReminder;
+
+                                return GestureDetector(
+                                  onTap: () {
+                                    if (isCustomOption) {
+                                      _showCustomReminderDialog();
+                                    } else {
+                                      setState(() {
+                                        _isCustomReminder = false;
+                                        _reminderMinutes = option['minutes'];
+                                      });
+                                    }
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          isSelected
+                                              ? const Color(0xFFE85A3B)
+                                              : const Color(0xFF3A3A3A),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color:
+                                            isSelected
+                                                ? Colors.transparent
+                                                : Colors.grey[600]!,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      isCustomOption && _isCustomReminder
+                                          ? 'カスタム ($_customValue${_customUnit == 'minutes'
+                                              ? '分'
+                                              : _customUnit == 'hours'
+                                              ? '時間'
+                                              : '日'}前)'
+                                          : option['label'],
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                                child: Text(
-                                  isCustomOption && _isCustomReminder 
-                                      ? 'カスタム ($_customValue${_customUnit == 'minutes' ? '分' : _customUnit == 'hours' ? '時間' : '日'}前)'
-                                      : option['label'],
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
+                                );
+                              }).toList(),
                         ),
                       ],
                     ),
@@ -737,9 +773,9 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
             ),
           ),
         ),
-        
+
         const SizedBox(height: 8),
-        
+
         // ボタン
         Row(
           children: [
@@ -923,10 +959,7 @@ class _CustomReminderDialogState extends State<_CustomReminderDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(
-            'キャンセル',
-            style: TextStyle(color: Colors.grey[400]),
-          ),
+          child: Text('キャンセル', style: TextStyle(color: Colors.grey[400])),
         ),
         Container(
           decoration: BoxDecoration(
@@ -935,18 +968,12 @@ class _CustomReminderDialogState extends State<_CustomReminderDialog> {
           ),
           child: TextButton(
             onPressed: () {
-              Navigator.pop(context, {
-                'value': _value,
-                'unit': _unit,
-              });
+              Navigator.pop(context, {'value': _value, 'unit': _unit});
             },
-            child: const Text(
-              '設定',
-              style: TextStyle(color: Colors.white),
-            ),
+            child: const Text('設定', style: TextStyle(color: Colors.white)),
           ),
         ),
       ],
     );
   }
-} 
+}
