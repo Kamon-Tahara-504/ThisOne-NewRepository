@@ -41,24 +41,27 @@ class MemoFilterHeader extends StatelessWidget {
             // 色フィルタリングボタン
             Container(
               decoration: BoxDecoration(
-                color: selectedColorFilter != null ? Colors.transparent : const Color(0xFF3A3A3A),
+                color:
+                    selectedColorFilter != null
+                        ? Colors.transparent
+                        : const Color(0xFF3A3A3A),
                 borderRadius: BorderRadius.circular(20),
-                border: selectedColorFilter != null
-                    ? Border.all(
-                        width: 1,
-                        color: Colors.transparent,
-                      )
-                    : Border.all(
-                        color: Colors.grey[600]!,
-                      ),
-                gradient: selectedColorFilter != null
-                    ? createOrangeYellowGradient()
-                    : null,
+                border:
+                    selectedColorFilter != null
+                        ? Border.all(width: 1, color: Colors.transparent)
+                        : Border.all(color: Colors.grey[600]!),
+                gradient:
+                    selectedColorFilter != null
+                        ? createOrangeYellowGradient()
+                        : null,
               ),
               child: Container(
                 margin: const EdgeInsets.all(1),
                 decoration: BoxDecoration(
-                  color: selectedColorFilter != null ? Colors.transparent : const Color(0xFF3A3A3A),
+                  color:
+                      selectedColorFilter != null
+                          ? Colors.transparent
+                          : const Color(0xFF3A3A3A),
                   borderRadius: BorderRadius.circular(19),
                 ),
                 child: Material(
@@ -67,12 +70,17 @@ class MemoFilterHeader extends StatelessWidget {
                     onTap: onShowColorFilterBottomSheet,
                     borderRadius: BorderRadius.circular(19),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           ShaderMask(
-                            shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
+                            shaderCallback:
+                                (bounds) => createOrangeYellowGradient()
+                                    .createShader(bounds),
                             child: const Icon(
                               Icons.palette,
                               size: 18,
@@ -81,7 +89,9 @@ class MemoFilterHeader extends StatelessWidget {
                           ),
                           const SizedBox(width: 8),
                           ShaderMask(
-                            shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
+                            shaderCallback:
+                                (bounds) => createOrangeYellowGradient()
+                                    .createShader(bounds),
                             child: Text(
                               selectedColorFilter != null ? '色フィルタ中' : '色で検索',
                               style: const TextStyle(
@@ -102,14 +112,19 @@ class MemoFilterHeader extends StatelessWidget {
             if (selectedColorFilter != null) ...[
               const SizedBox(width: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
-                  gradient: ColorUtils.isGradientColor(selectedColorFilter!)
-                      ? ColorUtils.getGradientFromHex(selectedColorFilter!)
-                      : null,
-                  color: ColorUtils.isGradientColor(selectedColorFilter!)
-                      ? null
-                      : ColorUtils.getColorFromHex(selectedColorFilter!),
+                  gradient:
+                      ColorUtils.isGradientColor(selectedColorFilter!)
+                          ? ColorUtils.getGradientFromHex(selectedColorFilter!)
+                          : null,
+                  color:
+                      ColorUtils.isGradientColor(selectedColorFilter!)
+                          ? null
+                          : ColorUtils.getColorFromHex(selectedColorFilter!),
                   borderRadius: BorderRadius.circular(15),
                 ),
                 child: Row(
@@ -118,7 +133,10 @@ class MemoFilterHeader extends StatelessWidget {
                     Text(
                       'フィルタ中',
                       style: TextStyle(
-                        color: (selectedColorFilter == '#FFEB3B') ? Colors.black : Colors.white,
+                        color:
+                            (selectedColorFilter == '#FFEB3B')
+                                ? Colors.black
+                                : Colors.white,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
@@ -129,7 +147,10 @@ class MemoFilterHeader extends StatelessWidget {
                       child: Icon(
                         Icons.close,
                         size: 16,
-                        color: (selectedColorFilter == '#FFEB3B') ? Colors.black : Colors.white,
+                        color:
+                            (selectedColorFilter == '#FFEB3B')
+                                ? Colors.black
+                                : Colors.white,
                       ),
                     ),
                   ],
@@ -140,14 +161,11 @@ class MemoFilterHeader extends StatelessWidget {
             // メモ数表示
             Text(
               '$memoCount件のメモ',
-              style: TextStyle(
-                color: Colors.grey[500],
-                fontSize: 12,
-              ),
+              style: TextStyle(color: Colors.grey[500], fontSize: 12),
             ),
           ],
         ),
       ),
     );
   }
-} 
+}

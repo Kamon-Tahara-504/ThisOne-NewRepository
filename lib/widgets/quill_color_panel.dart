@@ -20,13 +20,13 @@ class QuillColorPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     // 色のリストを定義
     final List<Color?> firstRowColors = [
-       null, // リセットボタン
-       Colors.grey,
-       Colors.green,
-       Colors.yellow,
-       Colors.orange,
+      null, // リセットボタン
+      Colors.grey,
+      Colors.green,
+      Colors.yellow,
+      Colors.orange,
     ];
-    
+
     final List<Color?> secondRowColors = [
       Colors.cyan,
       Colors.indigo,
@@ -40,10 +40,11 @@ class QuillColorPanel extends StatelessWidget {
     const double buttonSpacing = 12.0;
     const double sidePadding = 8.0;
     const int buttonCount = 5;
-    
-    final double panelWidth = (buttonCount * buttonSize) + 
-                             ((buttonCount - 1) * buttonSpacing) + 
-                             (sidePadding * 2);
+
+    final double panelWidth =
+        (buttonCount * buttonSize) +
+        ((buttonCount - 1) * buttonSpacing) +
+        (sidePadding * 2);
 
     return Positioned(
       top: 60,
@@ -109,35 +110,43 @@ class QuillColorPanel extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
-              
+
               // 最初の行（5色）
               Row(
-                children: firstRowColors.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final color = entry.value;
-                  return Padding(
-                    padding: EdgeInsets.only(
-                      right: index < firstRowColors.length - 1 ? buttonSpacing : 0
-                    ),
-                    child: _buildSmallColorButton(color),
-                  );
-                }).toList(),
+                children:
+                    firstRowColors.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final color = entry.value;
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          right:
+                              index < firstRowColors.length - 1
+                                  ? buttonSpacing
+                                  : 0,
+                        ),
+                        child: _buildSmallColorButton(color),
+                      );
+                    }).toList(),
               ),
-              
+
               const SizedBox(height: 10),
-              
+
               // 2番目の行（5色、リセットボタン含む）
               Row(
-                children: secondRowColors.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final color = entry.value;
-                  return Padding(
-                    padding: EdgeInsets.only(
-                      right: index < secondRowColors.length - 1 ? buttonSpacing : 0
-                    ),
-                    child: _buildSmallColorButton(color),
-                  );
-                }).toList(),
+                children:
+                    secondRowColors.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final color = entry.value;
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          right:
+                              index < secondRowColors.length - 1
+                                  ? buttonSpacing
+                                  : 0,
+                        ),
+                        child: _buildSmallColorButton(color),
+                      );
+                    }).toList(),
               ),
             ],
           ),
@@ -148,7 +157,7 @@ class QuillColorPanel extends StatelessWidget {
 
   Widget _buildSmallColorButton(Color? color) {
     const double buttonSize = 24.0;
-    
+
     return GestureDetector(
       onTap: () {
         if (color != null) {
@@ -162,31 +171,33 @@ class QuillColorPanel extends StatelessWidget {
         width: buttonSize,
         height: buttonSize,
         decoration: BoxDecoration(
-          color: isBackgroundColorMode
-              ? (color != null 
-                  ? Color.fromRGBO(
-                      (color.r * 255).round(),
-                      (color.g * 255).round(),
-                      (color.b * 255).round(),
-                      0.3,
-                    )
-                  : const Color(0xFF3A3A3A)) // リセットボタンはエディタの背景色
-              : const Color(0xFF4A4A4A), // 文字色ボタンの背景
+          color:
+              isBackgroundColorMode
+                  ? (color != null
+                      ? Color.fromRGBO(
+                        (color.r * 255).round(),
+                        (color.g * 255).round(),
+                        (color.b * 255).round(),
+                        0.3,
+                      )
+                      : const Color(0xFF3A3A3A)) // リセットボタンはエディタの背景色
+                  : const Color(0xFF4A4A4A), // 文字色ボタンの背景
           border: Border.all(color: Colors.grey[400]!, width: 0.5),
           borderRadius: BorderRadius.circular(4),
         ),
-        child: isBackgroundColorMode
-            ? null // 背景色は色そのものを表示（nullの場合は通常の背景色）
-            : Center(
-                child: Text(
-                  'A',
-                  style: TextStyle(
-                    color: color ?? Colors.white, // 文字色またはリセット時は白
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
+        child:
+            isBackgroundColorMode
+                ? null // 背景色は色そのものを表示（nullの場合は通常の背景色）
+                : Center(
+                  child: Text(
+                    'A',
+                    style: TextStyle(
+                      color: color ?? Colors.white, // 文字色またはリセット時は白
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              ),
       ),
     );
   }
@@ -210,12 +221,13 @@ class QuillColorPanel extends StatelessWidget {
     required VoidCallback onColorChanged,
   }) {
     return OverlayEntry(
-      builder: (context) => QuillColorPanel(
-        controller: controller,
-        isBackgroundColorMode: isBackgroundColorMode,
-        onClose: onClose,
-        onColorChanged: onColorChanged,
-      ),
+      builder:
+          (context) => QuillColorPanel(
+            controller: controller,
+            isBackgroundColorMode: isBackgroundColorMode,
+            onClose: onClose,
+            onColorChanged: onColorChanged,
+          ),
     );
   }
-} 
+}
