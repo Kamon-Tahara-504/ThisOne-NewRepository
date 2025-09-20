@@ -201,7 +201,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   void addScheduleFromExternal() {
     showCustomBottomSheet(
       context: context,
-      initialHeight: 0.75, // 0.7から0.75に変更
+      initialHeight: 0.95, // ガイドラインまで引き上げ
       minHeight: 0.3,
       maxHeight: 0.95,
       enableDrag: true,

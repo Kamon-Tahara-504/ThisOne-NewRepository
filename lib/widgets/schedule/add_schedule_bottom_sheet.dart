@@ -28,7 +28,6 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
   String _selectedColorHex = '#9E9E9E';
   bool _isNotificationEnabled = false;
   int _reminderMinutes = 15;
-  late PageController _pageController;
   bool _isCustomReminder = false;
   int _customValue = 15;
   String _customUnit = 'minutes'; // 'minutes', 'hours', 'days'
@@ -44,16 +43,9 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
   ];
 
   @override
-  void initState() {
-    super.initState();
-    _pageController = PageController(initialPage: 0);
-  }
-
-  @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
-    _pageController.dispose();
     super.dispose();
   }
 
@@ -162,44 +154,80 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
       behavior: HitTestBehavior.opaque,
       child: Column(
         children: [
-          // ハンドル
+          // ハンドルタッチエリア
           Container(
-            margin: const EdgeInsets.symmetric(vertical: 12),
-            width: 60,
-            height: 4,
+            width: double.infinity,
+            height: 24,
             decoration: BoxDecoration(
-              color: Colors.grey[600],
-              borderRadius: BorderRadius.circular(2),
+              gradient: createHorizontalOrangeYellowGradient(),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            child: Center(
+              child: Container(
+                width: 60,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
             ),
           ),
 
           Expanded(
-            child: PageView(
-              controller: _pageController,
-              physics: const PageScrollPhysics(),
-              onPageChanged: (index) {
-                // ページ変更時の処理（必要に応じて追加）
-              },
-              children: [
-                SingleChildScrollView(
-                  padding: const EdgeInsets.only(
-                    left: 20,
-                    right: 20,
-                    top: 8,
-                    bottom: 16,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 8,
+                bottom: 16,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 日付表示
+                  Text(
+                    '${widget.selectedDate.year}年${widget.selectedDate.month}月${widget.selectedDate.day}日',
+                    style: TextStyle(color: Colors.grey[400], fontSize: 14),
                   ),
-                  child: _buildBasicSettings(),
-                ),
-                SingleChildScrollView(
-                  padding: const EdgeInsets.only(
-                    left: 20,
-                    right: 20,
-                    top: 8,
-                    bottom: 16,
+                  const SizedBox(height: 8),
+                  // タイトル
+                  Row(
+                    children: [
+                      ShaderMask(
+                        shaderCallback:
+                            (bounds) => createOrangeYellowGradient()
+                                .createShader(bounds),
+                        child: const Icon(
+                          Icons.event_note,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'スケジュール作成',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
-                  child: _buildDetailedSettings(),
-                ),
-              ],
+                  const SizedBox(height: 20),
+
+                  // 基本設定セクション
+                  _buildBasicSettings(),
+                  const SizedBox(height: 20),
+
+                  // 詳細設定セクション
+                  _buildDetailedSettings(),
+                ],
+              ),
             ),
           ),
         ],
@@ -207,55 +235,90 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
     );
   }
 
-  // 第1段階：基本設定
+  // 基本設定セクション
   Widget _buildBasicSettings() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 日付表示
-        Text(
-          '${widget.selectedDate.year}年${widget.selectedDate.month}月${widget.selectedDate.day}日',
-          style: TextStyle(color: Colors.grey[400], fontSize: 14),
-        ),
-        const SizedBox(height: 8),
-        // タイトル
-        Row(
+        // タイトル入力
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ShaderMask(
-              shaderCallback:
-                  (bounds) => createOrangeYellowGradient().createShader(bounds),
-              child: const Icon(
-                Icons.event_note,
-                color: Colors.white,
-                size: 28,
-              ),
-            ),
-            const SizedBox(width: 12),
             const Text(
-              'スケジュール作成',
+              'タイトル',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF3A3A3A),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[600]!),
+              ),
+              child: TextField(
+                controller: _titleController,
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+                decoration: const InputDecoration(
+                  hintText: 'スケジュールのタイトルを入力...',
+                  hintStyle: TextStyle(color: Colors.grey),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.all(16),
+                ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 10),
 
-        // タイトル入力
+        // 説明入力
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '説明',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF3A3A3A),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[600]!),
+              ),
+              child: TextField(
+                controller: _descriptionController,
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  hintText: '詳細な説明を入力...',
+                  hintStyle: TextStyle(color: Colors.grey),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.all(12),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        // 色設定
         Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[700]!, width: 1),
-          ),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
           child: Container(
             padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'タイトル',
+                  '色ラベル',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -263,35 +326,41 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF3A3A3A),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey[600]!),
-                  ),
-                  child: TextField(
-                    controller: _titleController,
-                    style: const TextStyle(color: Colors.white, fontSize: 16),
-                    decoration: const InputDecoration(
-                      hintText: 'スケジュールのタイトルを入力...',
-                      hintStyle: TextStyle(color: Colors.grey),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.all(16),
-                    ),
+                // カラーパレット（横スクロール一列）
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 8), // 左端の余白
+                      for (
+                        int i = 0;
+                        i < ColorUtils.colorLabelPalette.length;
+                        i++
+                      ) ...[
+                        _buildColorOption(ColorUtils.colorLabelPalette[i]),
+                        if (i < ColorUtils.colorLabelPalette.length - 1)
+                          const SizedBox(width: 12), // アイテム間の間隔
+                      ],
+                      const SizedBox(width: 8), // 右端の余白
+                    ],
                   ),
                 ),
               ],
             ),
           ),
         ),
-        const SizedBox(height: 10),
+      ],
+    );
+  }
 
+  // 詳細設定セクション
+  Widget _buildDetailedSettings() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         // 時間設定
         Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[700]!, width: 1),
-          ),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
           child: Container(
             padding: const EdgeInsets.all(12),
             child: Column(
@@ -449,199 +518,9 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
         ),
         const SizedBox(height: 10),
 
-        // 色設定
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[700]!, width: 1),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '色ラベル',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                // カラーパレット（横スクロール一列）
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      const SizedBox(width: 8), // 左端の余白
-                      for (
-                        int i = 0;
-                        i < ColorUtils.colorLabelPalette.length;
-                        i++
-                      ) ...[
-                        _buildColorOption(ColorUtils.colorLabelPalette[i]),
-                        if (i < ColorUtils.colorLabelPalette.length - 1)
-                          const SizedBox(width: 12), // アイテム間の間隔
-                      ],
-                      const SizedBox(width: 8), // 右端の余白
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 8),
-
-        // ボタン
-        Row(
-          children: [
-            Expanded(
-              child: Container(
-                height: 56, // メモボトムシートと同じ高さに調整
-                decoration: BoxDecoration(
-                  color: const Color(0xFF3A3A3A),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey[600]!),
-                ),
-                child: TextButton(
-                  onPressed: () {
-                    _pageController.animateToPage(
-                      1,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    );
-                  },
-                  child: const Text(
-                    '詳細設定',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              flex: 2,
-              child: Container(
-                height: 56, // メモボトムシートと同じ高さに調整
-                decoration: BoxDecoration(
-                  gradient: createHorizontalOrangeYellowGradient(),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: ElevatedButton(
-                  onPressed: _addSchedule,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    '作成',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  // 第2段階：詳細設定
-  Widget _buildDetailedSettings() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 日付表示
-        Text(
-          '${widget.selectedDate.year}年${widget.selectedDate.month}月${widget.selectedDate.day}日',
-          style: TextStyle(color: Colors.grey[400], fontSize: 14),
-        ),
-        const SizedBox(height: 8),
-        // タイトル
-        Row(
-          children: [
-            ShaderMask(
-              shaderCallback:
-                  (bounds) => createOrangeYellowGradient().createShader(bounds),
-              child: const Icon(Icons.settings, color: Colors.white, size: 28),
-            ),
-            const SizedBox(width: 12),
-            const Text(
-              '詳細設定',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-
-        // 説明入力
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[700]!, width: 1),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '説明',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF3A3A3A),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey[600]!),
-                  ),
-                  child: TextField(
-                    controller: _descriptionController,
-                    style: const TextStyle(color: Colors.white, fontSize: 16),
-                    maxLines: 4,
-                    decoration: const InputDecoration(
-                      hintText: '詳細な説明を入力...',
-                      hintStyle: TextStyle(color: Colors.grey),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.all(12),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-
         // 通知設定
         Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[700]!, width: 1),
-          ),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
           child: Container(
             padding: const EdgeInsets.all(12),
             child: Column(
@@ -764,68 +643,34 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
           ),
         ),
 
-        const SizedBox(height: 8),
+        const SizedBox(height: 20),
 
-        // ボタン
-        Row(
-          children: [
-            Expanded(
-              child: Container(
-                height: 56, // メモボトムシートと同じ高さに調整
-                decoration: BoxDecoration(
-                  color: const Color(0xFF3A3A3A),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey[600]!),
-                ),
-                child: TextButton(
-                  onPressed: () {
-                    _pageController.animateToPage(
-                      0,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    );
-                  },
-                  child: const Text(
-                    '戻る',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
+        // 作成ボタン
+        Container(
+          width: double.infinity,
+          height: 56,
+          decoration: BoxDecoration(
+            gradient: createHorizontalOrangeYellowGradient(),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: ElevatedButton(
+            onPressed: _addSchedule,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              flex: 2,
-              child: Container(
-                height: 56, // メモボトムシートと同じ高さに調整
-                decoration: BoxDecoration(
-                  gradient: createHorizontalOrangeYellowGradient(),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: ElevatedButton(
-                  onPressed: _addSchedule,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    'スケジュールを作成',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+            child: const Text(
+              'スケジュールを作成',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
               ),
             ),
-          ],
+          ),
         ),
       ],
     );
