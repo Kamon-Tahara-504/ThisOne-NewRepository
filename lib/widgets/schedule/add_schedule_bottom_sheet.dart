@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../gradients.dart';
 import '../../utils/color_utils.dart';
 
@@ -33,6 +34,7 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
   bool _isCustomReminder = false;
   int _customValue = 15;
   String _customUnit = 'minutes'; // 'minutes', 'hours', 'days'
+  bool _isTimeWheelScrolling = false;
 
   // 通知時間オプション
   final List<Map<String, dynamic>> _reminderOptions = [
@@ -106,6 +108,12 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
       return TimeOfDay(hour: hour, minute: minute);
     }
     return TimeOfDay.now();
+  }
+
+  String _formatTimeOfDay(TimeOfDay time) {
+    final h = time.hour.toString().padLeft(2, '0');
+    final m = time.minute.toString().padLeft(2, '0');
+    return '$h:$m';
   }
 
   @override
@@ -212,8 +220,24 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
       children: [
         NotificationListener<ScrollNotification>(
           onNotification: (notification) {
+            // スクロール中はフラグONにし、停止検知はデバウンスで行う
+            if (notification is ScrollStartNotification ||
+                notification is ScrollUpdateNotification ||
+                notification is UserScrollNotification) {
+              if (!_isTimeWheelScrolling) {
+                setState(() {
+                  _isTimeWheelScrolling = true;
+                });
+              }
+              // ラベルは遅延なく常時更新されるため、ここではフラグのみON
+            }
+
             if (notification is ScrollEndNotification) {
-              // スクロール終了時にコントローラーの位置を確認して同期
+              if (_isTimeWheelScrolling) {
+                setState(() {
+                  _isTimeWheelScrolling = false;
+                });
+              }
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (controller.hasClients) {
                   final currentIndex = controller.selectedItem;
@@ -222,7 +246,9 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
                   }
                 }
               });
+              HapticFeedback.selectionClick();
             }
+
             return false;
           },
           child: ListWheelScrollView.useDelegate(
@@ -235,33 +261,18 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
             childDelegate: ListWheelChildBuilderDelegate(
               childCount: items.length,
               builder: (context, index) {
-                // 中央からの距離を計算（立体感のため）
+                // 中央からの距離に応じて不透明度のみを変化させる
                 final distance = (index - selectedIndex).abs();
                 double opacity;
-                double fontSize;
-                FontWeight fontWeight;
-
-                // 距離に基づいて透明度、サイズ、太さを調整
                 if (distance == 0) {
-                  // 選択中
-                  opacity = 1.0;
-                  fontSize = 20;
-                  fontWeight = FontWeight.bold;
+                  // スクロール中は下層テキストを見せ、停止時は隠す
+                  opacity = _isTimeWheelScrolling ? 1.0 : 0.0;
                 } else if (distance == 1) {
-                  // 1つ隣
                   opacity = 0.7;
-                  fontSize = 16;
-                  fontWeight = FontWeight.w500;
                 } else if (distance == 2) {
-                  // 2つ隣
                   opacity = 0.4;
-                  fontSize = 14;
-                  fontWeight = FontWeight.normal;
                 } else {
-                  // それより遠い
                   opacity = 0.2;
-                  fontSize = 12;
-                  fontWeight = FontWeight.w300;
                 }
 
                 return Container(
@@ -270,8 +281,8 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
                     items[index],
                     style: TextStyle(
                       color: Colors.white.withOpacity(opacity),
-                      fontSize: fontSize,
-                      fontWeight: fontWeight,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 );
@@ -279,17 +290,47 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
             ),
           ),
         ),
-        // 中央のハイライトライン
+        // 中央の選択行の前面にグラデーションボックスを配置（通常は下を通過）
         Positioned.fill(
-          child: Align(
-            alignment: Alignment.center,
-            child: Container(
-              height: 32,
-              decoration: BoxDecoration(
-                border: Border.symmetric(
-                  horizontal: BorderSide(
-                    color: Colors.white.withOpacity(0.1),
-                    width: 1,
+          child: IgnorePointer(
+            child: Align(
+              alignment: Alignment.center,
+              child: Container(
+                height: 40,
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                decoration: BoxDecoration(
+                  gradient: createHorizontalOrangeYellowGradient(),
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.25),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        // 選択中の時刻ラベル（HH:mm - HH:mm）をボックスの上に重ねる
+        Positioned.fill(
+          child: IgnorePointer(
+            child: Align(
+              alignment: Alignment.center,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: AnimatedScale(
+                  scale: _isTimeWheelScrolling ? 0.98 : 1.0,
+                  duration: const Duration(milliseconds: 120),
+                  curve: Curves.easeOut,
+                  child: Text(
+                    '${_formatTimeOfDay(_startTime)} - ${_formatTimeOfDay(_endTime)}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
