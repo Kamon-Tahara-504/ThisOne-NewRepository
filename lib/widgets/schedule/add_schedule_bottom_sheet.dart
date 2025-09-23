@@ -35,6 +35,11 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
   int _customValue = 15;
   String _customUnit = 'minutes'; // 'minutes', 'hours', 'days'
   bool _isTimeWheelScrolling = false;
+  late int _currentIntervalIndex;
+  bool _isIntervalSliding = false;
+  int _previewIntervalIndex = 0;
+  double? _dragStartX;
+  int? _dragStartIndex;
 
   // 通知時間オプション
   final List<Map<String, dynamic>> _reminderOptions = [
@@ -47,12 +52,15 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
   ];
 
   // 時間間隔オプション
+  // 表示ラベルは描画時に分/時間の単位を付けるため、ここでは数値のみを設定
   final List<Map<String, dynamic>> _timeIntervalOptions = [
-    {'label': '5分', 'minutes': 5},
-    {'label': '10分', 'minutes': 10},
-    {'label': '15分', 'minutes': 15},
-    {'label': '30分', 'minutes': 30},
-    {'label': '1時間', 'minutes': 60},
+    // 1分を5分の左側に表示するため、先頭に配置
+    {'label': '1', 'minutes': 1},
+    {'label': '5', 'minutes': 5},
+    {'label': '10', 'minutes': 10},
+    {'label': '15', 'minutes': 15},
+    {'label': '30', 'minutes': 30},
+    {'label': '60', 'minutes': 60},
   ];
 
   @override
@@ -61,6 +69,13 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
     _timeController = FixedExtentScrollController(
       initialItem: _getClosestTimeIndex(_startTime),
     );
+    _currentIntervalIndex = _timeIntervalOptions.indexWhere(
+      (option) => option['minutes'] == _timeInterval,
+    );
+    if (_currentIntervalIndex < 0) {
+      _currentIntervalIndex = 0;
+    }
+    _previewIntervalIndex = _currentIntervalIndex;
   }
 
   // 間隔に基づいた時刻選択肢を生成
@@ -724,11 +739,18 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                _timeIntervalOptions.firstWhere(
-                                  (option) =>
-                                      option['minutes'] == _timeInterval,
-                                  orElse: () => _timeIntervalOptions.first,
-                                )['label'],
+                                _currentIntervalIndex >= 0
+                                    ? (() {
+                                      final minutes =
+                                          _timeIntervalOptions[_currentIntervalIndex]['minutes']
+                                              as int;
+                                      if (minutes < 60) {
+                                        return '${minutes}m';
+                                      }
+                                      final hours = (minutes ~/ 60);
+                                      return '${hours}h';
+                                    })()
+                                    : '',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 12,
@@ -740,20 +762,103 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
                         ),
                         const SizedBox(height: 8),
                         Container(
-                          height: 40,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: _timeIntervalOptions.length,
-                            itemBuilder: (context, index) {
-                              final option = _timeIntervalOptions[index];
-                              final isSelected =
-                                  option['minutes'] == _timeInterval;
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2F2F2F),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.grey[700]!),
+                          ),
+                          child: Stack(
+                            children: [
+                              LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final itemCount = _timeIntervalOptions.length;
+                                  final barPadding = 12.0;
+                                  final totalWidth =
+                                      constraints.maxWidth - barPadding * 2;
+                                  final segmentWidth = totalWidth / itemCount;
+                                  final highlightWidth = segmentWidth * 0.8;
+                                  // 位置計算用のユーティリティ関数
+                                  int indexFromDx(double dx) {
+                                    final clamped = dx.clamp(
+                                      0.0,
+                                      constraints.maxWidth,
+                                    );
+                                    final relative =
+                                        (clamped - barPadding) / totalWidth;
+                                    final idx = (relative * itemCount).floor();
+                                    return idx.clamp(0, itemCount - 1);
+                                  }
 
-                              return GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _timeInterval = option['minutes'];
-                                    // 分のピッカーを再初期化
+                                  final displayIndex =
+                                      _isIntervalSliding
+                                          ? _previewIntervalIndex
+                                          : _currentIntervalIndex;
+                                  final left =
+                                      barPadding +
+                                      (displayIndex * segmentWidth) +
+                                      (segmentWidth - highlightWidth) / 2;
+
+                                  void selectPreviewIndex(int index) {
+                                    if (index < 0 || index >= itemCount) return;
+                                    if (_previewIntervalIndex == index) return;
+                                    setState(() {
+                                      _previewIntervalIndex = index;
+                                      _isIntervalSliding = true;
+                                    });
+                                  }
+
+                                  void startDragSession(double x, int index) {
+                                    _dragStartX = x;
+                                    _dragStartIndex = index;
+                                  }
+
+                                  void updateDragPreview(double x) {
+                                    if (_dragStartX == null) return;
+
+                                    // すでにスライディング中の場合は常に更新
+                                    if (_isIntervalSliding) {
+                                      final idx = indexFromDx(x);
+                                      if (idx != _previewIntervalIndex) {
+                                        setState(() {
+                                          _previewIntervalIndex = idx;
+                                        });
+                                      }
+                                      return;
+                                    }
+
+                                    // まだスライディングが開始されていない場合、一定距離以上移動したらプレビュー開始
+                                    final dragDistance =
+                                        (x - _dragStartX!).abs();
+                                    if (dragDistance > 25.0) {
+                                      // 25px以上移動したらプレビュー開始
+                                      final idx = indexFromDx(x);
+                                      selectPreviewIndex(idx);
+                                    }
+                                  }
+
+                                  void confirmSelection() {
+                                    // セッション情報をリセット
+                                    _dragStartX = null;
+                                    _dragStartIndex = null;
+
+                                    if (_currentIntervalIndex ==
+                                        _previewIntervalIndex) {
+                                      // プレビューが同じでもスライディング状態は停止
+                                      if (_isIntervalSliding) {
+                                        setState(() {
+                                          _isIntervalSliding = false;
+                                        });
+                                      }
+                                      return;
+                                    }
+                                    setState(() {
+                                      _currentIntervalIndex =
+                                          _previewIntervalIndex;
+                                      _timeInterval =
+                                          _timeIntervalOptions[_previewIntervalIndex]['minutes'];
+                                      _isIntervalSliding = false;
+                                    });
                                     WidgetsBinding.instance
                                         .addPostFrameCallback((_) {
                                           final currentTime =
@@ -763,7 +868,6 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
                                           final newIndex = _getClosestTimeIndex(
                                             currentTime,
                                           );
-
                                           if (_timeController.hasClients) {
                                             _timeController.animateToItem(
                                               newIndex,
@@ -773,54 +877,186 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
                                               curve: Curves.easeInOut,
                                             );
                                           }
-
-                                          // 新しい間隔に基づいて時刻を調整
                                           final adjustedTime =
                                               _getTimeFromIndex(newIndex);
-                                          if (_timePickerMode == 'start') {
-                                            _startTime = adjustedTime;
-                                          } else {
-                                            _endTime = adjustedTime;
-                                          }
+                                          setState(() {
+                                            if (_timePickerMode == 'start') {
+                                              _startTime = adjustedTime;
+                                            } else {
+                                              _endTime = adjustedTime;
+                                            }
+                                          });
                                         });
-                                  });
-                                },
-                                child: Container(
-                                  margin: const EdgeInsets.only(right: 8),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color:
-                                        isSelected
-                                            ? const Color(0xFFE85A3B)
-                                            : const Color(0xFF2A2A2A),
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color:
-                                          isSelected
-                                              ? Colors.transparent
-                                              : Colors.grey[700]!,
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      option['label'],
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                        fontWeight:
-                                            isSelected
-                                                ? FontWeight.bold
-                                                : FontWeight.normal,
+                                  }
+
+                                  return Stack(
+                                    children: [
+                                      // バックグラウンドのタッチ可能エリア（下層テキスト）
+                                      GestureDetector(
+                                        behavior: HitTestBehavior.opaque,
+                                        onTapDown: (details) {
+                                          final x = details.localPosition.dx;
+                                          final idx = indexFromDx(x);
+                                          startDragSession(x, idx);
+
+                                          // タップした位置が現在選択中と全く同じ場合は何もしない
+                                          // 隣接（1つ離れ）の場合も何もしない（ユーザーの微細な操作を許容）
+                                          // 2つ以上離れている場合のみ即座にプレビュー
+                                          final distance =
+                                              (idx - _currentIntervalIndex)
+                                                  .abs();
+                                          if (distance >= 2) {
+                                            selectPreviewIndex(idx);
+                                          }
+                                        },
+                                        onTap: () {
+                                          // ドラッグセッション中でない場合（単純タップ）の処理
+                                          if (_dragStartX != null &&
+                                              _dragStartIndex != null) {
+                                            final tappedIndex =
+                                                _dragStartIndex!;
+                                            final distance =
+                                                (tappedIndex -
+                                                        _currentIntervalIndex)
+                                                    .abs();
+
+                                            // 隣接項目をタップした場合はその項目に移動
+                                            if (distance == 1 &&
+                                                !_isIntervalSliding) {
+                                              setState(() {
+                                                _previewIntervalIndex =
+                                                    tappedIndex;
+                                              });
+                                            }
+                                          }
+
+                                          // タップ完了時に確定
+                                          Future.delayed(
+                                            const Duration(milliseconds: 200),
+                                            confirmSelection,
+                                          );
+                                        },
+                                        onHorizontalDragStart: (details) {
+                                          final x = details.localPosition.dx;
+                                          final idx = indexFromDx(x);
+                                          startDragSession(x, idx);
+                                        },
+                                        onHorizontalDragUpdate: (details) {
+                                          updateDragPreview(
+                                            details.localPosition.dx,
+                                          );
+                                        },
+                                        onHorizontalDragEnd: (details) {
+                                          // ドラッグ終了時に確定
+                                          Future.delayed(
+                                            const Duration(milliseconds: 150),
+                                            confirmSelection,
+                                          );
+                                        },
+                                        child: Row(
+                                          children: List.generate(
+                                            itemCount,
+                                            (i) => Expanded(
+                                              child: Center(
+                                                child: Text(
+                                                  (() {
+                                                    final minutes =
+                                                        _timeIntervalOptions[i]['minutes']
+                                                            as int;
+                                                    if (minutes < 60) {
+                                                      return '${minutes}m';
+                                                    }
+                                                    final hours =
+                                                        (minutes ~/ 60);
+                                                    return '${hours}h';
+                                                  })(),
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
+                                      // オレンジグラデーションボックス（中層）
+                                      AnimatedPositioned(
+                                        duration: const Duration(
+                                          milliseconds: 200,
+                                        ),
+                                        curve: Curves.easeInOut,
+                                        left: left,
+                                        top: 8,
+                                        bottom: 8,
+                                        width: highlightWidth,
+                                        child: IgnorePointer(
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              gradient:
+                                                  createHorizontalOrangeYellowGradient(),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withOpacity(0.3),
+                                                  blurRadius: 4,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      // 選択中の間隔テキスト（上層）
+                                      AnimatedPositioned(
+                                        duration: const Duration(
+                                          milliseconds: 200,
+                                        ),
+                                        curve: Curves.easeInOut,
+                                        left: left,
+                                        top: 0,
+                                        bottom: 0,
+                                        width: highlightWidth,
+                                        child: IgnorePointer(
+                                          child: Center(
+                                            child: AnimatedScale(
+                                              scale:
+                                                  _isIntervalSliding
+                                                      ? 0.98
+                                                      : 1.0,
+                                              duration: const Duration(
+                                                milliseconds: 120,
+                                              ),
+                                              curve: Curves.easeOut,
+                                              child: Text(
+                                                (() {
+                                                  final minutes =
+                                                      _timeIntervalOptions[displayIndex]['minutes']
+                                                          as int;
+                                                  if (minutes < 60) {
+                                                    return '${minutes}m';
+                                                  }
+                                                  final hours = (minutes ~/ 60);
+                                                  return '${hours}h';
+                                                })(),
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ],
                           ),
                         ),
                       ],
