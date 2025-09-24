@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../gradients.dart';
+import 'custom_time_picker.dart';
 
 class TimeSettingWidget extends StatefulWidget {
   final TimeOfDay startTime;
@@ -24,9 +24,7 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
   late TimeOfDay _startTime;
   late TimeOfDay _endTime;
   late int _timeInterval;
-  late FixedExtentScrollController _timeController;
   String _timePickerMode = 'start';
-  bool _isTimeWheelScrolling = false;
   late int _currentIntervalIndex;
   bool _isIntervalSliding = false;
   int _previewIntervalIndex = 0;
@@ -55,9 +53,7 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
       _timeInterval = 5; // 安全な値に設定
     }
 
-    _timeController = FixedExtentScrollController(
-      initialItem: _getClosestTimeIndex(_startTime),
-    );
+    // カスタムピッカーではコントローラーは不要
     _currentIntervalIndex = _timeIntervalOptions.indexWhere(
       (option) => option['minutes'] == _timeInterval,
     );
@@ -88,23 +84,13 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
         _timePickerKey = UniqueKey();
       });
 
-      // コントローラーを再初期化
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final targetTime = _timePickerMode == 'start' ? _startTime : _endTime;
-        _handleTimePickerModeChange(targetTime);
-      });
+      // UIの再構築のみ（カスタムピッカーでは自動的に処理）
     }
   }
 
   @override
   void dispose() {
-    try {
-      if (_timeController.hasClients) {
-        _timeController.dispose();
-      }
-    } catch (e) {
-      // コントローラーのdisposeでエラーが発生した場合は無視
-    }
+    // カスタムピッカーではコントローラー不要
     super.dispose();
   }
 
@@ -211,241 +197,38 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
     return '$h:$m';
   }
 
-  // スクロール終了時の処理を分離
-  void _handleScrollEnd(FixedExtentScrollController controller) {
-    if (!mounted || !controller.hasClients) return;
+  // _handleScrollEnd は _commitTimeFromIndex に置き換え
 
-    try {
-      // より安全にselectedItemを取得
-      if (controller.positions.isNotEmpty &&
-          controller.positions.first.hasViewportDimension &&
-          controller.positions.first.hasContentDimensions) {
-        final finalIndex = controller.selectedItem;
-        final options = _getTimeOptions();
-
-        // インデックスが有効範囲内かチェック
-        if (finalIndex >= 0 && finalIndex < options.length) {
-          final newTime = _getTimeFromIndex(finalIndex);
-
-          if (mounted) {
-            setState(() {
-              if (_timePickerMode == 'start') {
-                _startTime = newTime;
-              } else {
-                _endTime = newTime;
-              }
-            });
-
-            widget.onTimeChange(_startTime, _endTime, _timeInterval);
-          }
-        }
-      }
-    } catch (e) {
-      // エラーが発生した場合は何もしない
-    }
-  }
-
-  // 間隔変更時の処理を分離
-  void _handleIntervalChange(TimeOfDay currentTime) {
+  // シンプルな時刻変更ハンドラー
+  void _handleTimeIndexChanged(int index) {
     if (!mounted) return;
 
-    try {
-      // 新しい間隔でのオプションを取得
-      final newOptions = _getTimeOptions();
-      final newIndex = _getClosestTimeIndex(currentTime);
+    final options = _getTimeOptions();
+    if (index < 0 || index >= options.length) return;
 
-      // インデックスが有効範囲内かチェック
-      if (newIndex >= 0 && newIndex < newOptions.length) {
-        // コントローラーを最適化して再初期化
-        _recreateScrollController(newIndex);
+    final newTime = _getTimeFromIndex(index);
 
-        final adjustedTime = _getTimeFromIndex(newIndex);
-
-        if (mounted) {
-          setState(() {
-            if (_timePickerMode == 'start') {
-              _startTime = adjustedTime;
-            } else {
-              _endTime = adjustedTime;
-            }
-          });
-
-          widget.onTimeChange(_startTime, _endTime, _timeInterval);
-        }
+    setState(() {
+      if (_timePickerMode == 'start') {
+        _startTime = newTime;
+      } else {
+        _endTime = newTime;
       }
-    } catch (e) {
-      // 間隔変更でエラーが発生
-    }
-  }
+    });
 
-  // タイムピッカーモード変更時の処理を分離
-  void _handleTimePickerModeChange(TimeOfDay targetTime) {
-    if (!mounted) return;
-
-    try {
-      final newIndex = _getClosestTimeIndex(targetTime);
-      final options = _getTimeOptions();
-
-      // インデックスが有効範囲内かチェック
-      if (newIndex >= 0 && newIndex < options.length) {
-        _recreateScrollController(newIndex);
-
-        if (mounted) {
-          setState(() {});
-        }
-      }
-    } catch (e) {
-      // タイムピッカーモード変更でエラーが発生
-    }
-  }
-
-  // ScrollControllerを安全に再作成する最適化メソッド
-  void _recreateScrollController(int initialItem) {
-    try {
-      // 既存のコントローラーを安全に破棄
-      if (_timeController.hasClients) {
-        _timeController.dispose();
-      }
-
-      // 新しいコントローラーを作成
-      _timeController = FixedExtentScrollController(initialItem: initialItem);
-    } catch (e) {
-      // ScrollController作成でエラーが発生した場合のフォールバック
-      try {
-        _timeController = FixedExtentScrollController(initialItem: 0);
-      } catch (e2) {
-        // 最後の手段として現在時刻を使用
-      }
-    }
+    widget.onTimeChange(_startTime, _endTime, _timeInterval);
   }
 
   Widget _buildTimeWheelPicker({
     required List<String> items,
     required int selectedIndex,
     required Function(int) onChanged,
-    required FixedExtentScrollController controller,
   }) {
-    return Stack(
-      children: [
-        NotificationListener<ScrollNotification>(
-          onNotification: (notification) {
-            if (notification is ScrollStartNotification) {
-              if (mounted) {
-                setState(() {
-                  _isTimeWheelScrolling = true;
-                });
-              }
-            } else if (notification is ScrollEndNotification) {
-              if (mounted) {
-                setState(() {
-                  _isTimeWheelScrolling = false;
-                });
-
-                // スクロール終了時に最終的な時刻を確定（PostFrameCallbackを使用）
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  _handleScrollEnd(controller);
-                });
-
-                // スクロール終了時にハプティックフィードバック
-                HapticFeedback.selectionClick();
-              }
-            }
-            return false;
-          },
-          child: ListWheelScrollView.useDelegate(
-            itemExtent: 32, // アイテム高さを小さくしてより多く表示
-            diameterRatio: 4.0, // より大きな円周で多くのアイテムを表示
-            perspective: 0.002, // より平坦にしてより多くの項目を見えるように
-            physics: const BouncingScrollPhysics(), // バウンス効果でスムーズに
-            controller: controller,
-            onSelectedItemChanged: (index) {
-              // リアルタイム更新は避けて、スクロール終了時のみ処理
-            },
-            childDelegate: ListWheelChildBuilderDelegate(
-              childCount: items.length,
-              builder: (context, index) {
-                // selectedIndexを直接使用（build中のcontroller.selectedItemアクセスを避ける）
-                final currentSelectedIndex = selectedIndex.clamp(
-                  0,
-                  items.length - 1,
-                );
-                final distance = (index - currentSelectedIndex).abs();
-
-                double opacity;
-                if (distance == 0) {
-                  // 選択中のアイテムは透明（グラデーションボックス上のラベルで表示）
-                  opacity = 0.0;
-                } else if (distance == 1) {
-                  // 隣接する時刻: 90%の透明度（非常によく見える）
-                  opacity = 0.8;
-                } else {
-                  // それ以外の時刻: 80%の透明度（よく見える）
-                  opacity = 0.4;
-                }
-
-                return Container(
-                  alignment: Alignment.center,
-                  child: Text(
-                    items[index],
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: opacity),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-        // 中央の選択行のグラデーションボックス
-        Positioned.fill(
-          child: IgnorePointer(
-            child: Align(
-              alignment: Alignment.center,
-              child: Container(
-                height: 36, // itemExtent(32)に合わせて調整
-                margin: const EdgeInsets.symmetric(horizontal: 20),
-                decoration: BoxDecoration(
-                  gradient: createHorizontalOrangeYellowGradient(),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-        // 選択中の時刻ラベル
-        Positioned.fill(
-          child: IgnorePointer(
-            child: Align(
-              alignment: Alignment.center,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: AnimatedScale(
-                  scale: _isTimeWheelScrolling ? 0.98 : 1.0,
-                  duration: const Duration(milliseconds: 120),
-                  curve: Curves.easeOut,
-                  child: Text(
-                    '${_formatTimeOfDay(_startTime)} - ${_formatTimeOfDay(_endTime)}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
+    return CustomTimePicker(
+      timeOptions: items,
+      initialIndex: selectedIndex.clamp(0, items.length - 1),
+      onChanged: onChanged,
+      itemHeight: 32.0,
     );
   }
 
@@ -482,9 +265,6 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
                           _timePickerMode = 'start';
                           _timePickerKey = UniqueKey();
                         });
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          _handleTimePickerModeChange(_startTime);
-                        });
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(
@@ -519,9 +299,6 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
                         setState(() {
                           _timePickerMode = 'end';
                           _timePickerKey = UniqueKey();
-                        });
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          _handleTimePickerModeChange(_endTime);
                         });
                       },
                       child: Container(
@@ -564,11 +341,7 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
                         _timePickerMode == 'start'
                             ? _getClosestTimeIndex(_startTime)
                             : _getClosestTimeIndex(_endTime),
-                    controller: _timeController,
-                    onChanged: (index) {
-                      // 実際の時刻変更はスクロール終了時に処理されるため、ここでは何もしない
-                      // この処理は_handleScrollEndで行われる
-                    },
+                    onChanged: _handleTimeIndexChanged,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -613,14 +386,13 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
               LayoutBuilder(
                 builder: (context, constraints) {
                   final itemCount = _timeIntervalOptions.length;
-                  final barPadding = 12.0;
-                  final totalWidth = constraints.maxWidth - barPadding * 2;
-                  final segmentWidth = totalWidth / itemCount;
-                  final highlightWidth = segmentWidth * 0.85; // サイズを95%に拡大
+                  final containerWidth = constraints.maxWidth;
+                  final segmentWidth = containerWidth / itemCount;
+                  final highlightWidth = segmentWidth * 0.85;
 
                   int indexFromDx(double dx) {
-                    final clamped = dx.clamp(0.0, constraints.maxWidth);
-                    final relative = (clamped - barPadding) / totalWidth;
+                    final clamped = dx.clamp(0.0, containerWidth);
+                    final relative = clamped / containerWidth;
                     final idx = (relative * itemCount).floor();
                     return idx.clamp(0, itemCount - 1);
                   }
@@ -630,24 +402,10 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
                           ? _previewIntervalIndex
                           : _currentIntervalIndex;
 
-                  // ボックスの位置を計算（端のアイテムは完全に端まで移動）
-                  final double left;
-                  if (displayIndex == 0) {
-                    // 最初の要素：完全に左端から開始（paddingを無視）
-                    left = 4.0; // 僅かなマージンのみ
-                  } else if (displayIndex == itemCount - 1) {
-                    // 最後の要素：完全に右端まで（paddingを無視）
-                    left =
-                        constraints.maxWidth -
-                        highlightWidth -
-                        4.0; // 僅かなマージンのみ
-                  } else {
-                    // 中間の要素：中央配置
-                    left =
-                        barPadding +
-                        (displayIndex * segmentWidth) +
-                        (segmentWidth - highlightWidth) / 2;
-                  }
+                  // ボックスの位置を計算（Expandedと同じ配置ロジック）
+                  final double left =
+                      (displayIndex * segmentWidth) +
+                      (segmentWidth - highlightWidth) / 2;
 
                   void startDragSession(double x, int index) {
                     _dragStartX = x;
@@ -670,10 +428,9 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
                         _timePickerKey = UniqueKey();
                       });
 
-                      // 間隔変更時の処理を分離してPostFrameCallbackで実行
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        _handleIntervalChange(currentTime);
-                      });
+                      // 間隔変更時は自動的に最も近い時刻に調整
+                      final newIndex = _getClosestTimeIndex(currentTime);
+                      _handleTimeIndexChanged(newIndex);
                     }
                   }
 
@@ -711,10 +468,9 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
                               _timePickerKey = UniqueKey();
                             });
 
-                            // タップ処理も分離してPostFrameCallbackで実行
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              _handleIntervalChange(currentTime);
-                            });
+                            // タップ処理も同様に調整
+                            final newIndex = _getClosestTimeIndex(currentTime);
+                            _handleTimeIndexChanged(newIndex);
                           }
                           confirmSelection();
                         },
@@ -791,10 +547,10 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
                       AnimatedPositioned(
                         duration: const Duration(milliseconds: 200),
                         curve: Curves.easeInOut,
-                        left: left,
+                        left: displayIndex * segmentWidth,
                         top: 0,
                         bottom: 0,
-                        width: highlightWidth,
+                        width: segmentWidth,
                         child: IgnorePointer(
                           child: Center(
                             child: AnimatedScale(
