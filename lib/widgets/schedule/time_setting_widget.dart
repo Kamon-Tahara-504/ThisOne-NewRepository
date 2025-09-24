@@ -9,15 +9,15 @@ class TimeSettingWidget extends StatefulWidget {
   final Function(TimeOfDay, TimeOfDay, int) onTimeChange;
 
   const TimeSettingWidget({
-    Key? key,
+    super.key,
     required this.startTime,
     required this.endTime,
     required this.timeInterval,
     required this.onTimeChange,
-  }) : super(key: key);
+  });
 
   @override
-  _TimeSettingWidgetState createState() => _TimeSettingWidgetState();
+  State<TimeSettingWidget> createState() => _TimeSettingWidgetState();
 }
 
 class _TimeSettingWidgetState extends State<TimeSettingWidget> {
@@ -49,6 +49,12 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
     _startTime = widget.startTime;
     _endTime = widget.endTime;
     _timeInterval = widget.timeInterval;
+
+    // 時間間隔が異常な値でないかチェック
+    if (_timeInterval <= 0 || _timeInterval > 60) {
+      _timeInterval = 5; // 安全な値に設定
+    }
+
     _timeController = FixedExtentScrollController(
       initialItem: _getClosestTimeIndex(_startTime),
     );
@@ -57,6 +63,7 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
     );
     if (_currentIntervalIndex < 0) {
       _currentIntervalIndex = 1; // デフォルトは5分間隔
+      _timeInterval = 5; // 値も確実に5分に設定
     }
     _previewIntervalIndex = _currentIntervalIndex;
   }
@@ -83,20 +90,21 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
 
       // コントローラーを再初期化
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _timeController.dispose();
-        _timeController = FixedExtentScrollController(
-          initialItem: _getClosestTimeIndex(
-            _timePickerMode == 'start' ? _startTime : _endTime,
-          ),
-        );
-        setState(() {});
+        final targetTime = _timePickerMode == 'start' ? _startTime : _endTime;
+        _handleTimePickerModeChange(targetTime);
       });
     }
   }
 
   @override
   void dispose() {
-    _timeController.dispose();
+    try {
+      if (_timeController.hasClients) {
+        _timeController.dispose();
+      }
+    } catch (e) {
+      // コントローラーのdisposeでエラーが発生した場合は無視
+    }
     super.dispose();
   }
 
@@ -115,6 +123,26 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
   int _getClosestTimeIndex(TimeOfDay time) {
     final options = _getTimeOptions();
     final targetMinutes = time.hour * 60 + time.minute;
+
+    // 時間間隔に合わせて最も近い有効な時刻を計算
+    final adjustedMinutes = _roundToNearestInterval(
+      targetMinutes,
+      _timeInterval,
+    );
+    final adjustedHour = (adjustedMinutes ~/ 60) % 24;
+    final adjustedMinute = adjustedMinutes % 60;
+
+    final targetTimeString =
+        '${adjustedHour.toString().padLeft(2, '0')}:${adjustedMinute.toString().padLeft(2, '0')}';
+
+    // 正確にマッチする時刻を探す
+    for (int i = 0; i < options.length; i++) {
+      if (options[i] == targetTimeString) {
+        return i;
+      }
+    }
+
+    // 見つからない場合は最も近い時刻を探す（フォールバック）
     int closestIndex = 0;
     int minDifference = 24 * 60;
 
@@ -124,30 +152,171 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
       final optionMinute = int.parse(timeParts[1]);
       final optionTotalMinutes = optionHour * 60 + optionMinute;
 
-      final difference = (targetMinutes - optionTotalMinutes).abs();
+      final difference = (adjustedMinutes - optionTotalMinutes).abs();
       if (difference < minDifference) {
         minDifference = difference;
         closestIndex = i;
       }
     }
+
     return closestIndex;
+  }
+
+  // 指定された間隔に最も近い分数に丸める
+  int _roundToNearestInterval(int totalMinutes, int interval) {
+    if (interval <= 0) return totalMinutes;
+
+    final remainder = totalMinutes % interval;
+    if (remainder <= interval / 2) {
+      // 下に丸める
+      return totalMinutes - remainder;
+    } else {
+      // 上に丸める
+      return totalMinutes + (interval - remainder);
+    }
   }
 
   TimeOfDay _getTimeFromIndex(int index) {
     final options = _getTimeOptions();
-    if (index < options.length) {
-      final timeParts = options[index].split(':');
-      final hour = int.parse(timeParts[0]);
-      final minute = int.parse(timeParts[1]);
-      return TimeOfDay(hour: hour, minute: minute);
+
+    // インデックスが有効範囲内かチェック
+    if (index >= 0 && index < options.length) {
+      try {
+        final timeParts = options[index].split(':');
+        if (timeParts.length == 2) {
+          final hour = int.parse(timeParts[0]);
+          final minute = int.parse(timeParts[1]);
+
+          // 時間・分が有効範囲内かチェック
+          if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+            return TimeOfDay(hour: hour, minute: minute);
+          }
+        }
+      } catch (e) {
+        // 時刻のパース中にエラーが発生
+      }
     }
-    return TimeOfDay.now();
+
+    // フォールバック: 現在のモードに応じて適切な時刻を返す
+    if (_timePickerMode == 'start') {
+      return _startTime;
+    } else {
+      return _endTime;
+    }
   }
 
   String _formatTimeOfDay(TimeOfDay time) {
     final h = time.hour.toString().padLeft(2, '0');
     final m = time.minute.toString().padLeft(2, '0');
     return '$h:$m';
+  }
+
+  // スクロール終了時の処理を分離
+  void _handleScrollEnd(FixedExtentScrollController controller) {
+    if (!mounted || !controller.hasClients) return;
+
+    try {
+      // より安全にselectedItemを取得
+      if (controller.positions.isNotEmpty &&
+          controller.positions.first.hasViewportDimension &&
+          controller.positions.first.hasContentDimensions) {
+        final finalIndex = controller.selectedItem;
+        final options = _getTimeOptions();
+
+        // インデックスが有効範囲内かチェック
+        if (finalIndex >= 0 && finalIndex < options.length) {
+          final newTime = _getTimeFromIndex(finalIndex);
+
+          if (mounted) {
+            setState(() {
+              if (_timePickerMode == 'start') {
+                _startTime = newTime;
+              } else {
+                _endTime = newTime;
+              }
+            });
+
+            widget.onTimeChange(_startTime, _endTime, _timeInterval);
+          }
+        }
+      }
+    } catch (e) {
+      // エラーが発生した場合は何もしない
+    }
+  }
+
+  // 間隔変更時の処理を分離
+  void _handleIntervalChange(TimeOfDay currentTime) {
+    if (!mounted) return;
+
+    try {
+      // 新しい間隔でのオプションを取得
+      final newOptions = _getTimeOptions();
+      final newIndex = _getClosestTimeIndex(currentTime);
+
+      // インデックスが有効範囲内かチェック
+      if (newIndex >= 0 && newIndex < newOptions.length) {
+        // コントローラーを最適化して再初期化
+        _recreateScrollController(newIndex);
+
+        final adjustedTime = _getTimeFromIndex(newIndex);
+
+        if (mounted) {
+          setState(() {
+            if (_timePickerMode == 'start') {
+              _startTime = adjustedTime;
+            } else {
+              _endTime = adjustedTime;
+            }
+          });
+
+          widget.onTimeChange(_startTime, _endTime, _timeInterval);
+        }
+      }
+    } catch (e) {
+      // 間隔変更でエラーが発生
+    }
+  }
+
+  // タイムピッカーモード変更時の処理を分離
+  void _handleTimePickerModeChange(TimeOfDay targetTime) {
+    if (!mounted) return;
+
+    try {
+      final newIndex = _getClosestTimeIndex(targetTime);
+      final options = _getTimeOptions();
+
+      // インデックスが有効範囲内かチェック
+      if (newIndex >= 0 && newIndex < options.length) {
+        _recreateScrollController(newIndex);
+
+        if (mounted) {
+          setState(() {});
+        }
+      }
+    } catch (e) {
+      // タイムピッカーモード変更でエラーが発生
+    }
+  }
+
+  // ScrollControllerを安全に再作成する最適化メソッド
+  void _recreateScrollController(int initialItem) {
+    try {
+      // 既存のコントローラーを安全に破棄
+      if (_timeController.hasClients) {
+        _timeController.dispose();
+      }
+
+      // 新しいコントローラーを作成
+      _timeController = FixedExtentScrollController(initialItem: initialItem);
+    } catch (e) {
+      // ScrollController作成でエラーが発生した場合のフォールバック
+      try {
+        _timeController = FixedExtentScrollController(initialItem: 0);
+      } catch (e2) {
+        // 最後の手段として現在時刻を使用
+      }
+    }
   }
 
   Widget _buildTimeWheelPicker({
@@ -172,20 +341,9 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
                   _isTimeWheelScrolling = false;
                 });
 
-                // スクロール終了時に最終的な時刻を確定
+                // スクロール終了時に最終的な時刻を確定（PostFrameCallbackを使用）
                 WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (controller.hasClients && mounted) {
-                    final finalIndex = controller.selectedItem;
-                    final newTime = _getTimeFromIndex(finalIndex);
-                    setState(() {
-                      if (_timePickerMode == 'start') {
-                        _startTime = newTime;
-                      } else {
-                        _endTime = newTime;
-                      }
-                    });
-                    widget.onTimeChange(_startTime, _endTime, _timeInterval);
-                  }
+                  _handleScrollEnd(controller);
                 });
 
                 // スクロール終了時にハプティックフィードバック
@@ -201,16 +359,16 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
             physics: const BouncingScrollPhysics(), // バウンス効果でスムーズに
             controller: controller,
             onSelectedItemChanged: (index) {
-              // スクロール終了時に処理されるため、ここでは何もしない
+              // リアルタイム更新は避けて、スクロール終了時のみ処理
             },
             childDelegate: ListWheelChildBuilderDelegate(
               childCount: items.length,
               builder: (context, index) {
-                // リアルタイムでコントローラーから現在の選択インデックスを取得
-                final currentSelectedIndex =
-                    controller.hasClients
-                        ? controller.selectedItem
-                        : selectedIndex;
+                // selectedIndexを直接使用（build中のcontroller.selectedItemアクセスを避ける）
+                final currentSelectedIndex = selectedIndex.clamp(
+                  0,
+                  items.length - 1,
+                );
                 final distance = (index - currentSelectedIndex).abs();
 
                 double opacity;
@@ -230,7 +388,7 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
                   child: Text(
                     items[index],
                     style: TextStyle(
-                      color: Colors.white.withOpacity(opacity),
+                      color: Colors.white.withValues(alpha: opacity),
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
                     ),
@@ -253,7 +411,7 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
+                      color: Colors.black.withValues(alpha: 0.3),
                       blurRadius: 10,
                       offset: const Offset(0, 3),
                     ),
@@ -325,12 +483,7 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
                           _timePickerKey = UniqueKey();
                         });
                         WidgetsBinding.instance.addPostFrameCallback((_) {
-                          final newIndex = _getClosestTimeIndex(_startTime);
-                          _timeController.dispose();
-                          _timeController = FixedExtentScrollController(
-                            initialItem: newIndex,
-                          );
-                          setState(() {});
+                          _handleTimePickerModeChange(_startTime);
                         });
                       },
                       child: Container(
@@ -368,12 +521,7 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
                           _timePickerKey = UniqueKey();
                         });
                         WidgetsBinding.instance.addPostFrameCallback((_) {
-                          final newIndex = _getClosestTimeIndex(_endTime);
-                          _timeController.dispose();
-                          _timeController = FixedExtentScrollController(
-                            initialItem: newIndex,
-                          );
-                          setState(() {});
+                          _handleTimePickerModeChange(_endTime);
                         });
                       },
                       child: Container(
@@ -407,7 +555,7 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
                 ),
                 const SizedBox(height: 12),
                 // 統合時刻ピッカー
-                Container(
+                SizedBox(
                   height: 160, // より多くの項目を表示するため高さを拡大
                   key: _timePickerKey,
                   child: _buildTimeWheelPicker(
@@ -418,15 +566,8 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
                             : _getClosestTimeIndex(_endTime),
                     controller: _timeController,
                     onChanged: (index) {
-                      setState(() {
-                        final newTime = _getTimeFromIndex(index);
-                        if (_timePickerMode == 'start') {
-                          _startTime = newTime;
-                        } else {
-                          _endTime = newTime;
-                        }
-                      });
-                      widget.onTimeChange(_startTime, _endTime, _timeInterval);
+                      // 実際の時刻変更はスクロール終了時に処理されるため、ここでは何もしない
+                      // この処理は_handleScrollEndで行われる
                     },
                   ),
                 ),
@@ -451,7 +592,7 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
             Text(
               '時間間隔',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 0.8),
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
@@ -529,26 +670,9 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
                         _timePickerKey = UniqueKey();
                       });
 
+                      // 間隔変更時の処理を分離してPostFrameCallbackで実行
                       WidgetsBinding.instance.addPostFrameCallback((_) {
-                        final newIndex = _getClosestTimeIndex(currentTime);
-                        _timeController.dispose();
-                        _timeController = FixedExtentScrollController(
-                          initialItem: newIndex,
-                        );
-
-                        final adjustedTime = _getTimeFromIndex(newIndex);
-                        setState(() {
-                          if (_timePickerMode == 'start') {
-                            _startTime = adjustedTime;
-                          } else {
-                            _endTime = adjustedTime;
-                          }
-                        });
-                        widget.onTimeChange(
-                          _startTime,
-                          _endTime,
-                          _timeInterval,
-                        );
+                        _handleIntervalChange(currentTime);
                       });
                     }
                   }
@@ -587,28 +711,9 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
                               _timePickerKey = UniqueKey();
                             });
 
+                            // タップ処理も分離してPostFrameCallbackで実行
                             WidgetsBinding.instance.addPostFrameCallback((_) {
-                              final newIndex = _getClosestTimeIndex(
-                                currentTime,
-                              );
-                              _timeController.dispose();
-                              _timeController = FixedExtentScrollController(
-                                initialItem: newIndex,
-                              );
-
-                              final adjustedTime = _getTimeFromIndex(newIndex);
-                              setState(() {
-                                if (_timePickerMode == 'start') {
-                                  _startTime = adjustedTime;
-                                } else {
-                                  _endTime = adjustedTime;
-                                }
-                              });
-                              widget.onTimeChange(
-                                _startTime,
-                                _endTime,
-                                _timeInterval,
-                              );
+                              _handleIntervalChange(currentTime);
                             });
                           }
                           confirmSelection();
@@ -646,7 +751,9 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
                                             ? (_isIntervalSliding
                                                 ? Colors.white
                                                 : Colors.transparent)
-                                            : Colors.white.withOpacity(0.7),
+                                            : Colors.white.withValues(
+                                              alpha: 0.7,
+                                            ),
                                     fontSize: 14,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -671,7 +778,7 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
                               borderRadius: BorderRadius.circular(12),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.3),
+                                  color: Colors.black.withValues(alpha: 0.3),
                                   blurRadius: 4,
                                   offset: const Offset(0, 2),
                                 ),

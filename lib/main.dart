@@ -573,30 +573,33 @@ class _MainScreenState extends State<MainScreen> {
         // メモリストを再読み込み
         _loadMemos();
 
-        // ignore: use_build_context_synchronously
-        ScaffoldMessenger.of(
-          currentContext,
-        ).showSnackBar(SnackBar(content: Text('メモ「$title」を作成しました')));
+        if (mounted && currentContext.mounted) {
+          ScaffoldMessenger.of(
+            currentContext,
+          ).showSnackBar(SnackBar(content: Text('メモ「$title」を作成しました')));
+        }
       } else {
-        // ignore: use_build_context_synchronously
-        ScaffoldMessenger.of(currentContext).showSnackBar(
-          const SnackBar(
-            content: Text('ログインしていないため、メモはローカルに保存されました'),
-            duration: Duration(seconds: 3),
-          ),
-        );
+        if (mounted && currentContext.mounted) {
+          ScaffoldMessenger.of(currentContext).showSnackBar(
+            const SnackBar(
+              content: Text('ログインしていないため、メモはローカルに保存されました'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (!mounted) return; // エラー処理でも再度チェック
 
-      // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(currentContext).showSnackBar(
-        SnackBar(
-          content: Text('メモの作成に失敗しました: $e'),
-          backgroundColor: Colors.red[600],
-          duration: const Duration(seconds: 5),
-        ),
-      );
+      if (mounted && currentContext.mounted) {
+        ScaffoldMessenger.of(currentContext).showSnackBar(
+          SnackBar(
+            content: Text('メモの作成に失敗しました: $e'),
+            backgroundColor: Colors.red[600],
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
     }
   }
 }

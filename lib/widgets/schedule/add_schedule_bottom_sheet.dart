@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../gradients.dart';
 import '../../utils/color_utils.dart';
 import 'time_setting_widget.dart';
@@ -163,7 +162,7 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
                 width: 60,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
