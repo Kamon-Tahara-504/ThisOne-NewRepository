@@ -67,14 +67,19 @@ lib/
 │   │   ├── collapsible_app_bar.dart   # 折りたたみ可能なアプリバー
 │   │   └── custom_app_bar.dart        # カスタムアプリバー
 │   ├── auth/
+│   │   ├── google_signin_button.dart  # Googleサインインボタン
 │   │   ├── login_bottom_sheet.dart    # ログインボトムシート
-│   │   └── signup_page.dart           # サインアップページ
+│   │   ├── signup_page.dart           # サインアップページ
+│   │   └── x_signin_button.dart       # X（Twitter）サインインボタン
 │   ├── navigation/
 │   │   └── custom_bottom_navigation_bar.dart # カスタムボトムナビゲーション
 │   ├── overlays/
-│   │   └── account_info_overlay.dart  # アカウント情報オーバーレイ
+│   │   ├── account_info_overlay.dart  # アカウント情報オーバーレイ
+│   │   └── custom_bottom_sheet.dart   # カスタムボトムシート
 │   ├── schedule/
-│   │   └── add_schedule_bottom_sheet.dart # スケジュール追加ボトムシート
+│   │   ├── add_schedule_bottom_sheet.dart # スケジュール追加ボトムシート
+│   │   ├── custom_time_picker.dart    # カスタム時間選択ピッカー（PageView版）
+│   │   └── time_setting_widget.dart   # 時間設定ウィジェット（間隔選択・時間選択）
 │   ├── memo_back_header.dart          # メモ画面ヘッダー
 │   ├── memo_filter_header.dart        # メモフィルターヘッダー
 │   ├── memo_item_card.dart            # メモアイテムカード
@@ -172,6 +177,9 @@ flutter run --verbose
   - [x] 認証状態管理
   - [x] エラーハンドリング
   - [x] 統合認証画面（サインアップ・ログイン統合）
+  - [x] **ソーシャルログイン対応**
+    - [x] Googleサインイン
+    - [x] X（Twitter）サインイン
 - [x] **タスク管理（Supabase完全連携）**
   - [x] タスクの追加・完了・削除・更新
   - [x] 優先度・期日管理
@@ -353,4 +361,4 @@ dependencies:
 プロジェクトへの貢献は歓迎します！  
 新しい機能の提案やバグ報告は、GitHubのIssueでお知らせください。
 
-*README最終更新: 2025/9/17*  
+*README最終更新: 2025/9/25*  

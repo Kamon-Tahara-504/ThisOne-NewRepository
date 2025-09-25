@@ -1,70 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/physics.dart';
 import '../../gradients.dart';
 
-// カスタムScrollPhysics - ドラッグ中はスナップしない
-class SmoothPageScrollPhysics extends ScrollPhysics {
-  final bool allowSnap;
-
-  const SmoothPageScrollPhysics({super.parent, this.allowSnap = true});
+// カスタムScrollPhysics - ListWheelScrollView用の滑らかなスクロール
+class SmoothListWheelScrollPhysics extends FixedExtentScrollPhysics {
+  const SmoothListWheelScrollPhysics({super.parent});
 
   @override
-  SmoothPageScrollPhysics applyTo(ScrollPhysics? ancestor) {
-    return SmoothPageScrollPhysics(
-      parent: buildParent(ancestor),
-      allowSnap: allowSnap,
-    );
+  SmoothListWheelScrollPhysics applyTo(ScrollPhysics? ancestor) {
+    return SmoothListWheelScrollPhysics(parent: buildParent(ancestor));
   }
 
   @override
   SpringDescription get spring =>
-      const SpringDescription(mass: 0.8, stiffness: 100.0, damping: 1.0);
+      const SpringDescription(mass: 1.0, stiffness: 50.0, damping: 8.0);
 
   @override
-  double get minFlingVelocity => 50.0;
+  double get minFlingVelocity => 30.0;
 
   @override
-  double get maxFlingVelocity => 2500.0;
+  double get maxFlingVelocity => 1600.0;
 
   @override
-  Tolerance get tolerance => const Tolerance(velocity: 1.0, distance: 0.5);
-
-  @override
-  Simulation? createBallisticSimulation(
-    ScrollMetrics position,
-    double velocity,
-  ) {
-    // ドラッグ中はスナップを無効化
-    if (!allowSnap) {
-      return super.createBallisticSimulation(position, velocity);
-    }
-
-    // 通常時はPageViewのスナップ動作
-    final tolerance = this.tolerance;
-    if (velocity.abs() >= tolerance.velocity || position.outOfRange) {
-      return super.createBallisticSimulation(position, velocity);
-    }
-
-    // 低速時は最も近いページにスナップ
-    final target = _getTargetPixels(position);
-    if ((target - position.pixels).abs() < tolerance.distance) {
-      return null;
-    }
-
-    return ScrollSpringSimulation(
-      spring,
-      position.pixels,
-      target,
-      velocity,
-      tolerance: tolerance,
-    );
-  }
-
-  double _getTargetPixels(ScrollMetrics position) {
-    final page = position.pixels / position.viewportDimension;
-    return page.roundToDouble() * position.viewportDimension;
-  }
+  Tolerance get tolerance => const Tolerance(velocity: 0.3, distance: 0.15);
 }
 
 class CustomTimePicker extends StatefulWidget {
@@ -86,10 +44,9 @@ class CustomTimePicker extends StatefulWidget {
 }
 
 class _CustomTimePickerState extends State<CustomTimePicker> {
-  late PageController _pageController;
+  late FixedExtentScrollController _scrollController;
   late int _selectedIndex;
   bool _isScrolling = false;
-  bool _isDragging = false;
   double _scrollOffset = 0.0;
 
   @override
@@ -99,39 +56,48 @@ class _CustomTimePickerState extends State<CustomTimePicker> {
       0,
       widget.timeOptions.length - 1,
     );
-    _pageController = PageController(
-      initialPage: _selectedIndex,
-      viewportFraction: 0.2, // 5つのアイテムを表示（中央1つ + 上下2つずつ）
+    _scrollController = FixedExtentScrollController(
+      initialItem: _selectedIndex,
     );
 
     // スクロール位置の監視を追加
-    _pageController.addListener(_onScrollChanged);
+    _scrollController.addListener(_onScrollChanged);
   }
 
   @override
   void dispose() {
-    _pageController.removeListener(_onScrollChanged);
-    _pageController.dispose();
+    _scrollController.removeListener(_onScrollChanged);
+    _scrollController.dispose();
     super.dispose();
   }
 
   void _onScrollChanged() {
-    if (!mounted || !_pageController.hasClients) return;
+    if (!mounted || !_scrollController.hasClients) return;
 
-    final page = _pageController.page ?? _selectedIndex.toDouble();
+    final currentOffset = _scrollController.offset;
+    final itemExtent = widget.itemHeight;
+    final currentIndex = (currentOffset / itemExtent).round();
+    final page = currentOffset / itemExtent;
 
     if (_scrollOffset != page) {
       setState(() {
         _scrollOffset = page;
       });
     }
+
+    // スクロール停止時に選択項目を更新
+    if (!_isScrolling &&
+        currentIndex != _selectedIndex &&
+        currentIndex >= 0 &&
+        currentIndex < widget.timeOptions.length) {
+      _updateSelectedIndex(currentIndex);
+    }
   }
 
-  void _handlePageChanged(int index) {
-    if (!mounted) return;
+  void _updateSelectedIndex(int index) {
+    if (!mounted || index == _selectedIndex) return;
     setState(() {
       _selectedIndex = index;
-      _isScrolling = false;
     });
     widget.onChanged(index);
     HapticFeedback.selectionClick();
@@ -149,74 +115,78 @@ class _CustomTimePickerState extends State<CustomTimePicker> {
               if (notification is ScrollStartNotification) {
                 setState(() {
                   _isScrolling = true;
-                  _isDragging = notification.dragDetails != null;
-                });
-              } else if (notification is ScrollUpdateNotification) {
-                setState(() {
-                  _isDragging = notification.dragDetails != null;
                 });
               } else if (notification is ScrollEndNotification) {
                 setState(() {
                   _isScrolling = false;
-                  _isDragging = false;
                 });
+                // スクロール終了時に最終的な選択項目を確定
+                final currentOffset = _scrollController.offset;
+                final itemExtent = widget.itemHeight;
+                final finalIndex = (currentOffset / itemExtent).round().clamp(
+                  0,
+                  widget.timeOptions.length - 1,
+                );
+                _updateSelectedIndex(finalIndex);
               }
               return false;
             },
-            child: PageView.builder(
-              controller: _pageController,
-              scrollDirection: Axis.vertical,
-              onPageChanged: _handlePageChanged,
-              itemCount: widget.timeOptions.length,
-              physics: SmoothPageScrollPhysics(
-                parent: const ClampingScrollPhysics(),
-                allowSnap: !_isDragging, // ドラッグ中はスナップを無効化
+            child: ListWheelScrollView.useDelegate(
+              controller: _scrollController,
+              itemExtent: widget.itemHeight,
+              perspective: 0.003,
+              diameterRatio: 2.5,
+              physics: const SmoothListWheelScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
               ),
-              itemBuilder: (context, index) {
-                // スクロール中は実際のスクロール位置を使用
-                final currentCenter =
-                    _isScrolling ? _scrollOffset : _selectedIndex.toDouble();
-                final distance = (index - currentCenter).abs();
+              childDelegate: ListWheelChildBuilderDelegate(
+                childCount: widget.timeOptions.length,
+                builder: (context, index) {
+                  // スクロール中は実際のスクロール位置を使用
+                  final currentCenter =
+                      _isScrolling ? _scrollOffset : _selectedIndex.toDouble();
+                  final distance = (index - currentCenter).abs();
 
-                double opacity;
-                double scale = 1.0;
+                  double opacity;
+                  double scale = 1.0;
 
-                if (distance < 0.1) {
-                  // 選択中のアイテムは透明（グラデーションボックス上のラベルで表示）
-                  opacity = 0.0;
-                  scale = 1.0;
-                } else if (distance <= 1.0) {
-                  // 隣接する時刻: 距離に応じてスムーズに透明度変化
-                  opacity = 0.8 - (distance - 0.1) * 0.2;
-                  scale = 1.0 - distance * 0.1;
-                } else if (distance <= 2.0) {
-                  // 2つ離れた時刻: より薄く
-                  opacity = 0.4 - (distance - 1.0) * 0.2;
-                  scale = 0.9 - (distance - 1.0) * 0.1;
-                } else {
-                  // それ以外の時刻: 非常に薄く
-                  opacity = 0.1;
-                  scale = 0.8;
-                }
+                  if (distance < 0.1) {
+                    // 選択中のアイテムは透明（グラデーションボックス上のラベルで表示）
+                    opacity = 0.0;
+                    scale = 1.0;
+                  } else if (distance <= 1.0) {
+                    // 隣接する時刻: 距離に応じてスムーズに透明度変化
+                    opacity = 0.8 - (distance - 0.1) * 0.2;
+                    scale = 1.0 - distance * 0.1;
+                  } else if (distance <= 2.0) {
+                    // 2つ離れた時刻: より薄く
+                    opacity = 0.4 - (distance - 1.0) * 0.2;
+                    scale = 0.9 - (distance - 1.0) * 0.1;
+                  } else {
+                    // それ以外の時刻: 非常に薄く
+                    opacity = 0.1;
+                    scale = 0.8;
+                  }
 
-                return Transform.scale(
-                  scale: scale,
-                  child: Container(
-                    height: widget.itemHeight,
-                    alignment: Alignment.center,
-                    child: AnimatedDefaultTextStyle(
-                      duration: const Duration(milliseconds: 150),
-                      curve: Curves.easeOut,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: opacity),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
+                  return Transform.scale(
+                    scale: scale,
+                    child: Container(
+                      height: widget.itemHeight,
+                      alignment: Alignment.center,
+                      child: AnimatedDefaultTextStyle(
+                        duration: const Duration(milliseconds: 120),
+                        curve: Curves.easeOut,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: opacity),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        child: Text(widget.timeOptions[index]),
                       ),
-                      child: Text(widget.timeOptions[index]),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
 
@@ -226,7 +196,7 @@ class _CustomTimePickerState extends State<CustomTimePicker> {
               child: Align(
                 alignment: Alignment.center,
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
+                  duration: const Duration(milliseconds: 160),
                   curve: Curves.easeOut,
                   height: widget.itemHeight,
                   margin: const EdgeInsets.symmetric(horizontal: 20),

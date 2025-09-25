@@ -191,12 +191,6 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
     }
   }
 
-  String _formatTimeOfDay(TimeOfDay time) {
-    final h = time.hour.toString().padLeft(2, '0');
-    final m = time.minute.toString().padLeft(2, '0');
-    return '$h:$m';
-  }
-
   // _handleScrollEnd は _commitTimeFromIndex に置き換え
 
   // シンプルな時刻変更ハンドラー
@@ -569,10 +563,7 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
                                   return '${hours}h';
                                 })(),
                                 style: TextStyle(
-                                  color:
-                                      _isIntervalSliding
-                                          ? Colors.transparent
-                                          : Colors.white,
+                                  color: Colors.white,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                 ),
