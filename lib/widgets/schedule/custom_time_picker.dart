@@ -49,13 +49,18 @@ class _CustomTimePickerState extends State<CustomTimePicker> {
   bool _isScrolling = false;
   double _scrollOffset = 0.0;
 
+  // 無限スクロール風のループ制御
+  static const int _loopingMultiplier = 1000; // 繰り返し回数
+  int get _optionsLength => widget.timeOptions.length;
+  int get _totalItems => _optionsLength * _loopingMultiplier;
+  int get _baseCycle => _loopingMultiplier ~/ 2;
+  int _toLogicalIndex(int index) => index % _optionsLength;
+
   @override
   void initState() {
     super.initState();
-    _selectedIndex = widget.initialIndex.clamp(
-      0,
-      widget.timeOptions.length - 1,
-    );
+    final initialLogical = widget.initialIndex.clamp(0, _optionsLength - 1);
+    _selectedIndex = _baseCycle * _optionsLength + initialLogical;
     _scrollController = FixedExtentScrollController(
       initialItem: _selectedIndex,
     );
@@ -86,10 +91,7 @@ class _CustomTimePickerState extends State<CustomTimePicker> {
     }
 
     // スクロール停止時に選択項目を更新
-    if (!_isScrolling &&
-        currentIndex != _selectedIndex &&
-        currentIndex >= 0 &&
-        currentIndex < widget.timeOptions.length) {
+    if (!_isScrolling && currentIndex != _selectedIndex) {
       _updateSelectedIndex(currentIndex);
     }
   }
@@ -99,7 +101,7 @@ class _CustomTimePickerState extends State<CustomTimePicker> {
     setState(() {
       _selectedIndex = index;
     });
-    widget.onChanged(index);
+    widget.onChanged(_toLogicalIndex(index));
     HapticFeedback.selectionClick();
   }
 
@@ -123,11 +125,26 @@ class _CustomTimePickerState extends State<CustomTimePicker> {
                 // スクロール終了時に最終的な選択項目を確定
                 final currentOffset = _scrollController.offset;
                 final itemExtent = widget.itemHeight;
-                final finalIndex = (currentOffset / itemExtent).round().clamp(
-                  0,
-                  widget.timeOptions.length - 1,
-                );
-                _updateSelectedIndex(finalIndex);
+                final finalIndex = (currentOffset / itemExtent).round();
+                if (finalIndex != _selectedIndex) {
+                  _updateSelectedIndex(finalIndex);
+                }
+
+                // 端に近づいたら中央サイクルへジャンプしてループを安定化
+                if (finalIndex < _optionsLength ||
+                    finalIndex > _totalItems - _optionsLength) {
+                  final centered =
+                      _baseCycle * _optionsLength + _toLogicalIndex(finalIndex);
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted && _scrollController.hasClients) {
+                      _scrollController.jumpToItem(centered);
+                      setState(() {
+                        _selectedIndex = centered;
+                        _scrollOffset = centered.toDouble();
+                      });
+                    }
+                  });
+                }
               }
               return false;
             },
@@ -140,8 +157,9 @@ class _CustomTimePickerState extends State<CustomTimePicker> {
                 parent: AlwaysScrollableScrollPhysics(),
               ),
               childDelegate: ListWheelChildBuilderDelegate(
-                childCount: widget.timeOptions.length,
+                childCount: _totalItems,
                 builder: (context, index) {
+                  final logicalIndex = _toLogicalIndex(index);
                   // スクロール中は実際のスクロール位置を使用
                   final currentCenter =
                       _isScrolling ? _scrollOffset : _selectedIndex.toDouble();
@@ -181,7 +199,7 @@ class _CustomTimePickerState extends State<CustomTimePicker> {
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
                         ),
-                        child: Text(widget.timeOptions[index]),
+                        child: Text(widget.timeOptions[logicalIndex]),
                       ),
                     ),
                   );
@@ -230,10 +248,7 @@ class _CustomTimePickerState extends State<CustomTimePicker> {
                     duration: const Duration(milliseconds: 120),
                     curve: Curves.easeOut,
                     child: Text(
-                      _selectedIndex >= 0 &&
-                              _selectedIndex < widget.timeOptions.length
-                          ? widget.timeOptions[_selectedIndex]
-                          : '',
+                      widget.timeOptions[_toLogicalIndex(_selectedIndex)],
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
