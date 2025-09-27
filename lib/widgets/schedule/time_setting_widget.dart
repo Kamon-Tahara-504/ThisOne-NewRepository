@@ -6,14 +6,18 @@ class TimeSettingWidget extends StatefulWidget {
   final TimeOfDay startTime;
   final TimeOfDay endTime;
   final int timeInterval;
+  final bool isAllDay;
   final Function(TimeOfDay, TimeOfDay, int) onTimeChange;
+  final ValueChanged<bool> onAllDayChange;
 
   const TimeSettingWidget({
     super.key,
     required this.startTime,
     required this.endTime,
     required this.timeInterval,
+    required this.isAllDay,
     required this.onTimeChange,
+    required this.onAllDayChange,
   });
 
   @override
@@ -250,97 +254,37 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
             padding: const EdgeInsets.all(12),
             child: Column(
               children: [
-                // 開始時刻・終了時刻切替ボタン
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _timePickerMode = 'start';
-                          _timePickerKey = UniqueKey();
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color:
-                              _timePickerMode == 'start'
-                                  ? const Color(0xFFE85A3B)
-                                  : const Color(0xFF2A2A2A),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color:
-                                _timePickerMode == 'start'
-                                    ? Colors.transparent
-                                    : Colors.grey[700]!,
-                          ),
-                        ),
-                        child: Text(
-                          '開始: ${_startTime.hour.toString().padLeft(2, '0')}:${_startTime.minute.toString().padLeft(2, '0')}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _timePickerMode = 'end';
-                          _timePickerKey = UniqueKey();
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color:
-                              _timePickerMode == 'end'
-                                  ? const Color(0xFFE85A3B)
-                                  : const Color(0xFF2A2A2A),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color:
-                                _timePickerMode == 'end'
-                                    ? Colors.transparent
-                                    : Colors.grey[700]!,
-                          ),
-                        ),
-                        child: Text(
-                          '終了: ${_endTime.hour.toString().padLeft(2, '0')}:${_endTime.minute.toString().padLeft(2, '0')}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                // 終日スイッチ + 開始/終了スイッチ（同一行）
+                _buildTopControlsRow(context),
                 const SizedBox(height: 12),
-                // 統合時刻ピッカー
-                SizedBox(
-                  height: 160, // より多くの項目を表示するため高さを拡大
-                  key: _timePickerKey,
-                  child: _buildTimeWheelPicker(
-                    items: _getTimeOptions(),
-                    selectedIndex:
-                        _timePickerMode == 'start'
-                            ? _getClosestTimeIndex(_startTime)
-                            : _getClosestTimeIndex(_endTime),
-                    onChanged: _handleTimeIndexChanged,
+                // 終日の場合は操作不可にする
+                AnimatedOpacity(
+                  opacity: widget.isAllDay ? 0.35 : 1.0,
+                  duration: const Duration(milliseconds: 200),
+                  child: IgnorePointer(
+                    ignoring: widget.isAllDay,
+                    child: Column(
+                      children: [
+                        // 統合時刻ピッカー
+                        SizedBox(
+                          height: 160,
+                          key: _timePickerKey,
+                          child: _buildTimeWheelPicker(
+                            items: _getTimeOptions(),
+                            selectedIndex:
+                                _timePickerMode == 'start'
+                                    ? _getClosestTimeIndex(_startTime)
+                                    : _getClosestTimeIndex(_endTime),
+                            onChanged: _handleTimeIndexChanged,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // 間隔選択スライダー
+                        _buildIntervalSlider(),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                // 間隔選択スライダー
-                _buildIntervalSlider(),
               ],
             ),
           ),
@@ -348,6 +292,175 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
       ],
     );
   }
+
+  Widget _buildTimeSelectionButtons(BuildContext context) {
+    return Opacity(
+      opacity: widget.isAllDay ? 0.5 : 1.0,
+      child: IgnorePointer(
+        ignoring: widget.isAllDay,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final segmentCount = 2;
+            final segmentWidth = (constraints.maxWidth - 4) / segmentCount;
+            final knobLeft =
+                _timePickerMode == 'start' ? 2.0 : 2.0 + segmentWidth;
+            return SizedBox(
+              height: 40,
+              child: Stack(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2F2F2F),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[700]!),
+                    ),
+                  ),
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeInOut,
+                    left: knobLeft,
+                    top: 2,
+                    bottom: 2,
+                    width: segmentWidth,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: createHorizontalOrangeYellowGradient(),
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.25),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            setState(() {
+                              _timePickerMode = 'start';
+                              _timePickerKey = UniqueKey();
+                            });
+                          },
+                          child: Center(
+                            child: Text(
+                              '開始 ${_startTime.hour.toString().padLeft(2, '0')}:${_startTime.minute.toString().padLeft(2, '0')}',
+                              style: TextStyle(
+                                color:
+                                    _timePickerMode == 'start'
+                                        ? Colors.white
+                                        : Colors.white.withOpacity(0.8),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            setState(() {
+                              _timePickerMode = 'end';
+                              _timePickerKey = UniqueKey();
+                            });
+                          },
+                          child: Center(
+                            child: Text(
+                              '終了 ${_endTime.hour.toString().padLeft(2, '0')}:${_endTime.minute.toString().padLeft(2, '0')}',
+                              style: TextStyle(
+                                color:
+                                    _timePickerMode == 'end'
+                                        ? Colors.white
+                                        : Colors.white.withOpacity(0.8),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  // 上段: 「終日」ラベル＋トグルの右側に開始/終了スイッチを配置
+  Widget _buildTopControlsRow(BuildContext context) {
+    return Row(
+      children: [
+        // 左: 終日ラベル + トグル
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '終日',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.9),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () => widget.onAllDayChange(!widget.isAllDay),
+              child: Container(
+                width: 56,
+                height: 32,
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color:
+                      widget.isAllDay
+                          ? const Color(0xFFE85A3B)
+                          : const Color(0xFF2F2F2F),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey[700]!),
+                ),
+                child: Stack(
+                  children: [
+                    AnimatedAlign(
+                      duration: const Duration(milliseconds: 180),
+                      curve: Curves.easeOut,
+                      alignment:
+                          widget.isAllDay
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
+                      child: Container(
+                        width: 26,
+                        height: 26,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(width: 12),
+        // 右: 開始/終了スイッチ（残り幅いっぱい）
+        Expanded(child: _buildTimeSelectionButtons(context)),
+      ],
+    );
+  }
+
+  // 旧: 終日トグル単体の行（未使用だが残す場合があるため参考用）
+  // Widget _buildAllDayRow(BuildContext context) { ... }
 
   Widget _buildIntervalSlider() {
     return Column(

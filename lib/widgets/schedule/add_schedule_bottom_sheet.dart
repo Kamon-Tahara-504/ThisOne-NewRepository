@@ -25,6 +25,7 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
     hour: TimeOfDay.now().hour + 1,
     minute: TimeOfDay.now().minute,
   );
+  bool _isAllDay = false;
   String _selectedColorHex = '#9E9E9E';
   bool _isNotificationEnabled = false;
   int _reminderMinutes = 15;
@@ -90,14 +91,18 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
       final finalReminderMinutes =
           _isCustomReminder ? _getCustomReminderMinutes() : _reminderMinutes;
 
+      final startForSave =
+          _isAllDay ? const TimeOfDay(hour: 0, minute: 0) : _startTime;
+      final TimeOfDay? endForSave = _isAllDay ? null : _endTime;
+
       widget.onAdd({
         'id': DateTime.now().millisecondsSinceEpoch,
         'title': _titleController.text.trim(),
         'description': _descriptionController.text.trim(),
         'date': widget.selectedDate,
-        'startTime': _startTime,
-        'endTime': _endTime,
-        'isAllDay': false,
+        'startTime': startForSave,
+        'endTime': endForSave,
+        'isAllDay': _isAllDay,
         'colorHex': _selectedColorHex,
         'notificationMode': _isNotificationEnabled ? 'reminder' : 'none',
         'reminderMinutes': _isNotificationEnabled ? finalReminderMinutes : 0,
@@ -221,11 +226,21 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
                     startTime: _startTime,
                     endTime: _endTime,
                     timeInterval: _timeInterval,
+                    isAllDay: _isAllDay,
                     onTimeChange: (newStartTime, newEndTime, newInterval) {
                       setState(() {
                         _startTime = newStartTime;
                         _endTime = newEndTime;
                         _timeInterval = newInterval;
+                      });
+                    },
+                    onAllDayChange: (value) {
+                      setState(() {
+                        _isAllDay = value;
+                        if (value) {
+                          _startTime = const TimeOfDay(hour: 0, minute: 0);
+                          _endTime = const TimeOfDay(hour: 23, minute: 59);
+                        }
                       });
                     },
                   ),
