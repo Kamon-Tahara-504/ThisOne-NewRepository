@@ -420,96 +420,130 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 通知スイッチ
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '通知設定',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                GestureDetector(
-                  onTap: () => setState(() => _isNotificationEnabled = false),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color:
-                          !_isNotificationEnabled
-                              ? const Color(0xFFE85A3B)
-                              : const Color(0xFF3A3A3A),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color:
-                            !_isNotificationEnabled
-                                ? Colors.transparent
-                                : Colors.grey[600]!,
-                      ),
-                    ),
-                    child: const Text(
-                      '通知なし',
-                      style: TextStyle(color: Colors.white, fontSize: 14),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: () => setState(() => _isNotificationEnabled = true),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color:
-                          _isNotificationEnabled
-                              ? const Color(0xFFE85A3B)
-                              : const Color(0xFF3A3A3A),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color:
-                            _isNotificationEnabled
-                                ? Colors.transparent
-                                : Colors.grey[600]!,
-                      ),
-                    ),
-                    child: const Text(
-                      '通知あり',
-                      style: TextStyle(color: Colors.white, fontSize: 14),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
+        const Text(
+          '通知設定',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         const SizedBox(height: 8),
         Container(
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(
+            color: const Color(0xFF3A3A3A),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[600]!),
+          ),
           child: Container(
             padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 通知設定詳細
+                // セグメント式スイッチ（通知なし / 通知あり）
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final segmentCount = 2;
+                    final segmentWidth =
+                        (constraints.maxWidth - 4) / segmentCount;
+                    final knobLeft =
+                        _isNotificationEnabled ? 2.0 + segmentWidth : 2.0;
+                    return SizedBox(
+                      height: 40,
+                      child: Stack(
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2F2F2F),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey[700]!),
+                            ),
+                          ),
+                          AnimatedPositioned(
+                            duration: const Duration(milliseconds: 200),
+                            curve: Curves.easeInOut,
+                            left: knobLeft,
+                            top: 2,
+                            bottom: 2,
+                            width: segmentWidth,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient:
+                                    createHorizontalOrangeYellowGradient(),
+                                borderRadius: BorderRadius.circular(10),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.25),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(12),
+                                  onTap:
+                                      () => setState(
+                                        () => _isNotificationEnabled = false,
+                                      ),
+                                  child: Center(
+                                    child: Text(
+                                      '通知なし',
+                                      style: TextStyle(
+                                        color:
+                                            !_isNotificationEnabled
+                                                ? Colors.white
+                                                : Colors.white.withOpacity(0.8),
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(12),
+                                  onTap:
+                                      () => setState(
+                                        () => _isNotificationEnabled = true,
+                                      ),
+                                  child: Center(
+                                    child: Text(
+                                      '通知あり',
+                                      style: TextStyle(
+                                        color:
+                                            _isNotificationEnabled
+                                                ? Colors.white
+                                                : Colors.white.withOpacity(0.8),
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                // 詳細（通知オプション）
                 AnimatedOpacity(
-                  opacity: _isNotificationEnabled ? 1.0 : 0.3,
+                  opacity: _isNotificationEnabled ? 1.0 : 0.35,
                   duration: const Duration(milliseconds: 200),
                   child: IgnorePointer(
                     ignoring: !_isNotificationEnabled,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 12),
                         const Text(
                           '通知タイミング',
                           style: TextStyle(
@@ -663,7 +697,18 @@ class _CustomReminderDialogState extends State<_CustomReminderDialog> {
                   onChanged: (value) {
                     final intValue = int.tryParse(value);
                     if (intValue != null && intValue > 0) {
-                      _value = intValue;
+                      var next = intValue;
+                      if (_unit == 'days' && next > 3) {
+                        next = 3;
+                        if (_controller.text != '3') {
+                          // 入力を3に戻す
+                          _controller.text = '3';
+                          _controller.selection = TextSelection.fromPosition(
+                            const TextPosition(offset: 1),
+                          );
+                        }
+                      }
+                      _value = next;
                     }
                   },
                 ),
@@ -696,6 +741,16 @@ class _CustomReminderDialogState extends State<_CustomReminderDialog> {
                     if (value != null) {
                       setState(() {
                         _unit = value;
+                        // days選択時は最大3に制限
+                        if (_unit == 'days' && _value > 3) {
+                          _value = 3;
+                          if (_controller.text != '3') {
+                            _controller.text = '3';
+                            _controller.selection = TextSelection.fromPosition(
+                              const TextPosition(offset: 1),
+                            );
+                          }
+                        }
                       });
                     }
                   },
