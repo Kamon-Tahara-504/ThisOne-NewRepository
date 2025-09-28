@@ -328,7 +328,7 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
                         borderRadius: BorderRadius.circular(10),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.25),
+                            color: Colors.black.withValues(alpha: 0.25),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
@@ -354,7 +354,7 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
                                 color:
                                     _timePickerMode == 'start'
                                         ? Colors.white
-                                        : Colors.white.withOpacity(0.8),
+                                        : Colors.white.withValues(alpha: 0.8),
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -378,7 +378,7 @@ class _TimeSettingWidgetState extends State<TimeSettingWidget> {
                                 color:
                                     _timePickerMode == 'end'
                                         ? Colors.white
-                                        : Colors.white.withOpacity(0.8),
+                                        : Colors.white.withValues(alpha: 0.8),
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
                               ),

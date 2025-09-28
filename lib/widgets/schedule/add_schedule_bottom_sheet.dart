@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../gradients.dart';
 import '../../utils/color_utils.dart';
 import 'time_setting_widget.dart';
+import 'notification_settings.dart';
 
 class AddScheduleBottomSheet extends StatefulWidget {
   final DateTime selectedDate;
@@ -247,8 +248,25 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
 
                   const SizedBox(height: 20),
 
-                  // 通知設定セクション
-                  _buildNotificationSettings(),
+                  // 通知設定セクション（コンポーネント化）
+                  NotificationSettings(
+                    isEnabled: _isNotificationEnabled,
+                    reminderOptions: _reminderOptions,
+                    isCustomReminder: _isCustomReminder,
+                    reminderMinutes: _reminderMinutes,
+                    customValue: _customValue,
+                    customUnit: _customUnit,
+                    onEnabledChange:
+                        (value) => setState(() {
+                          _isNotificationEnabled = value;
+                        }),
+                    onSelectPresetMinutes:
+                        (minutes) => setState(() {
+                          _isCustomReminder = false;
+                          _reminderMinutes = minutes;
+                        }),
+                    onTapCustom: _showCustomReminderDialog,
+                  ),
 
                   const SizedBox(height: 20),
 
@@ -415,214 +433,7 @@ class _AddScheduleBottomSheetState extends State<AddScheduleBottomSheet> {
     );
   }
 
-  // 通知設定セクション
-  Widget _buildNotificationSettings() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          '通知設定',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFF3A3A3A),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[600]!),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // セグメント式スイッチ（通知なし / 通知あり）
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final segmentCount = 2;
-                    final segmentWidth =
-                        (constraints.maxWidth - 4) / segmentCount;
-                    final knobLeft =
-                        _isNotificationEnabled ? 2.0 + segmentWidth : 2.0;
-                    return SizedBox(
-                      height: 40,
-                      child: Stack(
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF2F2F2F),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey[700]!),
-                            ),
-                          ),
-                          AnimatedPositioned(
-                            duration: const Duration(milliseconds: 200),
-                            curve: Curves.easeInOut,
-                            left: knobLeft,
-                            top: 2,
-                            bottom: 2,
-                            width: segmentWidth,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                gradient:
-                                    createHorizontalOrangeYellowGradient(),
-                                borderRadius: BorderRadius.circular(10),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.25),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(12),
-                                  onTap:
-                                      () => setState(
-                                        () => _isNotificationEnabled = false,
-                                      ),
-                                  child: Center(
-                                    child: Text(
-                                      '通知なし',
-                                      style: TextStyle(
-                                        color:
-                                            !_isNotificationEnabled
-                                                ? Colors.white
-                                                : Colors.white.withOpacity(0.8),
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(12),
-                                  onTap:
-                                      () => setState(
-                                        () => _isNotificationEnabled = true,
-                                      ),
-                                  child: Center(
-                                    child: Text(
-                                      '通知あり',
-                                      style: TextStyle(
-                                        color:
-                                            _isNotificationEnabled
-                                                ? Colors.white
-                                                : Colors.white.withOpacity(0.8),
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 12),
-                // 詳細（通知オプション）
-                AnimatedOpacity(
-                  opacity: _isNotificationEnabled ? 1.0 : 0.35,
-                  duration: const Duration(milliseconds: 200),
-                  child: IgnorePointer(
-                    ignoring: !_isNotificationEnabled,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          '通知タイミング',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children:
-                              _reminderOptions.map((option) {
-                                final isCustomOption = option['minutes'] == -1;
-                                final isSelected =
-                                    isCustomOption
-                                        ? _isCustomReminder
-                                        : _reminderMinutes ==
-                                                option['minutes'] &&
-                                            !_isCustomReminder;
-
-                                return GestureDetector(
-                                  onTap: () {
-                                    if (isCustomOption) {
-                                      _showCustomReminderDialog();
-                                    } else {
-                                      setState(() {
-                                        _isCustomReminder = false;
-                                        _reminderMinutes = option['minutes'];
-                                      });
-                                    }
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 8,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          isSelected
-                                              ? const Color(0xFFE85A3B)
-                                              : const Color(0xFF3A3A3A),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color:
-                                            isSelected
-                                                ? Colors.transparent
-                                                : Colors.grey[600]!,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      isCustomOption && _isCustomReminder
-                                          ? 'カスタム ($_customValue${_customUnit == 'minutes'
-                                              ? '分'
-                                              : _customUnit == 'hours'
-                                              ? '時間'
-                                              : '日'}前)'
-                                          : option['label'],
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  // 通知設定セクションは NotificationSettings に移行
 }
 
 // カスタム通知設定用の独立ダイアログ
