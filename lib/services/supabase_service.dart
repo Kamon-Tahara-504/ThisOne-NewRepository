@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:convert';
 import '../models/memo.dart';
+import '../models/schedule.dart';
 
 // Supabaseクライアントを使用
 final supabase = Supabase.instance.client;
@@ -742,7 +743,6 @@ class SupabaseService {
     };
   }
 
-
   // 型安全なメモメソッド（新規追加）
   /// ユーザーのメモを全て取得（型安全版）
   Future<List<Memo>> getUserMemosTyped() async {
@@ -926,5 +926,220 @@ class SupabaseService {
     }
 
     return filteredMemos;
+  }
+
+  // ========================================
+  // 型安全なスケジュールメソッド（新規追加）
+  // ========================================
+
+  /// ユーザーのスケジュールを全て取得（型安全版）
+  Future<List<Schedule>> getUserSchedulesTyped() async {
+    final user = getCurrentUser();
+    if (user == null) return [];
+
+    try {
+      final response = await supabase
+          .from('schedules')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('schedule_date', ascending: true)
+          .order('start_time', ascending: true);
+
+      return (response as List)
+          .map(
+            (scheduleData) =>
+                Schedule.fromMap(scheduleData as Map<String, dynamic>),
+          )
+          .toList();
+    } catch (e) {
+      debugPrint('スケジュール取得エラー: $e');
+      return [];
+    }
+  }
+
+  /// 特定の日付のスケジュールを取得（型安全版）
+  Future<List<Schedule>> getSchedulesForDateTyped(DateTime date) async {
+    final user = getCurrentUser();
+    if (user == null) return [];
+
+    try {
+      final dateString =
+          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+      final response = await supabase
+          .from('schedules')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('schedule_date', dateString)
+          .order('start_time', ascending: true);
+
+      return (response as List)
+          .map(
+            (scheduleData) =>
+                Schedule.fromMap(scheduleData as Map<String, dynamic>),
+          )
+          .toList();
+    } catch (e) {
+      debugPrint('日付別スケジュール取得エラー: $e');
+      return [];
+    }
+  }
+
+  /// スケジュールを追加（型安全版）
+  Future<Schedule?> addScheduleTyped({
+    required String title,
+    String? description,
+    required DateTime date,
+    required TimeOfDay startTime,
+    TimeOfDay? endTime,
+    bool isAllDay = false,
+    String? location,
+    int reminderMinutes = 0,
+    String? colorHex,
+  }) async {
+    final user = getCurrentUser();
+    if (user == null) return null;
+
+    try {
+      final dateString =
+          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      final startTimeString =
+          '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}:00';
+      final endTimeString =
+          endTime != null
+              ? '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}:00'
+              : null;
+
+      final scheduleData = {
+        'user_id': user.id,
+        'title': title,
+        'description': description,
+        'schedule_date': dateString,
+        'start_time': startTimeString,
+        'end_time': endTimeString,
+        'is_all_day': isAllDay,
+        'location': location,
+        'reminder_minutes': reminderMinutes,
+        'color_hex': colorHex ?? '#E85A3B',
+      };
+
+      final response =
+          await supabase
+              .from('schedules')
+              .insert(scheduleData)
+              .select()
+              .single();
+
+      return Schedule.fromMap(response);
+    } catch (e) {
+      debugPrint('スケジュール追加エラー: $e');
+      return null;
+    }
+  }
+
+  /// スケジュールを更新（型安全版）
+  Future<void> updateScheduleTyped({
+    required String scheduleId,
+    String? title,
+    String? description,
+    DateTime? date,
+    TimeOfDay? startTime,
+    TimeOfDay? endTime,
+    bool? isAllDay,
+    String? location,
+    int? reminderMinutes,
+    String? colorHex,
+  }) async {
+    final user = getCurrentUser();
+    if (user == null) return;
+
+    try {
+      final updateData = <String, dynamic>{};
+
+      if (title != null) updateData['title'] = title;
+      if (description != null) updateData['description'] = description;
+      if (date != null) {
+        updateData['schedule_date'] =
+            '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      }
+      if (startTime != null) {
+        updateData['start_time'] =
+            '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}:00';
+      }
+      if (endTime != null) {
+        updateData['end_time'] =
+            '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}:00';
+      }
+      if (isAllDay != null) updateData['is_all_day'] = isAllDay;
+      if (location != null) updateData['location'] = location;
+      if (reminderMinutes != null)
+        updateData['reminder_minutes'] = reminderMinutes;
+      if (colorHex != null) updateData['color_hex'] = colorHex;
+
+      if (updateData.isNotEmpty) {
+        await supabase
+            .from('schedules')
+            .update(updateData)
+            .eq('id', scheduleId)
+            .eq('user_id', user.id);
+      }
+    } catch (e) {
+      debugPrint('スケジュール更新エラー: $e');
+      rethrow;
+    }
+  }
+
+  /// スケジュールを削除（型安全版）
+  Future<void> deleteScheduleTyped(String scheduleId) async {
+    final user = getCurrentUser();
+    if (user == null) return;
+
+    try {
+      await supabase
+          .from('schedules')
+          .delete()
+          .eq('id', scheduleId)
+          .eq('user_id', user.id);
+    } catch (e) {
+      debugPrint('スケジュール削除エラー: $e');
+      rethrow;
+    }
+  }
+
+  /// フィルターされたスケジュールを取得（型安全版）
+  Future<List<Schedule>> getFilteredSchedules(ScheduleFilter filter) async {
+    final allSchedules = await getUserSchedulesTyped();
+
+    // フィルター適用
+    var filteredSchedules = allSchedules.where(filter.matches).toList();
+
+    // ソート適用
+    switch (filter.sortOrder) {
+      case ScheduleSortOrder.dateTime:
+        filteredSchedules.sort((a, b) {
+          final dateComparison = a.scheduleDate.compareTo(b.scheduleDate);
+          if (dateComparison != 0) return dateComparison;
+          final aMinutes = a.startTime.hour * 60 + a.startTime.minute;
+          final bMinutes = b.startTime.hour * 60 + b.startTime.minute;
+          return aMinutes.compareTo(bMinutes);
+        });
+        break;
+      case ScheduleSortOrder.title:
+        filteredSchedules.sort((a, b) => a.title.compareTo(b.title));
+        break;
+      case ScheduleSortOrder.duration:
+        filteredSchedules.sort(
+          (a, b) => a.durationInMinutes.compareTo(b.durationInMinutes),
+        );
+        break;
+      case ScheduleSortOrder.created:
+        filteredSchedules.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        break;
+      case ScheduleSortOrder.updated:
+        filteredSchedules.sort((a, b) => a.updatedAt.compareTo(b.updatedAt));
+        break;
+    }
+
+    return filteredSchedules;
   }
 }

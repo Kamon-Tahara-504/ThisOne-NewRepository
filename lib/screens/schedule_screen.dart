@@ -5,6 +5,7 @@ import '../widgets/schedule/add_schedule_bottom_sheet.dart';
 import '../widgets/overlays/custom_bottom_sheet.dart';
 import '../services/supabase_service.dart';
 import '../utils/error_handler.dart';
+import '../models/schedule.dart';
 
 class ScheduleScreen extends StatefulWidget {
   final ScrollController? scrollController;
@@ -16,7 +17,7 @@ class ScheduleScreen extends StatefulWidget {
 }
 
 class _ScheduleScreenState extends State<ScheduleScreen> {
-  final Map<DateTime, List<Map<String, dynamic>>> _schedules = {};
+  final Map<DateTime, List<Schedule>> _schedules = {}; // 型安全なScheduleモデルに変更
   final SupabaseService _supabaseService = SupabaseService();
   DateTime _selectedDate = DateTime.now();
   DateTime _focusedDate = DateTime.now();
@@ -36,27 +37,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     });
 
     try {
-      final dbSchedules = await _supabaseService.getUserSchedules();
+      final schedules = await _supabaseService.getUserSchedulesTyped();
 
-      // データベースのデータをアプリ用に変換してMapに格納
-      final scheduleMap = <DateTime, List<Map<String, dynamic>>>{};
-
-      for (final dbSchedule in dbSchedules) {
-        final appSchedule = _supabaseService.convertDatabaseScheduleToApp(
-          dbSchedule,
-        );
-        final date = DateTime(
-          appSchedule['date'].year,
-          appSchedule['date'].month,
-          appSchedule['date'].day,
-        );
-
-        if (scheduleMap[date] != null) {
-          scheduleMap[date]!.add(appSchedule);
-        } else {
-          scheduleMap[date] = [appSchedule];
-        }
-      }
+      // 型安全なScheduleオブジェクトを日付ごとにグループ化
+      final scheduleMap = schedules.groupByDate();
 
       setState(() {
         _schedules.clear();
@@ -79,17 +63,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   /// スケジュールを削除（データベースからも削除）
-  Future<void> _deleteSchedule(Map<String, dynamic> schedule) async {
+  Future<void> _deleteSchedule(Schedule schedule) async {
     try {
       // データベースから削除
-      await _supabaseService.deleteSchedule(schedule['id']);
+      await _supabaseService.deleteScheduleTyped(schedule.id);
 
       // ローカルのMapからも削除
       setState(() {
         final date = DateTime(
-          schedule['date'].year,
-          schedule['date'].month,
-          schedule['date'].day,
+          schedule.scheduleDate.year,
+          schedule.scheduleDate.month,
+          schedule.scheduleDate.day,
         );
         _schedules[date]?.remove(schedule);
         if (_schedules[date]?.isEmpty == true) {
@@ -108,7 +92,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     }
   }
 
-  List<Map<String, dynamic>> _getSchedulesForDate(DateTime date) {
+  List<Schedule> _getSchedulesForDate(DateTime date) {
     final normalizedDate = DateTime(date.year, date.month, date.day);
     return _schedules[normalizedDate] ?? [];
   }
@@ -146,7 +130,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   Future<void> _addSchedule(Map<String, dynamic> schedule) async {
     try {
       // データベースに保存
-      final dbSchedule = await _supabaseService.addSchedule(
+      final newSchedule = await _supabaseService.addScheduleTyped(
         title: schedule['title'],
         description: schedule['description'],
         date: schedule['date'],
@@ -157,23 +141,18 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         colorHex: schedule['colorHex'],
       );
 
-      if (dbSchedule != null) {
-        // データベースの結果をアプリ用に変換（IDベースの色が自動的に設定される）
-        final appSchedule = _supabaseService.convertDatabaseScheduleToApp(
-          dbSchedule,
-        );
-
+      if (newSchedule != null) {
         // ローカルのMapに追加
         setState(() {
           final date = DateTime(
-            schedule['date'].year,
-            schedule['date'].month,
-            schedule['date'].day,
+            newSchedule.scheduleDate.year,
+            newSchedule.scheduleDate.month,
+            newSchedule.scheduleDate.day,
           );
           if (_schedules[date] != null) {
-            _schedules[date]!.add(appSchedule);
+            _schedules[date]!.add(newSchedule);
           } else {
-            _schedules[date] = [appSchedule];
+            _schedules[date] = [newSchedule];
           }
         });
       } else {
@@ -335,7 +314,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                             selectedDayPredicate:
                                 (day) => isSameDay(_selectedDate, day),
                             calendarFormat: _calendarFormat,
-                            eventLoader: _getSchedulesForDate,
+                            eventLoader:
+                                (date) =>
+                                    _getSchedulesForDate(
+                                      date,
+                                    ).map((s) => s.toMap()).toList(),
                             startingDayOfWeek: StartingDayOfWeek.sunday,
                             headerVisible: false,
                             calendarStyle: CalendarStyle(
@@ -551,19 +534,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                             index,
                           ) {
                             final schedule = todaySchedules[index];
-                            final isAllDay = schedule['isAllDay'] ?? false;
-                            final startTime =
-                                schedule['startTime'] ??
-                                schedule['time'] as TimeOfDay?;
-                            final endTime = schedule['endTime'] as TimeOfDay?;
-                            final colorHex = schedule['colorHex'] ?? '#E85A3B';
+                            final colorHex = schedule.colorHex;
                             final scheduleColor = Color(
                               int.parse(colorHex.substring(1), radix: 16) +
                                   0xFF000000,
                             );
                             final isNotificationEnabled =
-                                schedule['notificationMode'] != 'none' &&
-                                schedule['notificationMode'] != null;
+                                schedule.reminderMinutes > 0;
 
                             return Container(
                               margin: const EdgeInsets.only(bottom: 8),
@@ -620,13 +597,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                                     ),
                                                   ),
                                                   child: Text(
-                                                    isAllDay
-                                                        ? '終日'
-                                                        : startTime != null
-                                                        ? endTime != null
-                                                            ? '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}-${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}'
-                                                            : '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}'
-                                                        : '--:--',
+                                                    schedule.timeDisplayString,
                                                     style: TextStyle(
                                                       color: scheduleColor,
                                                       fontSize: 14, // 10から14に変更
@@ -638,7 +609,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                                 const SizedBox(width: 12),
                                                 Expanded(
                                                   child: Text(
-                                                    schedule['title'],
+                                                    schedule.title,
                                                     style: const TextStyle(
                                                       color: Colors.white,
                                                       fontSize: 16,
@@ -670,12 +641,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                               ],
                                             ),
                                             // 説明文（ある場合のみ表示）
-                                            if (schedule['description']
+                                            if (schedule
+                                                    .description
                                                     ?.isNotEmpty ==
                                                 true) ...[
                                               const SizedBox(height: 4),
                                               Text(
-                                                schedule['description'],
+                                                schedule.description!,
                                                 style: TextStyle(
                                                   color: Colors.grey[400],
                                                   fontSize: 14,
