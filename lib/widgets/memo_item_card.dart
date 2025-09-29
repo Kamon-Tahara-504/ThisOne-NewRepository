@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '../gradients.dart';
 import '../utils/color_utils.dart';
+import '../models/memo.dart'; // 型安全なMemoモデル
 
 class MemoItemCard extends StatelessWidget {
-  final Map<String, dynamic> memo;
+  final Memo memo; // 型安全なMemoモデルに変更
   final bool isAnimating;
   final Animation<double>? popAnimation;
   final VoidCallback onTap;
@@ -24,9 +25,9 @@ class MemoItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final updatedAt = memo['updatedAt'] as DateTime;
-    final isPinned = memo['is_pinned'] ?? false;
-    
+    final updatedAt = memo.updatedAt;
+    final isPinned = memo.isPinned;
+
     Widget memoCard = Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -34,13 +35,16 @@ class MemoItemCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey[700]!), // ピン留め状態に関係なく統一
         // アニメーション中は特別な装飾を追加
-        boxShadow: isAnimating ? [
-          BoxShadow(
-            color: const Color(0xFFE85A3B).withValues(alpha: 0.6),
-            blurRadius: 20,
-            offset: const Offset(0, 5),
-          ),
-        ] : null,
+        boxShadow:
+            isAnimating
+                ? [
+                  BoxShadow(
+                    color: const Color(0xFFE85A3B).withValues(alpha: 0.6),
+                    blurRadius: 20,
+                    offset: const Offset(0, 5),
+                  ),
+                ]
+                : null,
       ),
       child: InkWell(
         onTap: isAnimating ? null : onTap, // アニメーション中はタップを無効化
@@ -53,12 +57,14 @@ class MemoItemCard extends StatelessWidget {
                 width: 8,
                 height: double.infinity,
                 decoration: BoxDecoration(
-                  gradient: ColorUtils.isGradientColor(memo['color_tag'] ?? ColorUtils.defaultColorHex)
-                      ? ColorUtils.getGradientFromHex(memo['color_tag'] ?? ColorUtils.defaultColorHex)
-                      : null,
-                  color: ColorUtils.isGradientColor(memo['color_tag'] ?? ColorUtils.defaultColorHex)
-                      ? null
-                      : ColorUtils.getColorFromHex(memo['color_tag'] ?? ColorUtils.defaultColorHex),
+                  gradient:
+                      ColorUtils.isGradientColor(memo.colorTag)
+                          ? ColorUtils.getGradientFromHex(memo.colorTag)
+                          : null,
+                  color:
+                      ColorUtils.isGradientColor(memo.colorTag)
+                          ? null
+                          : ColorUtils.getColorFromHex(memo.colorTag),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(12),
                     bottomLeft: Radius.circular(12),
@@ -77,7 +83,9 @@ class MemoItemCard extends StatelessWidget {
                           // ピン留めアイコン
                           if (isPinned) ...[
                             ShaderMask(
-                              shaderCallback: (bounds) => createOrangeYellowGradient().createShader(bounds),
+                              shaderCallback:
+                                  (bounds) => createOrangeYellowGradient()
+                                      .createShader(bounds),
                               child: const Icon(
                                 Icons.push_pin,
                                 size: 16,
@@ -88,13 +96,16 @@ class MemoItemCard extends StatelessWidget {
                           ],
                           // モード表示ラベル
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.grey[600]!.withValues(alpha: 0.3),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              memo['mode'] == 'memo' ? 'メモ' : (memo['mode'] == 'calculator' || memo['mode'] == 'rich') ? '計算機' : memo['mode'],
+                              memo.mode.displayName,
                               style: const TextStyle(
                                 color: Colors.white70,
                                 fontSize: 10,
@@ -105,7 +116,7 @@ class MemoItemCard extends StatelessWidget {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              memo['title'],
+                              memo.title,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,
@@ -117,10 +128,13 @@ class MemoItemCard extends StatelessWidget {
                           IconButton(
                             onPressed: onTogglePin,
                             icon: Icon(
-                              isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-                              color: isPinned 
-                                  ? const Color(0xFFE85A3B)
-                                  : Colors.grey[500],
+                              isPinned
+                                  ? Icons.push_pin
+                                  : Icons.push_pin_outlined,
+                              color:
+                                  isPinned
+                                      ? const Color(0xFFE85A3B)
+                                      : Colors.grey[500],
                               size: 20,
                             ),
                           ),
@@ -145,9 +159,9 @@ class MemoItemCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       // メモの内容プレビュー
-                      if (memo['content'] != null && memo['content'].isNotEmpty) ...[
+                      if (memo.content.isNotEmpty) ...[
                         Text(
-                          memo['content'],
+                          memo.previewText,
                           style: TextStyle(
                             color: Colors.grey[400],
                             fontSize: 14,
@@ -161,10 +175,7 @@ class MemoItemCard extends StatelessWidget {
                       // 更新日時
                       Text(
                         '${updatedAt.year}/${updatedAt.month}/${updatedAt.day} ${updatedAt.hour.toString().padLeft(2, '0')}:${updatedAt.minute.toString().padLeft(2, '0')}',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
                       ),
                     ],
                   ),
@@ -175,7 +186,7 @@ class MemoItemCard extends StatelessWidget {
         ),
       ),
     );
-    
+
     // アニメーション中の場合は、スケールとバウンス効果を適用
     if (isAnimating && popAnimation != null) {
       return Material(
@@ -195,11 +206,8 @@ class MemoItemCard extends StatelessWidget {
         ),
       );
     }
-    
+
     // 通常状態
-    return Material(
-      color: Colors.transparent,
-      child: memoCard,
-    );
+    return Material(color: Colors.transparent, child: memoCard);
   }
-} 
+}

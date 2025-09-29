@@ -6,40 +6,27 @@ import '../widgets/memo_back_header.dart';
 import '../widgets/quill_rich_editor.dart';
 import '../widgets/memo_save_manager.dart';
 import '../utils/calculator_utils.dart';
+import '../models/memo.dart';
 
 class MemoDetailScreen extends StatefulWidget {
-  final String memoId;
-  final String title;
-  final String content;
-  final String mode;
-  final String? richContent;
-  final String? colorHex;
-  final DateTime? updatedAt;
+  final Memo memo; // 型安全なMemoモデルに変更
 
-  const MemoDetailScreen({
-    super.key,
-    required this.memoId,
-    required this.title,
-    required this.content,
-    required this.mode,
-    this.richContent,
-    this.colorHex,
-    this.updatedAt,
-  });
+  const MemoDetailScreen({super.key, required this.memo});
 
   @override
   State<MemoDetailScreen> createState() => _MemoDetailScreenState();
 }
 
-class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBindingObserver {
+class _MemoDetailScreenState extends State<MemoDetailScreen>
+    with WidgetsBindingObserver {
   late TextEditingController _titleController;
   late QuillController _quillController;
   late MemoSaveManager _saveManager;
   final FocusNode _titleFocusNode = FocusNode();
-  
+
   bool _isMemoFocused = false;
   MemoSaveState _saveState = const MemoSaveState();
-  
+
   // 計算機モード用の状態
   String _calculatorSummary = '';
   Map<String, dynamic> _summaryData = {};
@@ -47,19 +34,21 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
   @override
   void initState() {
     super.initState();
-    
+
     WidgetsBinding.instance.addObserver(this);
-    
-    _titleController = TextEditingController(text: widget.title);
-    
+
+    _titleController = TextEditingController(text: widget.memo.title);
+
     // QuillControllerを初期化（Androidシミュレーター対応）
     Document document;
     try {
-      if (widget.richContent != null && widget.richContent!.isNotEmpty) {
+      if (widget.memo.richContent != null &&
+          widget.memo.richContent!.isNotEmpty) {
         try {
-          final deltaJson = jsonDecode(widget.richContent!);
+          final deltaJson = jsonDecode(widget.memo.richContent!);
           List<dynamic> ops;
-          if (deltaJson is Map<String, dynamic> && deltaJson.containsKey('ops')) {
+          if (deltaJson is Map<String, dynamic> &&
+              deltaJson.containsKey('ops')) {
             ops = deltaJson['ops'] as List<dynamic>;
           } else if (deltaJson is List<dynamic>) {
             ops = deltaJson;
@@ -69,37 +58,38 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
           document = Document.fromJson(ops);
         } catch (e) {
           // JSONパースエラーの場合はプレーンテキストで初期化
-          document = Document()..insert(0, widget.content);
+          document = Document()..insert(0, widget.memo.content);
         }
       } else {
-        document = Document()..insert(0, widget.content);
+        document = Document()..insert(0, widget.memo.content);
       }
     } catch (e) {
       // Androidシミュレーターでの初期化エラーを回避
-      document = Document()..insert(0, widget.content);
+      document = Document()..insert(0, widget.memo.content);
     }
-    
+
     _quillController = QuillController(
       document: document,
       selection: const TextSelection.collapsed(offset: 0),
     );
-    
+
     // MemoSaveManagerを初期化
     _saveManager = MemoSaveManager(
-      memoId: widget.memoId,
+      memoId: widget.memo.id,
       titleController: _titleController,
       quillController: _quillController,
       onStateChanged: _onSaveStateChanged,
-      initialLastUpdated: widget.updatedAt,
+      initialLastUpdated: widget.memo.updatedAt,
     );
-    
+
     // 計算機モードの場合、テキスト変更リスナーを追加
-    if (widget.mode == 'calculator' || widget.mode == 'rich') {
+    if (widget.memo.mode == MemoMode.calculator ||
+        widget.memo.mode == MemoMode.rich) {
       _quillController.addListener(_onQuillTextChanged);
       // 初期計算
       _updateCalculations();
     }
-    
+
     // 初期化処理
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _saveManager.initialize();
@@ -111,12 +101,13 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
     WidgetsBinding.instance.removeObserver(this);
     _saveManager.dispose();
     _titleController.dispose();
-    
+
     // 計算機モードのリスナーを削除
-    if (widget.mode == 'calculator' || widget.mode == 'rich') {
+    if (widget.memo.mode == MemoMode.calculator ||
+        widget.memo.mode == MemoMode.rich) {
       _quillController.removeListener(_onQuillTextChanged);
     }
-    
+
     _quillController.dispose();
     _titleFocusNode.dispose();
     super.dispose();
@@ -126,7 +117,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
     setState(() {
       _saveState = state;
     });
-    
+
     if (state.errorMessage != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -139,7 +130,8 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
 
   // 計算機モード: テキスト変更リスナー
   void _onQuillTextChanged() {
-    if (widget.mode == 'calculator' || widget.mode == 'rich') {
+    if (widget.memo.mode == MemoMode.calculator ||
+        widget.memo.mode == MemoMode.rich) {
       _updateCalculations();
     }
   }
@@ -150,7 +142,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
     final entries = CalculatorUtils.extractCalculations(text);
     final summary = CalculatorUtils.generateSummary(entries);
     final summaryData = CalculatorUtils.getSummaryData(entries);
-    
+
     setState(() {
       _calculatorSummary = summary;
       _summaryData = summaryData;
@@ -193,7 +185,8 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
         _buildSummaryCard(
           label: '残高',
           amount: _summaryData['totalAmount'] ?? '¥0',
-          color: (_summaryData['total'] ?? 0) >= 0 ? Colors.blue : Colors.orange,
+          color:
+              (_summaryData['total'] ?? 0) >= 0 ? Colors.blue : Colors.orange,
           isVisible: true, // 残高は常に表示
         ),
       ],
@@ -209,16 +202,13 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
   }) {
     return Expanded(
       child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
-       
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+
         padding: const EdgeInsets.only(top: 8, bottom: 8, left: 4, right: 4),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(
-            color: color.withValues(alpha: 0.3),
-            width: 1,
-          ),
+          border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -286,79 +276,83 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> with WidgetsBinding
           backgroundColor: const Color(0xFF2B2B2B),
           body: SafeArea(
             child: Stack(
-            children: [
-              // メモバックヘッダー
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  color: const Color(0xFF2B2B2B),
-                  child: MemoBackHeader(
-                    titleController: _titleController,
-                    titleFocusNode: _titleFocusNode,
-                    mode: widget.mode,
-                    lastUpdated: _saveState.lastUpdated,
-                    isSaving: _saveState.isSaving,
-                    onBackPressed: _handleBackPressed,
-                    colorHex: widget.colorHex,
+              children: [
+                // メモバックヘッダー
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    color: const Color(0xFF2B2B2B),
+                    child: MemoBackHeader(
+                      titleController: _titleController,
+                      titleFocusNode: _titleFocusNode,
+                      mode: widget.memo.mode.value,
+                      lastUpdated: _saveState.lastUpdated,
+                      isSaving: _saveState.isSaving,
+                      onBackPressed: _handleBackPressed,
+                      colorHex: widget.memo.colorTag,
+                    ),
                   ),
                 ),
-              ),
-              // メモ編集エリア
-              AnimatedPositioned(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                top: _isMemoFocused ? 60 : 120, // この60と120の値は変えちゃダメよん僕
-                left: 16,
-                right: 16,
-                bottom: _isMemoFocused ? 20 : 16,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF3A3A3A), // メモ入力欄と同じ背景色
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    children: [
-                      // 計算機モード: 合計表示 (メモ入力中は非表示)
-                      if ((widget.mode == 'calculator' || widget.mode == 'rich') && 
-                          _calculatorSummary.isNotEmpty && 
-                          !_isMemoFocused)
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                          width: double.infinity,
-                          margin: const EdgeInsets.all(2),
-                          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
+                // メモ編集エリア
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  top: _isMemoFocused ? 60 : 120, // この60と120の値は変えちゃダメよん僕
+                  left: 16,
+                  right: 16,
+                  bottom: _isMemoFocused ? 20 : 16,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3A3A3A), // メモ入力欄と同じ背景色
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        // 計算機モード: 合計表示 (メモ入力中は非表示)
+                        if ((widget.memo.mode == MemoMode.calculator ||
+                                widget.memo.mode == MemoMode.rich) &&
+                            _calculatorSummary.isNotEmpty &&
+                            !_isMemoFocused)
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                            width: double.infinity,
+                            margin: const EdgeInsets.all(2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 2,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: _buildColoredSummaryText(),
                           ),
-                          child: _buildColoredSummaryText(),
-                        ),
-                      // メモエディター
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: GestureDetector(
-                            onTap: () {
-                              // QuillRichEditorエリアのタップでは親のunfocus()を無効化
-                            },
-                            child: QuillRichEditor(
-                              controller: _quillController,
-                              onFocusChanged: _onMemoFocusChanged,
+                        // メモエディター
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: GestureDetector(
+                              onTap: () {
+                                // QuillRichEditorエリアのタップでは親のunfocus()を無効化
+                              },
+                              child: QuillRichEditor(
+                                controller: _quillController,
+                                onFocusChanged: _onMemoFocusChanged,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
-} 
+}

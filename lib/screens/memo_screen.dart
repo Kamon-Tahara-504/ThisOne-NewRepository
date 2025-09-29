@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
-import '../utils/color_utils.dart'; // 色分けラベル用のユーティリティを追加
-import '../gradients.dart'; // グラデーション関数をインポート
+import '../gradients.dart';
 import '../widgets/memo_item_card.dart';
 import '../widgets/memo_filter_header.dart';
 import '../widgets/empty_memo_state.dart';
 import '../widgets/color_palette.dart';
 import '../utils/error_handler.dart';
+import '../models/memo.dart';
 import 'memo_detail_screen.dart';
 
 class MemoScreen extends StatefulWidget {
-  final List<Map<String, dynamic>> memos;
-  final Function(List<Map<String, dynamic>>) onMemosChanged;
+  final List<Memo> memos; // 型安全なMemoモデルに変更
+  final Function(List<Memo>) onMemosChanged; // 型安全なコールバックに変更
   final String? newlyCreatedMemoId; // 新しく作成されたメモのID
   final VoidCallback? onPopAnimationComplete; // ポップアニメーション完了時のコールバック
   final ScrollController? scrollController;
@@ -34,7 +34,9 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
   late AnimationController _popAnimationController;
   late Animation<double> _popAnimation;
   String? _animatingMemoId; // アニメーション中のメモID
-  String? _selectedColorFilter; // 選択された色フィルタ
+
+  // 型安全なフィルター管理
+  MemoFilter _currentFilter = const MemoFilter();
 
   @override
   void initState() {
@@ -88,27 +90,25 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
     _popAnimationController.forward(from: 0.0);
   }
 
-  // フィルタリングされたメモを取得
-  List<Map<String, dynamic>> get _filteredMemos {
-    if (_selectedColorFilter == null) {
-      return widget.memos;
-    }
-    return widget.memos
-        .where((memo) => memo['color_tag'] == _selectedColorFilter)
-        .toList();
+  // フィルタリングされたメモを取得（型安全版）
+  List<Memo> get _filteredMemos {
+    return widget.memos.where(_currentFilter.matches).toList();
   }
 
   // 色フィルタリングを設定
   void _setColorFilter(String? colorHex) {
     setState(() {
-      _selectedColorFilter = colorHex;
+      _currentFilter = MemoFilter(
+        colorTag: colorHex,
+        sortOrder: _currentFilter.sortOrder,
+      );
     });
   }
 
   // 色フィルタリングをクリア
   void _clearColorFilter() {
     setState(() {
-      _selectedColorFilter = null;
+      _currentFilter = const MemoFilter();
     });
   }
 
@@ -120,36 +120,17 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
       isScrollControlled: true,
       builder:
           (context) => _ColorFilterBottomSheet(
-            selectedColorFilter: _selectedColorFilter,
+            selectedColorFilter: _currentFilter.colorTag,
             onColorSelected: _setColorFilter,
           ),
     );
   }
 
-  // Supabaseからメモを再読み込み
+  // Supabaseからメモを再読み込み（型安全版）
   Future<void> _loadMemos() async {
     try {
-      final memos = await _supabaseService.getUserMemos();
-      final updatedMemos =
-          memos
-              .map(
-                (memo) => {
-                  'id': memo['id'],
-                  'title': memo['title'],
-                  'content': memo['content'] ?? '',
-                  'mode': memo['mode'] ?? 'memo',
-                  'rich_content': memo['rich_content'],
-                  'is_pinned': memo['is_pinned'] ?? false, // ピン留め状態を追加
-                  'tags': memo['tags'] ?? [], // タグを追加
-                  'color_tag': memo['color_tag'] ?? '#FFD700', // 色タグを追加
-                  'createdAt': DateTime.parse(memo['created_at']).toLocal(),
-                  'updatedAt': DateTime.parse(memo['updated_at']).toLocal(),
-                },
-              )
-              .toList();
-
-      // データベース側でソート済みなので、クライアント側ソートは不要
-      widget.onMemosChanged(updatedMemos);
+      final memos = await _supabaseService.getUserMemosTyped();
+      widget.onMemosChanged(memos);
     } catch (e) {
       if (mounted) {
         AppErrorHandler.handleError(
@@ -162,19 +143,13 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
     }
   }
 
-  void _openMemoDetail(Map<String, dynamic> memo) async {
+  void _openMemoDetail(Memo memo) async {
     final result = await Navigator.push(
       context,
       PageRouteBuilder(
         pageBuilder:
             (context, animation, secondaryAnimation) => MemoDetailScreen(
-              memoId: memo['id'],
-              title: memo['title'],
-              content: memo['content'],
-              mode: memo['mode'],
-              richContent: memo['rich_content'],
-              colorHex: memo['color_tag'], // 色ラベル情報を追加
-              updatedAt: memo['updatedAt'],
+              memo: memo, // 型安全なMemoオブジェクトを渡す
             ),
         transitionDuration: const Duration(milliseconds: 300),
         reverseTransitionDuration: const Duration(milliseconds: 300),
@@ -207,7 +182,7 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
     }
   }
 
-  void _deleteMemo(Map<String, dynamic> memo) async {
+  void _deleteMemo(Memo memo) async {
     // 削除確認ダイアログ
     final shouldDelete =
         await showDialog<bool>(
@@ -220,7 +195,7 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
                   style: TextStyle(color: Colors.white),
                 ),
                 content: Text(
-                  '「${memo['title']}」を削除しますか？\nこの操作は取り消せません。',
+                  '「${memo.title}」を削除しますか？\nこの操作は取り消せません。',
                   style: TextStyle(color: Colors.grey[300]),
                 ),
                 actions: [
@@ -255,7 +230,7 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
 
     if (shouldDelete) {
       try {
-        await _supabaseService.deleteMemo(memo['id']);
+        await _supabaseService.deleteMemoTyped(memo.id);
         _loadMemos(); // リストを再読み込み
       } catch (e) {
         if (mounted) {
@@ -270,13 +245,13 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
     }
   }
 
-  // ピン留め状態を切り替え
-  void _togglePin(Map<String, dynamic> memo) async {
-    final newPinStatus = !(memo['is_pinned'] ?? false);
+  // ピン留め状態を切り替え（型安全版）
+  void _togglePin(Memo memo) async {
+    final newPinStatus = !memo.isPinned;
 
     try {
-      await _supabaseService.updateMemoPinStatus(
-        memoId: memo['id'],
+      await _supabaseService.updateMemoPinStatusTyped(
+        memoId: memo.id,
         isPinned: newPinStatus,
       );
 
@@ -294,8 +269,8 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
     }
   }
 
-  // メモ編集ボトムシートを表示
-  void _editMemo(Map<String, dynamic> memo) {
+  // メモ編集ボトムシートを表示（型安全版）
+  void _editMemo(Memo memo) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -316,7 +291,7 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
         children: [
           // メモリスト（全体に表示）
           filteredMemos.isEmpty
-              ? EmptyMemoState(hasColorFilter: _selectedColorFilter != null)
+              ? EmptyMemoState(hasColorFilter: _currentFilter.hasFilter)
               : RefreshIndicator(
                 color: const Color(0xFFE85A3B),
                 backgroundColor: const Color(0xFF2B2B2B),
@@ -334,7 +309,7 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
                     final memo = filteredMemos[index];
                     return MemoItemCard(
                       memo: memo,
-                      isAnimating: _animatingMemoId == memo['id'],
+                      isAnimating: _animatingMemoId == memo.id,
                       popAnimation: _popAnimation,
                       onTap: () => _openMemoDetail(memo),
                       onTogglePin: () => _togglePin(memo),
@@ -346,7 +321,7 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
               ),
           // 色フィルタリングボタンとステータス表示（浮かせる）
           MemoFilterHeader(
-            selectedColorFilter: _selectedColorFilter,
+            selectedColorFilter: _currentFilter.colorTag,
             memoCount: filteredMemos.length,
             onShowColorFilterBottomSheet: _showColorFilterBottomSheet,
             onClearColorFilter: _clearColorFilter,
@@ -431,9 +406,9 @@ class _ColorFilterBottomSheet extends StatelessWidget {
   }
 }
 
-// メモ編集用ボトムシート
+// メモ編集用ボトムシート（型安全版）
 class _EditMemoBottomSheet extends StatefulWidget {
-  final Map<String, dynamic> memo;
+  final Memo memo;
   final VoidCallback onMemoUpdated;
 
   const _EditMemoBottomSheet({required this.memo, required this.onMemoUpdated});
@@ -444,15 +419,15 @@ class _EditMemoBottomSheet extends StatefulWidget {
 
 class _EditMemoBottomSheetState extends State<_EditMemoBottomSheet> {
   final SupabaseService _supabaseService = SupabaseService();
-  late String _selectedMode;
+  late MemoMode _selectedMode;
   late String _selectedColorHex;
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _selectedMode = widget.memo['mode'] ?? 'memo';
-    _selectedColorHex = widget.memo['color_tag'] ?? ColorUtils.defaultColorHex;
+    _selectedMode = widget.memo.mode;
+    _selectedColorHex = widget.memo.colorTag;
   }
 
   Future<void> _saveMemoSettings() async {
@@ -461,8 +436,8 @@ class _EditMemoBottomSheetState extends State<_EditMemoBottomSheet> {
     });
 
     try {
-      await _supabaseService.updateMemoSettings(
-        memoId: widget.memo['id'],
+      await _supabaseService.updateMemoSettingsTyped(
+        memoId: widget.memo.id,
         mode: _selectedMode,
         colorHex: _selectedColorHex,
       );
@@ -549,22 +524,24 @@ class _EditMemoBottomSheetState extends State<_EditMemoBottomSheet> {
                     children: [
                       Expanded(
                         child: GestureDetector(
-                          onTap: () => setState(() => _selectedMode = 'memo'),
+                          onTap:
+                              () =>
+                                  setState(() => _selectedMode = MemoMode.memo),
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
                               gradient:
-                                  _selectedMode == 'memo'
+                                  _selectedMode == MemoMode.memo
                                       ? createHorizontalOrangeYellowGradient()
                                       : null,
                               color:
-                                  _selectedMode == 'memo'
+                                  _selectedMode == MemoMode.memo
                                       ? null
                                       : const Color(0xFF3A3A3A),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color:
-                                    _selectedMode == 'memo'
+                                    _selectedMode == MemoMode.memo
                                         ? Colors.transparent
                                         : Colors.grey[600]!,
                                 width: 1,
@@ -595,23 +572,24 @@ class _EditMemoBottomSheetState extends State<_EditMemoBottomSheet> {
                       Expanded(
                         child: GestureDetector(
                           onTap:
-                              () =>
-                                  setState(() => _selectedMode = 'calculator'),
+                              () => setState(
+                                () => _selectedMode = MemoMode.calculator,
+                              ),
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
                               gradient:
-                                  _selectedMode == 'calculator'
+                                  _selectedMode == MemoMode.calculator
                                       ? createHorizontalOrangeYellowGradient()
                                       : null,
                               color:
-                                  _selectedMode == 'calculator'
+                                  _selectedMode == MemoMode.calculator
                                       ? null
                                       : const Color(0xFF3A3A3A),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color:
-                                    _selectedMode == 'calculator'
+                                    _selectedMode == MemoMode.calculator
                                         ? Colors.transparent
                                         : Colors.grey[600]!,
                                 width: 1,

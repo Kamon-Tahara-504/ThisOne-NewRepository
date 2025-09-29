@@ -11,6 +11,7 @@ import 'screens/schedule_screen.dart';
 import 'screens/memo_screen.dart';
 import 'screens/settings_screen.dart';
 import 'utils/error_handler.dart';
+import 'models/memo.dart'; // 型安全なMemoモデル
 
 // カスタムScrollPhysics for スワイプアニメーション速度調整
 class CustomPageScrollPhysics extends ScrollPhysics {
@@ -114,7 +115,7 @@ class _MainScreenState extends State<MainScreen> {
   // 状態変数
   int _currentIndex = 0;
   final List<Map<String, dynamic>> _tasks = [];
-  final List<Map<String, dynamic>> _memos = [];
+  final List<Memo> _memos = [];
   final SupabaseService _supabaseService = SupabaseService();
   bool _isLoading = true;
   bool _isLoadingMemos = true;
@@ -325,29 +326,13 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  // Supabaseからメモを読み込み
+  // Supabaseからメモを読み込み（型安全版）
   Future<void> _loadMemos() async {
     try {
-      final memos = await _supabaseService.getUserMemos();
+      final memos = await _supabaseService.getUserMemosTyped();
       setState(() {
         _memos.clear();
-        // Supabaseデータを内部形式に変換（データベース側でソート済み）
-        _memos.addAll(
-          memos.map(
-            (memo) => {
-              'id': memo['id'],
-              'title': memo['title'],
-              'content': memo['content'] ?? '',
-              'mode': memo['mode'] ?? 'memo',
-              'rich_content': memo['rich_content'],
-              'is_pinned': memo['is_pinned'] ?? false, // ピン留め状態を追加
-              'tags': memo['tags'] ?? [], // タグを追加
-              'color_tag': memo['color_tag'] ?? '#FFD700', // 色タグを追加
-              'createdAt': DateTime.parse(memo['created_at']).toLocal(),
-              'updatedAt': DateTime.parse(memo['updated_at']).toLocal(),
-            },
-          ),
-        );
+        _memos.addAll(memos);
         _isLoadingMemos = false;
       });
     } catch (e) {
@@ -568,9 +553,11 @@ class _MainScreenState extends State<MainScreen> {
     if (!mounted) return;
 
     try {
-      final newMemo = await _supabaseService.addMemo(
+      // modeをMemoModeに変換
+      final memoMode = MemoMode.fromString(mode);
+      final newMemo = await _supabaseService.addMemoTyped(
         title: title,
-        mode: mode,
+        mode: memoMode,
         colorHex: colorHex,
       );
 
@@ -579,7 +566,7 @@ class _MainScreenState extends State<MainScreen> {
       if (newMemo != null) {
         // 新しく作成されたメモのIDを設定
         setState(() {
-          _newlyCreatedMemoId = newMemo['id'];
+          _newlyCreatedMemoId = newMemo.id;
         });
 
         // メモリストを再読み込み
