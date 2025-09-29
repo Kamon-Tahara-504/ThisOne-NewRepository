@@ -150,16 +150,36 @@ flutter pub get
    - `database/migrations/004_smart_trigger.sql`
    - `database/migrations/005_add_schedule_color.sql`
 
-### 4. 設定ファイルの更新
+### 4. 環境変数の設定
 
-`lib/supabase_config.dart`を編集：
+**開発環境での設定方法：**
 
-```dart
-class SupabaseConfig {
-  static const String supabaseUrl = 'YOUR_SUPABASE_URL';
-  static const String supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
-}
+1. プロジェクトルートに`.env`ファイルを作成：
+```bash
+# .env ファイル
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key-here
 ```
+
+2. `.gitignore`に`.env`を追加（重要！）：
+```gitignore
+.env
+```
+
+3. Flutter実行時に環境変数を指定：
+```bash
+flutter run --dart-define=SUPABASE_URL=https://your-project.supabase.co --dart-define=SUPABASE_ANON_KEY=your-anon-key-here
+```
+
+**本番環境での設定方法**
+
+- CI/CDパイプラインで環境変数を設定
+- デプロイ時に`--dart-define`で値を指定
+
+**セキュリティ注意事項**
+- `.env`ファイルは絶対にGitにコミットしない
+- APIキーは環境変数で管理する
+- 本番環境では必須チェックが有効
 
 ### 5. アプリの実行
 
