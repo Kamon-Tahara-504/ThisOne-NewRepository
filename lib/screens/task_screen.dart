@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import '../gradients.dart';
 import '../services/supabase_service.dart';
 import '../utils/error_handler.dart';
+import '../models/task.dart';
 
 class TaskScreen extends StatefulWidget {
-  final List<Map<String, dynamic>>? tasks;
-  final Function(List<Map<String, dynamic>>)? onTasksChanged;
+  final List<Task>? tasks; // 型安全なTaskモデルに変更
+  final Function(List<Task>)? onTasksChanged; // 型安全なコールバックに変更
   final ScrollController? scrollController;
 
   const TaskScreen({
@@ -20,7 +21,7 @@ class TaskScreen extends StatefulWidget {
 }
 
 class _TaskScreenState extends State<TaskScreen> {
-  late List<Map<String, dynamic>> _tasks;
+  late List<Task> _tasks; // 型安全なTaskモデルに変更
   final TextEditingController _taskController = TextEditingController();
   final SupabaseService _supabaseService = SupabaseService();
 
@@ -44,46 +45,59 @@ class _TaskScreenState extends State<TaskScreen> {
     super.dispose();
   }
 
-  void addTask(String title) {
+  void addTask(String title) async {
     if (title.trim().isNotEmpty) {
-      setState(() {
-        _tasks.add({
-          'id': DateTime.now().millisecondsSinceEpoch.toString(),
-          'title': title.trim(),
-          'isCompleted': false,
-          'createdAt': DateTime.now(),
-          'description': null,
-          'dueDate': null,
-          'priority': 0,
-        });
-      });
-      _notifyTasksChanged();
+      try {
+        final newTask = await _supabaseService.addTaskTyped(
+          title: title.trim(),
+          priority: TaskPriority.low,
+        );
+
+        if (newTask != null) {
+          setState(() {
+            _tasks.add(newTask);
+          });
+          _notifyTasksChanged();
+        }
+      } catch (e) {
+        if (mounted) {
+          AppErrorHandler.handleError(
+            context,
+            e,
+            operation: 'タスクの追加',
+            onRetry: () => addTask(title),
+          );
+        }
+      }
     }
   }
 
   Future<void> _toggleTask(int index) async {
     final task = _tasks[index];
-    final newCompletionStatus = !task['isCompleted'];
+    final newCompletionStatus = !task.isCompleted;
 
     try {
-      // Supabaseで更新（IDがStringの場合のみ、つまりSupabaseのタスク）
-      if (task['id'] is String && task['id'].length > 10) {
-        await _supabaseService.updateTaskCompletion(
-          taskId: task['id'],
-          isCompleted: newCompletionStatus,
-        );
-      }
+      // データベースを更新
+      await _supabaseService.updateTaskCompletionTyped(
+        taskId: task.id,
+        isCompleted: newCompletionStatus,
+      );
 
+      // ローカルの状態を更新
       setState(() {
-        _tasks[index]['isCompleted'] = newCompletionStatus;
+        _tasks[index] = task.copyWith(
+          isCompleted: newCompletionStatus,
+          completedAt: newCompletionStatus ? DateTime.now() : null,
+        );
       });
+
       _notifyTasksChanged();
     } catch (e) {
       if (mounted) {
         AppErrorHandler.handleError(
           context,
           e,
-          operation: 'タスクの更新',
+          operation: 'タスクの完了状態更新',
           onRetry: () => _toggleTask(index),
         );
       }
@@ -94,10 +108,8 @@ class _TaskScreenState extends State<TaskScreen> {
     final task = _tasks[index];
 
     try {
-      // Supabaseで削除（IDがStringの場合のみ、つまりSupabaseのタスク）
-      if (task['id'] is String && task['id'].length > 10) {
-        await _supabaseService.deleteTask(task['id']);
-      }
+      // データベースから削除
+      await _supabaseService.deleteTaskTyped(task.id);
 
       setState(() {
         _tasks.removeAt(index);
@@ -179,7 +191,7 @@ class _TaskScreenState extends State<TaskScreen> {
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color:
-                                  task['isCompleted']
+                                  task.isCompleted
                                       ? const Color(
                                         0xFFE85A3B,
                                       ).withValues(alpha: 0.3)
@@ -196,18 +208,18 @@ class _TaskScreenState extends State<TaskScreen> {
                                   shape: BoxShape.circle,
                                   border: Border.all(
                                     color:
-                                        task['isCompleted']
+                                        task.isCompleted
                                             ? const Color(0xFFE85A3B)
                                             : Colors.grey[500]!,
                                     width: 2,
                                   ),
                                   color:
-                                      task['isCompleted']
+                                      task.isCompleted
                                           ? const Color(0xFFE85A3B)
                                           : Colors.transparent,
                                 ),
                                 child:
-                                    task['isCompleted']
+                                    task.isCompleted
                                         ? const Icon(
                                           Icons.check,
                                           color: Colors.white,
@@ -217,15 +229,15 @@ class _TaskScreenState extends State<TaskScreen> {
                               ),
                             ),
                             title: Text(
-                              task['title'],
+                              task.title,
                               style: TextStyle(
                                 color:
-                                    task['isCompleted']
+                                    task.isCompleted
                                         ? Colors.grey[500]
                                         : Colors.white,
                                 fontSize: 16,
                                 decoration:
-                                    task['isCompleted']
+                                    task.isCompleted
                                         ? TextDecoration.lineThrough
                                         : null,
                               ),

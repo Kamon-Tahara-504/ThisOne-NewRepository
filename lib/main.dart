@@ -11,7 +11,8 @@ import 'screens/schedule_screen.dart';
 import 'screens/memo_screen.dart';
 import 'screens/settings_screen.dart';
 import 'utils/error_handler.dart';
-import 'models/memo.dart'; // 型安全なMemoモデル
+import 'models/memo.dart';
+import 'models/task.dart';
 
 // カスタムScrollPhysics for スワイプアニメーション速度調整
 class CustomPageScrollPhysics extends ScrollPhysics {
@@ -114,7 +115,7 @@ class _MainScreenState extends State<MainScreen> {
 
   // 状態変数
   int _currentIndex = 0;
-  final List<Map<String, dynamic>> _tasks = [];
+  final List<Task> _tasks = [];
   final List<Memo> _memos = [];
   final SupabaseService _supabaseService = SupabaseService();
   bool _isLoading = true;
@@ -286,29 +287,13 @@ class _MainScreenState extends State<MainScreen> {
     super.dispose();
   }
 
-  // Supabaseからタスクを読み込み
+  // Supabaseからタスクを読み込み（型安全版）
   Future<void> _loadTasks() async {
     try {
-      final tasks = await _supabaseService.getUserTasks();
+      final tasks = await _supabaseService.getUserTasksTyped();
       setState(() {
         _tasks.clear();
-        // Supabaseデータを内部形式に変換
-        _tasks.addAll(
-          tasks.map(
-            (task) => {
-              'id': task['id'],
-              'title': task['title'],
-              'isCompleted': task['is_completed'],
-              'createdAt': DateTime.parse(task['created_at']),
-              'description': task['description'],
-              'dueDate':
-                  task['due_date'] != null
-                      ? DateTime.parse(task['due_date'])
-                      : null,
-              'priority': task['priority'],
-            },
-          ),
-        );
+        _tasks.addAll(tasks);
         _isLoading = false;
       });
     } catch (e) {
@@ -355,35 +340,26 @@ class _MainScreenState extends State<MainScreen> {
     if (title.trim().isEmpty) return;
 
     try {
-      final newTask = await _supabaseService.addTask(title: title.trim());
+      final newTask = await _supabaseService.addTaskTyped(title: title.trim());
 
       if (newTask != null) {
         setState(() {
-          _tasks.add({
-            'id': newTask['id'],
-            'title': newTask['title'],
-            'isCompleted': newTask['is_completed'],
-            'createdAt': DateTime.parse(newTask['created_at']),
-            'description': newTask['description'],
-            'dueDate':
-                newTask['due_date'] != null
-                    ? DateTime.parse(newTask['due_date'])
-                    : null,
-            'priority': newTask['priority'],
-          });
+          _tasks.add(newTask);
         });
       } else {
         // 認証されていない場合はローカルに保存
+        final localTask = Task(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          userId: 'local',
+          title: title.trim(),
+          isCompleted: false,
+          priority: TaskPriority.low,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+
         setState(() {
-          _tasks.add({
-            'id': DateTime.now().millisecondsSinceEpoch.toString(),
-            'title': title.trim(),
-            'isCompleted': false,
-            'createdAt': DateTime.now(),
-            'description': null,
-            'dueDate': null,
-            'priority': 0,
-          });
+          _tasks.add(localTask);
         });
 
         if (mounted) {

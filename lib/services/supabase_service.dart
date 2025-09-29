@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:convert';
 import '../models/memo.dart';
 import '../models/schedule.dart';
+import '../models/task.dart';
 
 // Supabaseクライアントを使用
 final supabase = Supabase.instance.client;
@@ -1141,5 +1142,175 @@ class SupabaseService {
     }
 
     return filteredSchedules;
+  }
+
+  // 型安全なタスクメソッド（新規追加）
+
+  /// ユーザーのタスクを全て取得（型安全版）
+  Future<List<Task>> getUserTasksTyped() async {
+    final user = getCurrentUser();
+    if (user == null) return [];
+
+    try {
+      final response = await supabase
+          .from('tasks')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false);
+
+      return (response as List)
+          .map((taskData) => Task.fromMap(taskData as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('タスク取得エラー: $e');
+      return [];
+    }
+  }
+
+  /// タスクを追加（型安全版）
+  Future<Task?> addTaskTyped({
+    required String title,
+    String? description,
+    DateTime? dueDate,
+    TaskPriority priority = TaskPriority.low,
+  }) async {
+    final user = getCurrentUser();
+    if (user == null) return null;
+
+    try {
+      final taskData = {
+        'user_id': user.id,
+        'title': title,
+        'description': description,
+        'due_date': dueDate?.toIso8601String(),
+        'priority': priority.value,
+        'is_completed': false,
+      };
+
+      final response =
+          await supabase.from('tasks').insert(taskData).select().single();
+
+      return Task.fromMap(response);
+    } catch (e) {
+      debugPrint('タスク追加エラー: $e');
+      return null;
+    }
+  }
+
+  /// タスクの完了状態を更新（型安全版）
+  Future<void> updateTaskCompletionTyped({
+    required String taskId,
+    required bool isCompleted,
+  }) async {
+    final user = getCurrentUser();
+    if (user == null) return;
+
+    try {
+      await supabase
+          .from('tasks')
+          .update({
+            'is_completed': isCompleted,
+            'completed_at':
+                isCompleted ? DateTime.now().toIso8601String() : null,
+          })
+          .eq('id', taskId)
+          .eq('user_id', user.id);
+    } catch (e) {
+      debugPrint('タスク完了状態更新エラー: $e');
+      rethrow;
+    }
+  }
+
+  /// タスクを削除（型安全版）
+  Future<void> deleteTaskTyped(String taskId) async {
+    final user = getCurrentUser();
+    if (user == null) return;
+
+    try {
+      await supabase
+          .from('tasks')
+          .delete()
+          .eq('id', taskId)
+          .eq('user_id', user.id);
+    } catch (e) {
+      debugPrint('タスク削除エラー: $e');
+      rethrow;
+    }
+  }
+
+  /// タスクを更新（型安全版）
+  Future<void> updateTaskTyped({
+    required String taskId,
+    String? title,
+    String? description,
+    DateTime? dueDate,
+    TaskPriority? priority,
+  }) async {
+    final user = getCurrentUser();
+    if (user == null) return;
+
+    try {
+      final updateData = <String, dynamic>{};
+
+      if (title != null) updateData['title'] = title;
+      if (description != null) updateData['description'] = description;
+      if (dueDate != null) updateData['due_date'] = dueDate.toIso8601String();
+      if (priority != null) updateData['priority'] = priority.value;
+
+      if (updateData.isNotEmpty) {
+        await supabase
+            .from('tasks')
+            .update(updateData)
+            .eq('id', taskId)
+            .eq('user_id', user.id);
+      }
+    } catch (e) {
+      debugPrint('タスク更新エラー: $e');
+      rethrow;
+    }
+  }
+
+  /// フィルターされたタスクを取得（型安全版）
+  Future<List<Task>> getFilteredTasks(TaskFilter filter) async {
+    final allTasks = await getUserTasksTyped();
+
+    // フィルター適用
+    var filteredTasks = allTasks.where(filter.matches).toList();
+
+    // ソート適用
+    switch (filter.sortOrder) {
+      case TaskSortOrder.createdAt:
+        filteredTasks.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        break;
+      case TaskSortOrder.updatedAt:
+        filteredTasks.sort((a, b) => a.updatedAt.compareTo(b.updatedAt));
+        break;
+      case TaskSortOrder.title:
+        filteredTasks.sort((a, b) => a.title.compareTo(b.title));
+        break;
+      case TaskSortOrder.priority:
+        filteredTasks.sort(
+          (a, b) => b.priority.value.compareTo(a.priority.value),
+        );
+        break;
+      case TaskSortOrder.dueDate:
+        filteredTasks.sort((a, b) {
+          if (a.dueDate == null && b.dueDate == null) return 0;
+          if (a.dueDate == null) return 1;
+          if (b.dueDate == null) return -1;
+          return a.dueDate!.compareTo(b.dueDate!);
+        });
+        break;
+      case TaskSortOrder.completedAt:
+        filteredTasks.sort((a, b) {
+          if (a.completedAt == null && b.completedAt == null) return 0;
+          if (a.completedAt == null) return 1;
+          if (b.completedAt == null) return -1;
+          return b.completedAt!.compareTo(a.completedAt!);
+        });
+        break;
+    }
+
+    return filteredTasks;
   }
 }
