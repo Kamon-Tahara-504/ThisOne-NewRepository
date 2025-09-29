@@ -123,10 +123,11 @@ class _MainScreenState extends State<MainScreen> {
   AccountInfoOverlay? _accountInfoOverlay;
   String? _newlyCreatedMemoId;
 
-  // コントローラー
+  // コントローラー（メモリリーク対策）
   late PageController _pageController;
   final GlobalKey _scheduleScreenKey = GlobalKey();
   final Map<int, ScrollController> _scrollControllers = {};
+  bool _isDisposed = false; // 二重dispose防止
 
   // ヘッダー制御
   bool _isHeaderVisible = true;
@@ -150,19 +151,29 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
-  // ScrollControllersを初期化
+  // ScrollControllersを初期化（メモリリーク対策）
   void _initializeScrollControllers() {
+    if (_isDisposed) return; // dispose後の初期化防止
+
     final pageCount = 4; // タスク、スケジュール、メモ、設定
     for (int i = 0; i < pageCount; i++) {
+      // 既存のコントローラーがあれば先にdispose
+      _scrollControllers[i]?.dispose();
+
       _scrollControllers[i] = ScrollController();
       _scrollControllers[i]!.addListener(() => _onScroll(i));
     }
   }
 
-  // スクロール制御
+  // スクロール制御（メモリリーク対策）
   void _onScroll(int pageIndex) {
+    if (_isDisposed || !mounted) return; // dispose後やマウント解除後の処理防止
+
     final controller = _scrollControllers[pageIndex];
-    if (controller == null || !controller.hasClients) return;
+    if (controller == null ||
+        !controller.hasClients ||
+        controller.hasClients == false)
+      return;
 
     // 現在のページのみ監視
     final currentPageIndex = _getCurrentPageIndex();
@@ -174,7 +185,7 @@ class _MainScreenState extends State<MainScreen> {
     // 最小スクロール量のフィルタ
     if (scrollDelta.abs() > _scrollSensitivity) {
       final shouldChangeState = _shouldChangeHeaderVisibility(scrollDelta);
-      if (shouldChangeState) {
+      if (shouldChangeState && mounted) {
         setState(() {});
       }
     }
@@ -275,32 +286,54 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   void dispose() {
-    _pageController.dispose();
+    if (_isDisposed) return; // 二重dispose防止
+    _isDisposed = true;
 
-    // ScrollControllersを解放
-    for (final controller in _scrollControllers.values) {
-      controller.dispose();
+    try {
+      _pageController.dispose();
+    } catch (e) {
+      debugPrint('PageController dispose error: $e');
+    }
+
+    // ScrollControllersを安全に解放
+    for (final entry in _scrollControllers.entries) {
+      try {
+        entry.value.dispose();
+      } catch (e) {
+        debugPrint('ScrollController dispose error for ${entry.key}: $e');
+      }
     }
     _scrollControllers.clear();
 
-    _accountInfoOverlay?.dispose();
+    // AccountInfoOverlayを安全に解放
+    try {
+      _accountInfoOverlay?.dispose();
+      _accountInfoOverlay = null;
+    } catch (e) {
+      debugPrint('AccountInfoOverlay dispose error: $e');
+    }
+
     super.dispose();
   }
 
-  // Supabaseからタスクを読み込み（型安全版）
+  // Supabaseからタスクを読み込み（型安全版・メモリリーク対策）
   Future<void> _loadTasks() async {
+    if (_isDisposed || !mounted) return;
+
     try {
       final tasks = await _supabaseService.getUserTasksTyped();
-      setState(() {
-        _tasks.clear();
-        _tasks.addAll(tasks);
-        _isLoading = false;
-      });
+      if (!_isDisposed && mounted) {
+        setState(() {
+          _tasks.clear();
+          _tasks.addAll(tasks);
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      if (mounted) {
+      if (!_isDisposed && mounted) {
+        setState(() {
+          _isLoading = false;
+        });
         AppErrorHandler.handleError(
           context,
           e,
@@ -311,20 +344,24 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  // Supabaseからメモを読み込み（型安全版）
+  // Supabaseからメモを読み込み（型安全版・メモリリーク対策）
   Future<void> _loadMemos() async {
+    if (_isDisposed || !mounted) return;
+
     try {
       final memos = await _supabaseService.getUserMemosTyped();
-      setState(() {
-        _memos.clear();
-        _memos.addAll(memos);
-        _isLoadingMemos = false;
-      });
+      if (!_isDisposed && mounted) {
+        setState(() {
+          _memos.clear();
+          _memos.addAll(memos);
+          _isLoadingMemos = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _isLoadingMemos = false;
-      });
-      if (mounted) {
+      if (!_isDisposed && mounted) {
+        setState(() {
+          _isLoadingMemos = false;
+        });
         AppErrorHandler.handleError(
           context,
           e,
@@ -335,39 +372,39 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  // Supabaseにタスクを追加
+  // Supabaseにタスクを追加（メモリリーク対策）
   Future<void> _addTask(String title) async {
-    if (title.trim().isEmpty) return;
+    if (_isDisposed || !mounted || title.trim().isEmpty) return;
 
     try {
       final newTask = await _supabaseService.addTaskTyped(title: title.trim());
 
-      if (newTask != null) {
-        setState(() {
-          _tasks.add(newTask);
-        });
-      } else {
-        // 認証されていない場合はローカルに保存
-        final localTask = Task(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          userId: 'local',
-          title: title.trim(),
-          isCompleted: false,
-          priority: TaskPriority.low,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        );
+      if (!_isDisposed && mounted) {
+        if (newTask != null) {
+          setState(() {
+            _tasks.add(newTask);
+          });
+        } else {
+          // 認証されていない場合はローカルに保存
+          final localTask = Task(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            userId: 'local',
+            title: title.trim(),
+            isCompleted: false,
+            priority: TaskPriority.low,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          );
 
-        setState(() {
-          _tasks.add(localTask);
-        });
+          setState(() {
+            _tasks.add(localTask);
+          });
 
-        if (mounted) {
           AppErrorHandler.showInfo(context, 'ログインしていないため、タスクはローカルに保存されました');
         }
       }
     } catch (e) {
-      if (mounted) {
+      if (!_isDisposed && mounted) {
         AppErrorHandler.handleError(
           context,
           e,
