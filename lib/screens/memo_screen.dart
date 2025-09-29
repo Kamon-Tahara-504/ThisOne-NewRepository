@@ -6,6 +6,7 @@ import '../widgets/memo_item_card.dart';
 import '../widgets/memo_filter_header.dart';
 import '../widgets/empty_memo_state.dart';
 import '../widgets/color_palette.dart';
+import '../utils/error_handler.dart';
 import 'memo_detail_screen.dart';
 
 class MemoScreen extends StatefulWidget {
@@ -151,9 +152,12 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
       widget.onMemosChanged(updatedMemos);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
+        AppErrorHandler.handleError(
           context,
-        ).showSnackBar(SnackBar(content: Text('メモの読み込みに失敗しました: $e')));
+          e,
+          operation: 'メモの読み込み',
+          onRetry: _loadMemos,
+        );
       }
     }
   }
@@ -253,17 +257,14 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
       try {
         await _supabaseService.deleteMemo(memo['id']);
         _loadMemos(); // リストを再読み込み
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('メモ「${memo['title']}」を削除しました')),
-          );
-        }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(
+          AppErrorHandler.handleError(
             context,
-          ).showSnackBar(SnackBar(content: Text('メモの削除に失敗しました: $e')));
+            e,
+            operation: 'メモの削除',
+            onRetry: () => _deleteMemo(memo),
+          );
         }
       }
     }
@@ -283,9 +284,12 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
       _loadMemos();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
+        AppErrorHandler.handleError(
           context,
-        ).showSnackBar(SnackBar(content: Text('ピン留めの更新に失敗しました: $e')));
+          e,
+          operation: 'ピン留めの更新',
+          onRetry: () => _togglePin(memo),
+        );
       }
     }
   }

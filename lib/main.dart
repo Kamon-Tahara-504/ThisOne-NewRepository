@@ -10,6 +10,7 @@ import 'screens/task_screen.dart';
 import 'screens/schedule_screen.dart';
 import 'screens/memo_screen.dart';
 import 'screens/settings_screen.dart';
+import 'utils/error_handler.dart';
 
 // カスタムScrollPhysics for スワイプアニメーション速度調整
 class CustomPageScrollPhysics extends ScrollPhysics {
@@ -98,6 +99,19 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
+  // 定数定義
+  static const int _taskPageIndex = 0;
+  static const int _schedulePageIndex = 1;
+  static const int _memoPageIndex = 2;
+  static const int _settingsPageIndex = 3;
+  static const int _memoTabIndex = 3;
+  static const int _settingsTabIndex = 4;
+  static const double _headerHeight = 54.0;
+  static const double _scrollSensitivity = 10.0;
+  static const double _scrollThreshold = 5.0;
+  static const Duration _headerAnimationDuration = Duration(milliseconds: 200);
+
+  // 状態変数
   int _currentIndex = 0;
   final List<Map<String, dynamic>> _tasks = [];
   final List<Map<String, dynamic>> _memos = [];
@@ -105,19 +119,16 @@ class _MainScreenState extends State<MainScreen> {
   bool _isLoading = true;
   bool _isLoadingMemos = true;
   AccountInfoOverlay? _accountInfoOverlay;
-  String? _newlyCreatedMemoId; // 新しく作成されたメモのIDを管理
+  String? _newlyCreatedMemoId;
 
-  // PageViewController を追加
+  // コントローラー
   late PageController _pageController;
-
-  // GlobalKey for ScheduleScreen
   final GlobalKey _scheduleScreenKey = GlobalKey();
-
-  // ヘッダー制御システム
   final Map<int, ScrollController> _scrollControllers = {};
-  bool _isHeaderVisible = true; // true=表示, false=非表示
-  double _lastScrollPosition = 0.0; // 前回のスクロール位置
-  final double _scrollSensitivity = 10.0; // スクロール感度
+
+  // ヘッダー制御
+  bool _isHeaderVisible = true;
+  double _lastScrollPosition = 0.0;
 
   @override
   void initState() {
@@ -139,9 +150,8 @@ class _MainScreenState extends State<MainScreen> {
 
   // ScrollControllersを初期化
   void _initializeScrollControllers() {
-    // 各画面用のScrollControllerを作成
-    for (int i = 0; i < 4; i++) {
-      // タスク、スケジュール、メモ、設定
+    final pageCount = 4; // タスク、スケジュール、メモ、設定
+    for (int i = 0; i < pageCount; i++) {
       _scrollControllers[i] = ScrollController();
       _scrollControllers[i]!.addListener(() => _onScroll(i));
     }
@@ -161,23 +171,7 @@ class _MainScreenState extends State<MainScreen> {
 
     // 最小スクロール量のフィルタ
     if (scrollDelta.abs() > _scrollSensitivity) {
-      bool shouldChangeState = false;
-
-      if (scrollDelta > 0) {
-        // 下スクロール：ヘッダーを隠す
-        if (_isHeaderVisible && scrollDelta > _scrollSensitivity) {
-          shouldChangeState = true;
-          _isHeaderVisible = false;
-        }
-      } else {
-        // 上スクロール：ヘッダーを表示
-        if (!_isHeaderVisible && (-scrollDelta) > 5.0) {
-          shouldChangeState = true;
-          _isHeaderVisible = true;
-        }
-      }
-
-      // 状態変更をアニメーション付きで実行
+      final shouldChangeState = _shouldChangeHeaderVisibility(scrollDelta);
       if (shouldChangeState) {
         setState(() {});
       }
@@ -187,45 +181,85 @@ class _MainScreenState extends State<MainScreen> {
     _lastScrollPosition = currentPosition;
   }
 
+  // ヘッダーの表示/非表示を変更すべきかを判定
+  bool _shouldChangeHeaderVisibility(double scrollDelta) {
+    if (scrollDelta > 0) {
+      // 下スクロール：ヘッダーを隠す
+      if (_isHeaderVisible && scrollDelta > _scrollSensitivity) {
+        _isHeaderVisible = false;
+        return true;
+      }
+    } else {
+      // 上スクロール：ヘッダーを表示
+      if (!_isHeaderVisible && (-scrollDelta) > _scrollThreshold) {
+        _isHeaderVisible = true;
+        return true;
+      }
+    }
+    return false;
+  }
+
   // 現在のPageViewインデックスを取得
   int _getCurrentPageIndex() {
     switch (_currentIndex) {
-      case 0:
-        return 0; // タスク
-      case 1:
-        return 1; // スケジュール
-      case 3:
-        return 2; // メモ
-      case 4:
-        return 3; // 設定
+      case _taskPageIndex:
+        return _taskPageIndex;
+      case _schedulePageIndex:
+        return _schedulePageIndex;
+      case _memoTabIndex:
+        return _memoPageIndex;
+      case _settingsTabIndex:
+        return _settingsPageIndex;
       default:
-        return 0;
+        return _taskPageIndex;
     }
   }
 
   // 動的トップパディング計算
   double _calculateDynamicTopPadding(BuildContext context) {
     final statusBarHeight = MediaQuery.of(context).padding.top;
-    final headerHeight = 54.0; // ヘッダー高さ
-    final baseTop = statusBarHeight + 4; // 基本位置
+    const baseOffset = 4.0;
+    final baseTop = statusBarHeight + baseOffset;
 
     // 表示時は通常、非表示時は詰める
-    final finalPadding =
-        _isHeaderVisible ? baseTop + headerHeight : statusBarHeight;
-
-    return finalPadding;
+    return _isHeaderVisible ? baseTop + _headerHeight : statusBarHeight;
   }
 
   // ヘッダー位置制御
   double _calculateHeaderTop(BuildContext context) {
     final statusBarHeight = MediaQuery.of(context).padding.top;
-    final baseTop = statusBarHeight + 4; // 基本位置
-    final headerHeight = 54.0; // ヘッダー高さ
+    const baseOffset = 4.0;
+    final baseTop = statusBarHeight + baseOffset;
 
     // 表示/非表示の切り替え
-    final targetTop = _isHeaderVisible ? baseTop : baseTop - headerHeight;
+    return _isHeaderVisible ? baseTop : baseTop - _headerHeight;
+  }
 
-    return targetTop;
+  // PageViewのページ変更処理
+  void _onPageChanged(int index) {
+    // PageViewのインデックスを_currentIndexに変換
+    // PageView: 0=タスク, 1=カレンダー, 2=メモ, 3=設定
+    // _currentIndex: 0=タスク, 1=カレンダー, 2=作成ボタン, 3=メモ, 4=設定
+    final newCurrentIndex = _convertPageIndexToTabIndex(index);
+    setState(() {
+      _currentIndex = newCurrentIndex;
+    });
+  }
+
+  // PageViewのインデックスをタブインデックスに変換
+  int _convertPageIndexToTabIndex(int pageIndex) {
+    switch (pageIndex) {
+      case _taskPageIndex:
+        return _taskPageIndex;
+      case _schedulePageIndex:
+        return _schedulePageIndex;
+      case _memoPageIndex:
+        return _memoTabIndex;
+      case _settingsPageIndex:
+        return _settingsTabIndex;
+      default:
+        return _taskPageIndex;
+    }
   }
 
   // AccountInfoOverlayの遅延初期化
@@ -281,9 +315,12 @@ class _MainScreenState extends State<MainScreen> {
         _isLoading = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(
+        AppErrorHandler.handleError(
           context,
-        ).showSnackBar(SnackBar(content: Text('タスクの読み込みに失敗しました: $e')));
+          e,
+          operation: 'タスクの読み込み',
+          onRetry: _loadTasks,
+        );
       }
     }
   }
@@ -318,9 +355,12 @@ class _MainScreenState extends State<MainScreen> {
         _isLoadingMemos = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(
+        AppErrorHandler.handleError(
           context,
-        ).showSnackBar(SnackBar(content: Text('メモの読み込みに失敗しました: $e')));
+          e,
+          operation: 'メモの読み込み',
+          onRetry: _loadMemos,
+        );
       }
     }
   }
@@ -362,19 +402,17 @@ class _MainScreenState extends State<MainScreen> {
         });
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('ログインしていないため、タスクはローカルに保存されました'),
-              duration: Duration(seconds: 3),
-            ),
-          );
+          AppErrorHandler.showInfo(context, 'ログインしていないため、タスクはローカルに保存されました');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
+        AppErrorHandler.handleError(
           context,
-        ).showSnackBar(SnackBar(content: Text('タスクの保存に失敗しました: $e')));
+          e,
+          operation: 'タスクの保存',
+          onRetry: () => _addTask(title),
+        );
       }
     }
   }
@@ -441,39 +479,14 @@ class _MainScreenState extends State<MainScreen> {
                 controller: _pageController,
                 physics:
                     const PageScrollPhysics(), // 標準のPageScrollPhysicsでページスナップを確実にする
-                onPageChanged: (index) {
-                  // PageViewのインデックスを_currentIndexに変換
-                  // PageView: 0=タスク, 1=カレンダー, 2=メモ, 3=設定
-                  // _currentIndex: 0=タスク, 1=カレンダー, 2=作成ボタン, 3=メモ, 4=設定
-                  int newCurrentIndex;
-                  switch (index) {
-                    case 0: // タスク
-                      newCurrentIndex = 0;
-                      break;
-                    case 1: // カレンダー
-                      newCurrentIndex = 1;
-                      break;
-                    case 2: // メモ
-                      newCurrentIndex = 3;
-                      break;
-                    case 3: // 設定
-                      newCurrentIndex = 4;
-                      break;
-                    default:
-                      newCurrentIndex = 0;
-                  }
-
-                  setState(() {
-                    _currentIndex = newCurrentIndex;
-                  });
-                },
+                onPageChanged: _onPageChanged,
                 children: pages,
               ),
             ),
           ),
           // アニメーションヘッダー
           AnimatedPositioned(
-            duration: const Duration(milliseconds: 200),
+            duration: _headerAnimationDuration,
             curve: Curves.easeInOut,
             top: _calculateHeaderTop(context),
             left: 0,
@@ -536,24 +549,23 @@ class _MainScreenState extends State<MainScreen> {
         onTaskAdded: (title) => _addTask(title),
         onMemoCreated:
             (title, mode, colorHex) => _createMemo(title, mode, colorHex),
-        onScheduleCreate: () {
-          // スケジュール画面がアクティブな場合、スケジュール作成ボトムシートを開く
-          if (_currentIndex == 1) {
-            final scheduleScreenState =
-                _scheduleScreenKey.currentState as dynamic;
-            if (scheduleScreenState != null) {
-              scheduleScreenState.addScheduleFromExternal();
-            }
-          }
-        },
+        onScheduleCreate: _handleScheduleCreate,
       ),
     );
   }
 
+  // スケジュール作成処理
+  void _handleScheduleCreate() {
+    // スケジュール画面がアクティブな場合、スケジュール作成ボトムシートを開く
+    if (_currentIndex == _schedulePageIndex) {
+      final scheduleScreenState = _scheduleScreenKey.currentState as dynamic;
+      scheduleScreenState?.addScheduleFromExternal();
+    }
+  }
+
   // _createMemo メソッドは CustomBottomNavigationBar で使用されるため保持
   Future<void> _createMemo(String title, String mode, String colorHex) async {
-    if (!mounted) return; // 最初にmountedをチェック
-    final currentContext = context; // Contextをローカル変数で保存
+    if (!mounted) return;
 
     try {
       final newMemo = await _supabaseService.addMemo(
@@ -562,7 +574,7 @@ class _MainScreenState extends State<MainScreen> {
         colorHex: colorHex,
       );
 
-      if (!mounted) return; // 非同期処理後に再度チェック
+      if (!mounted) return;
 
       if (newMemo != null) {
         // 新しく作成されたメモのIDを設定
@@ -572,32 +584,20 @@ class _MainScreenState extends State<MainScreen> {
 
         // メモリストを再読み込み
         _loadMemos();
-
-        if (mounted && currentContext.mounted) {
-          ScaffoldMessenger.of(
-            currentContext,
-          ).showSnackBar(SnackBar(content: Text('メモ「$title」を作成しました')));
-        }
       } else {
-        if (mounted && currentContext.mounted) {
-          ScaffoldMessenger.of(currentContext).showSnackBar(
-            const SnackBar(
-              content: Text('ログインしていないため、メモはローカルに保存されました'),
-              duration: Duration(seconds: 3),
-            ),
-          );
+        if (mounted) {
+          AppErrorHandler.showInfo(context, 'ログインしていないため、メモはローカルに保存されました');
         }
       }
     } catch (e) {
-      if (!mounted) return; // エラー処理でも再度チェック
+      if (!mounted) return;
 
-      if (mounted && currentContext.mounted) {
-        ScaffoldMessenger.of(currentContext).showSnackBar(
-          SnackBar(
-            content: Text('メモの作成に失敗しました: $e'),
-            backgroundColor: Colors.red[600],
-            duration: const Duration(seconds: 5),
-          ),
+      if (mounted) {
+        AppErrorHandler.handleError(
+          context,
+          e,
+          operation: 'メモの作成',
+          onRetry: () => _createMemo(title, mode, colorHex),
         );
       }
     }

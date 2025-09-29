@@ -4,6 +4,7 @@ import '../gradients.dart';
 import '../widgets/schedule/add_schedule_bottom_sheet.dart';
 import '../widgets/overlays/custom_bottom_sheet.dart';
 import '../services/supabase_service.dart';
+import '../utils/error_handler.dart';
 
 class ScheduleScreen extends StatefulWidget {
   final ScrollController? scrollController;
@@ -62,12 +63,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         _schedules.addAll(scheduleMap);
       });
     } catch (e) {
-      debugPrint('スケジュール読み込みエラー: $e');
-      // エラーダイアログを表示（オプション）
       if (mounted) {
-        ScaffoldMessenger.of(
+        AppErrorHandler.handleError(
           context,
-        ).showSnackBar(SnackBar(content: Text('スケジュールの読み込みに失敗しました: $e')));
+          e,
+          operation: 'スケジュールの読み込み',
+          onRetry: _loadSchedules,
+        );
       }
     } finally {
       setState(() {
@@ -94,18 +96,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           _schedules.remove(date);
         }
       });
-
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('スケジュールを削除しました')));
-      }
     } catch (e) {
-      debugPrint('スケジュール削除エラー: $e');
       if (mounted) {
-        ScaffoldMessenger.of(
+        AppErrorHandler.handleError(
           context,
-        ).showSnackBar(SnackBar(content: Text('削除に失敗しました: $e')));
+          e,
+          operation: 'スケジュールの削除',
+          onRetry: () => _deleteSchedule(schedule),
+        );
       }
     }
   }
@@ -178,21 +176,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             _schedules[date] = [appSchedule];
           }
         });
-
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('スケジュールを保存しました')));
-        }
       } else {
         throw Exception('データベースへの保存に失敗しました');
       }
     } catch (e) {
-      debugPrint('スケジュール追加エラー: $e');
       if (mounted) {
-        ScaffoldMessenger.of(
+        AppErrorHandler.handleError(
           context,
-        ).showSnackBar(SnackBar(content: Text('保存に失敗しました: $e')));
+          e,
+          operation: 'スケジュールの保存',
+          onRetry: () => _addSchedule(schedule),
+        );
       }
     }
   }

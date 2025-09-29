@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../gradients.dart';
 import '../services/supabase_service.dart';
+import '../utils/error_handler.dart';
 
 class TaskScreen extends StatefulWidget {
   final List<Map<String, dynamic>>? tasks;
@@ -79,9 +80,12 @@ class _TaskScreenState extends State<TaskScreen> {
       _notifyTasksChanged();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
+        AppErrorHandler.handleError(
           context,
-        ).showSnackBar(SnackBar(content: Text('タスクの更新に失敗しました: $e')));
+          e,
+          operation: 'タスクの更新',
+          onRetry: () => _toggleTask(index),
+        );
       }
     }
   }
@@ -101,9 +105,12 @@ class _TaskScreenState extends State<TaskScreen> {
       _notifyTasksChanged();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
+        AppErrorHandler.handleError(
           context,
-        ).showSnackBar(SnackBar(content: Text('タスクの削除に失敗しました: $e')));
+          e,
+          operation: 'タスクの削除',
+          onRetry: () => _deleteTask(index),
+        );
       }
     }
   }
