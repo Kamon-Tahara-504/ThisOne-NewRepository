@@ -15,6 +15,7 @@ import 'models/memo.dart';
 import 'models/task.dart';
 import 'controllers/scroll_controller_manager.dart';
 import 'controllers/header_controller.dart';
+import 'controllers/page_controller.dart';
 
 // カスタムScrollPhysics for スワイプアニメーション速度調整
 class CustomPageScrollPhysics extends ScrollPhysics {
@@ -103,16 +104,7 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  // 定数定義
-  static const int _taskPageIndex = 0;
-  static const int _schedulePageIndex = 1;
-  static const int _memoPageIndex = 2;
-  static const int _settingsPageIndex = 3;
-  static const int _memoTabIndex = 3;
-  static const int _settingsTabIndex = 4;
-
   // 状態変数
-  int _currentIndex = 0;
   final List<Task> _tasks = [];
   final List<Memo> _memos = [];
   final SupabaseService _supabaseService = SupabaseService();
@@ -122,7 +114,7 @@ class _MainScreenState extends State<MainScreen> {
   String? _newlyCreatedMemoId;
 
   // コントローラー（メモリリーク対策）
-  late PageController _pageController;
+  late AppPageController _appPageController;
   final GlobalKey _scheduleScreenKey = GlobalKey();
   late ScrollControllerManager _scrollControllerManager;
   late HeaderController _headerController;
@@ -131,15 +123,23 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
-    // PageControllerを初期化
-    _pageController = PageController(initialPage: 0);
 
     // コントローラーを初期化
+    _appPageController = AppPageController();
+    _appPageController.initializePageController(initialPage: 0);
+
     _scrollControllerManager = ScrollControllerManager();
     _headerController = HeaderController();
 
     // ヘッダーコントローラーの変更を監視
     _headerController.addListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+
+    // ページコントローラーの変更を監視
+    _appPageController.addListener(() {
       if (mounted) {
         setState(() {});
       }
@@ -171,7 +171,7 @@ class _MainScreenState extends State<MainScreen> {
       return;
 
     // 現在のページのみ監視
-    final currentPageIndex = _getCurrentPageIndex();
+    final currentPageIndex = _appPageController.getCurrentPageIndex();
     if (pageIndex != currentPageIndex) return;
 
     final currentPosition = controller.offset;
@@ -182,49 +182,6 @@ class _MainScreenState extends State<MainScreen> {
       currentPageIndex: pageIndex,
       targetPageIndex: currentPageIndex,
     );
-  }
-
-  // 現在のPageViewインデックスを取得
-  int _getCurrentPageIndex() {
-    switch (_currentIndex) {
-      case _taskPageIndex:
-        return _taskPageIndex;
-      case _schedulePageIndex:
-        return _schedulePageIndex;
-      case _memoTabIndex:
-        return _memoPageIndex;
-      case _settingsTabIndex:
-        return _settingsPageIndex;
-      default:
-        return _taskPageIndex;
-    }
-  }
-
-  // PageViewのページ変更処理
-  void _onPageChanged(int index) {
-    // PageViewのインデックスを_currentIndexに変換
-    // PageView: 0=タスク, 1=カレンダー, 2=メモ, 3=設定
-    // _currentIndex: 0=タスク, 1=カレンダー, 2=作成ボタン, 3=メモ, 4=設定
-    final newCurrentIndex = _convertPageIndexToTabIndex(index);
-    setState(() {
-      _currentIndex = newCurrentIndex;
-    });
-  }
-
-  // PageViewのインデックスをタブインデックスに変換
-  int _convertPageIndexToTabIndex(int pageIndex) {
-    switch (pageIndex) {
-      case _taskPageIndex:
-        return _taskPageIndex;
-      case _schedulePageIndex:
-        return _schedulePageIndex;
-      case _memoPageIndex:
-        return _memoTabIndex;
-      case _settingsPageIndex:
-        return _settingsTabIndex;
-      default:
-        return _taskPageIndex;
-    }
   }
 
   // AccountInfoOverlayの遅延初期化
@@ -242,9 +199,9 @@ class _MainScreenState extends State<MainScreen> {
     _isDisposed = true;
 
     try {
-      _pageController.dispose();
+      _appPageController.dispose();
     } catch (e) {
-      debugPrint('PageController dispose error: $e');
+      debugPrint('AppPageController dispose error: $e');
     }
 
     // コントローラーを安全に解放
@@ -424,10 +381,10 @@ class _MainScreenState extends State<MainScreen> {
                 ), // ヘッダーの隠れ具合に応じて調整
               ),
               child: PageView(
-                controller: _pageController,
+                controller: _appPageController.pageController,
                 physics:
                     const PageScrollPhysics(), // 標準のPageScrollPhysicsでページスナップを確実にする
-                onPageChanged: _onPageChanged,
+                onPageChanged: _appPageController.onPageChanged,
                 children: pages,
               ),
             ),
@@ -489,15 +446,20 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: CustomBottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTabChanged: (index) => setState(() => _currentIndex = index),
-        pageController: _pageController,
-        supabaseService: _supabaseService,
-        onTaskAdded: (title) => _addTask(title),
-        onMemoCreated:
-            (title, mode, colorHex) => _createMemo(title, mode, colorHex),
-        onScheduleCreate: _handleScheduleCreate,
+      bottomNavigationBar: AnimatedBuilder(
+        animation: _appPageController,
+        builder: (context, child) {
+          return CustomBottomNavigationBar(
+            currentIndex: _appPageController.currentIndex,
+            onTabChanged: (index) => _appPageController.navigateToTab(index),
+            pageController: _appPageController.pageController,
+            supabaseService: _supabaseService,
+            onTaskAdded: (title) => _addTask(title),
+            onMemoCreated:
+                (title, mode, colorHex) => _createMemo(title, mode, colorHex),
+            onScheduleCreate: _handleScheduleCreate,
+          );
+        },
       ),
     );
   }
@@ -505,7 +467,8 @@ class _MainScreenState extends State<MainScreen> {
   // スケジュール作成処理
   void _handleScheduleCreate() {
     // スケジュール画面がアクティブな場合、スケジュール作成ボトムシートを開く
-    if (_currentIndex == _schedulePageIndex) {
+    if (_appPageController.currentIndex ==
+        AppPageController.schedulePageIndex) {
       final scheduleScreenState = _scheduleScreenKey.currentState as dynamic;
       scheduleScreenState?.addScheduleFromExternal();
     }

@@ -72,7 +72,12 @@ class CustomBottomNavigationBar extends StatelessWidget {
     );
   }
 
-  Widget _buildNavItem(BuildContext context, int index, IconData icon, String label) {
+  Widget _buildNavItem(
+    BuildContext context,
+    int index,
+    IconData icon,
+    String label,
+  ) {
     final isSelected = currentIndex == index;
     return Expanded(
       child: Transform.translate(
@@ -83,35 +88,9 @@ class CustomBottomNavigationBar extends StatelessWidget {
             if (index == 2) {
               return;
             }
-            
-            // _currentIndexからPageViewのインデックスに変換
-            // _currentIndex: 0=タスク, 1=カレンダー, 2=作成ボタン, 3=メモ, 4=設定
-            // PageView: 0=タスク, 1=カレンダー, 2=メモ, 3=設定
-            int pageIndex;
-            switch (index) {
-              case 0: // タスク
-                pageIndex = 0;
-                break;
-              case 1: // カレンダー
-                pageIndex = 1;
-                break;
-              case 3: // メモ
-                pageIndex = 2;
-                break;
-              case 4: // 設定
-                pageIndex = 3;
-                break;
-              default:
-                pageIndex = 0;
-            }
-            
-            // PageViewをアニメーション付きで移動
-            pageController.animateToPage(
-              pageIndex,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-            );
-            
+
+            // onTabChangedを呼び出すだけでOK
+            // AppPageController.navigateToTabが適切に処理する
             onTabChanged(index);
           },
           child: Container(
@@ -120,24 +99,26 @@ class CustomBottomNavigationBar extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 ShaderMask(
-                  shaderCallback: (bounds) => isSelected
-                      ? createHorizontalOrangeYellowGradient().createShader(bounds)
-                      : LinearGradient(
-                          colors: [Colors.grey[500]!, Colors.grey[500]!],
-                        ).createShader(bounds),
-                  child: Icon(
-                    icon,
-                    size: 24,
-                    color: Colors.white,
-                  ),
+                  shaderCallback:
+                      (bounds) =>
+                          isSelected
+                              ? createHorizontalOrangeYellowGradient()
+                                  .createShader(bounds)
+                              : LinearGradient(
+                                colors: [Colors.grey[500]!, Colors.grey[500]!],
+                              ).createShader(bounds),
+                  child: Icon(icon, size: 24, color: Colors.white),
                 ),
                 const SizedBox(height: 4),
                 ShaderMask(
-                  shaderCallback: (bounds) => isSelected
-                      ? createHorizontalOrangeYellowGradient().createShader(bounds)
-                      : LinearGradient(
-                          colors: [Colors.grey[500]!, Colors.grey[500]!],
-                        ).createShader(bounds),
+                  shaderCallback:
+                      (bounds) =>
+                          isSelected
+                              ? createHorizontalOrangeYellowGradient()
+                                  .createShader(bounds)
+                              : LinearGradient(
+                                colors: [Colors.grey[500]!, Colors.grey[500]!],
+                              ).createShader(bounds),
                   child: Text(
                     label,
                     style: const TextStyle(
@@ -181,7 +162,9 @@ class CustomBottomNavigationBar extends StatelessWidget {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFE85A3B).withValues(alpha: 0.4), // 影を少し濃く
+                  color: const Color(
+                    0xFFE85A3B,
+                  ).withValues(alpha: 0.4), // 影を少し濃く
                   blurRadius: 12, // 影を大きく
                   offset: const Offset(0, 4), // 影の位置も調整
                 ),
@@ -213,44 +196,35 @@ class CustomBottomNavigationBar extends StatelessWidget {
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'タスク追加',
-                style: TextStyle(color: Colors.white),
-              ),
+              const Text('タスク追加', style: TextStyle(color: Colors.white)),
               if (supabaseService.getCurrentUser() == null) ...[
                 const SizedBox(height: 4),
                 Text(
                   'ローカルに保存されます（ログインして同期）',
-                  style: TextStyle(
-                    color: Colors.grey[500],
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.grey[500], fontSize: 12),
                 ),
               ],
             ],
           ),
-                     content: TextField(
-             controller: controller,
-             style: const TextStyle(color: Colors.white),
-             decoration: InputDecoration(
-               hintText: 'タスクを入力してください',
-               hintStyle: TextStyle(color: Colors.grey[400]),
-               enabledBorder: UnderlineInputBorder(
-                 borderSide: BorderSide(color: Colors.grey[600]!),
-               ),
-               focusedBorder: const UnderlineInputBorder(
-                 borderSide: BorderSide(color: Color(0xFFE85A3B)),
-               ),
-             ),
-             autofocus: false,
-           ),
+          content: TextField(
+            controller: controller,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'タスクを入力してください',
+              hintStyle: TextStyle(color: Colors.grey[400]),
+              enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.grey[600]!),
+              ),
+              focusedBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Color(0xFFE85A3B)),
+              ),
+            ),
+            autofocus: false,
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text(
-                'キャンセル',
-                style: TextStyle(color: Colors.grey[400]),
-              ),
+              child: Text('キャンセル', style: TextStyle(color: Colors.grey[400])),
             ),
             Container(
               decoration: BoxDecoration(
@@ -264,10 +238,7 @@ class CustomBottomNavigationBar extends StatelessWidget {
                     onTaskAdded(controller.text.trim());
                   }
                 },
-                child: const Text(
-                  '追加',
-                  style: TextStyle(color: Colors.white),
-                ),
+                child: const Text('追加', style: TextStyle(color: Colors.white)),
               ),
             ),
           ],
@@ -330,7 +301,11 @@ class _CreateMemoBottomSheetState extends State<_CreateMemoBottomSheet> {
   }
 
   // 色選択オプション（強化版）
-  Widget _buildEnhancedColorOption(Map<String, dynamic> colorItem, String selectedColorHex, Function(String) onColorSelected) {
+  Widget _buildEnhancedColorOption(
+    Map<String, dynamic> colorItem,
+    String selectedColorHex,
+    Function(String) onColorSelected,
+  ) {
     final colorHex = colorItem['hex'] as String;
     final isGradient = colorItem['isGradient'] as bool;
     final color = colorItem['color'] as Color?;
@@ -359,13 +334,10 @@ class _CreateMemoBottomSheetState extends State<_CreateMemoBottomSheet> {
               ),
           ],
         ),
-        child: isSelected
-            ? const Icon(
-                Icons.check,
-                color: Colors.white,
-                size: 24,
-              )
-            : null,
+        child:
+            isSelected
+                ? const Icon(Icons.check, color: Colors.white, size: 24)
+                : null,
       ),
     );
   }
@@ -394,7 +366,7 @@ class _CreateMemoBottomSheetState extends State<_CreateMemoBottomSheet> {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          
+
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(24),
@@ -424,7 +396,7 @@ class _CreateMemoBottomSheetState extends State<_CreateMemoBottomSheet> {
                     ],
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // タイトル入力
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -447,22 +419,25 @@ class _CreateMemoBottomSheetState extends State<_CreateMemoBottomSheet> {
                             width: 1,
                           ),
                         ),
-                                                 child: TextField(
-                           controller: _titleController,
-                           style: const TextStyle(color: Colors.white, fontSize: 16),
-                           decoration: const InputDecoration(
-                             hintText: 'メモのタイトルを入力...',
-                             hintStyle: TextStyle(color: Colors.grey),
-                             border: InputBorder.none,
-                             contentPadding: EdgeInsets.all(16),
-                           ),
-                           autofocus: false,
-                         ),
+                        child: TextField(
+                          controller: _titleController,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
+                          decoration: const InputDecoration(
+                            hintText: 'メモのタイトルを入力...',
+                            hintStyle: TextStyle(color: Colors.grey),
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.all(16),
+                          ),
+                          autofocus: false,
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // モード選択
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -480,21 +455,27 @@ class _CreateMemoBottomSheetState extends State<_CreateMemoBottomSheet> {
                         children: [
                           Expanded(
                             child: GestureDetector(
-                              onTap: () => setState(() => _selectedMode = 'memo'),
+                              onTap:
+                                  () => setState(() => _selectedMode = 'memo'),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
                                 decoration: BoxDecoration(
-                                  gradient: _selectedMode == 'memo' 
-                                      ? createHorizontalOrangeYellowGradient()
-                                      : null,
-                                  color: _selectedMode == 'memo' 
-                                      ? null 
-                                      : const Color(0xFF3A3A3A),
+                                  gradient:
+                                      _selectedMode == 'memo'
+                                          ? createHorizontalOrangeYellowGradient()
+                                          : null,
+                                  color:
+                                      _selectedMode == 'memo'
+                                          ? null
+                                          : const Color(0xFF3A3A3A),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: _selectedMode == 'memo' 
-                                        ? Colors.transparent 
-                                        : Colors.grey[600]!,
+                                    color:
+                                        _selectedMode == 'memo'
+                                            ? Colors.transparent
+                                            : Colors.grey[600]!,
                                     width: 1,
                                   ),
                                 ),
@@ -522,21 +503,29 @@ class _CreateMemoBottomSheetState extends State<_CreateMemoBottomSheet> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: GestureDetector(
-                              onTap: () => setState(() => _selectedMode = 'calculator'),
+                              onTap:
+                                  () => setState(
+                                    () => _selectedMode = 'calculator',
+                                  ),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
                                 decoration: BoxDecoration(
-                                  gradient: _selectedMode == 'calculator' 
-                                      ? createHorizontalOrangeYellowGradient()
-                                      : null,
-                                  color: _selectedMode == 'calculator' 
-                                      ? null 
-                                      : const Color(0xFF3A3A3A),
+                                  gradient:
+                                      _selectedMode == 'calculator'
+                                          ? createHorizontalOrangeYellowGradient()
+                                          : null,
+                                  color:
+                                      _selectedMode == 'calculator'
+                                          ? null
+                                          : const Color(0xFF3A3A3A),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: _selectedMode == 'calculator' 
-                                        ? Colors.transparent 
-                                        : Colors.grey[600]!,
+                                    color:
+                                        _selectedMode == 'calculator'
+                                            ? Colors.transparent
+                                            : Colors.grey[600]!,
                                     width: 1,
                                   ),
                                 ),
@@ -566,7 +555,7 @@ class _CreateMemoBottomSheetState extends State<_CreateMemoBottomSheet> {
                     ],
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // 色選択
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -579,7 +568,7 @@ class _CreateMemoBottomSheetState extends State<_CreateMemoBottomSheet> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                                            const SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       // カラーパレット（2行5列のグリッド）
                       Column(
                         children: [
@@ -587,14 +576,19 @@ class _CreateMemoBottomSheetState extends State<_CreateMemoBottomSheet> {
                             Padding(
                               padding: const EdgeInsets.symmetric(vertical: 8),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
                                 children: [
                                   for (int col = 0; col < 5; col++)
-                                    if (row * 5 + col < ColorUtils.colorLabelPalette.length)
+                                    if (row * 5 + col <
+                                        ColorUtils.colorLabelPalette.length)
                                       _buildEnhancedColorOption(
-                                        ColorUtils.colorLabelPalette[row * 5 + col],
+                                        ColorUtils.colorLabelPalette[row * 5 +
+                                            col],
                                         _selectedColorHex,
-                                        (colorHex) => setState(() => _selectedColorHex = colorHex),
+                                        (colorHex) => setState(
+                                          () => _selectedColorHex = colorHex,
+                                        ),
                                       ),
                                 ],
                               ),
@@ -603,9 +597,9 @@ class _CreateMemoBottomSheetState extends State<_CreateMemoBottomSheet> {
                       ),
                     ],
                   ),
-                  
+
                   const Spacer(),
-                  
+
                   // 作成ボタン
                   Container(
                     width: double.infinity,
@@ -616,11 +610,16 @@ class _CreateMemoBottomSheetState extends State<_CreateMemoBottomSheet> {
                     ),
                     child: ElevatedButton(
                       onPressed: () async {
-                        final title = _titleController.text.trim().isNotEmpty 
-                            ? _titleController.text.trim() 
-                            : '無題';
+                        final title =
+                            _titleController.text.trim().isNotEmpty
+                                ? _titleController.text.trim()
+                                : '無題';
                         Navigator.pop(context);
-                        await widget.onMemoCreated(title, _selectedMode, _selectedColorHex);
+                        await widget.onMemoCreated(
+                          title,
+                          _selectedMode,
+                          _selectedColorHex,
+                        );
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent,
@@ -647,4 +646,4 @@ class _CreateMemoBottomSheetState extends State<_CreateMemoBottomSheet> {
       ),
     );
   }
-} 
+}
