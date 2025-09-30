@@ -13,6 +13,8 @@ import 'screens/settings_screen.dart';
 import 'utils/error_handler.dart';
 import 'models/memo.dart';
 import 'models/task.dart';
+import 'controllers/scroll_controller_manager.dart';
+import 'controllers/header_controller.dart';
 
 // カスタムScrollPhysics for スワイプアニメーション速度調整
 class CustomPageScrollPhysics extends ScrollPhysics {
@@ -108,10 +110,6 @@ class _MainScreenState extends State<MainScreen> {
   static const int _settingsPageIndex = 3;
   static const int _memoTabIndex = 3;
   static const int _settingsTabIndex = 4;
-  static const double _headerHeight = 54.0;
-  static const double _scrollSensitivity = 10.0;
-  static const double _scrollThreshold = 5.0;
-  static const Duration _headerAnimationDuration = Duration(milliseconds: 200);
 
   // 状態変数
   int _currentIndex = 0;
@@ -126,12 +124,9 @@ class _MainScreenState extends State<MainScreen> {
   // コントローラー（メモリリーク対策）
   late PageController _pageController;
   final GlobalKey _scheduleScreenKey = GlobalKey();
-  final Map<int, ScrollController> _scrollControllers = {};
+  late ScrollControllerManager _scrollControllerManager;
+  late HeaderController _headerController;
   bool _isDisposed = false; // 二重dispose防止
-
-  // ヘッダー制御
-  bool _isHeaderVisible = true;
-  double _lastScrollPosition = 0.0;
 
   @override
   void initState() {
@@ -139,8 +134,22 @@ class _MainScreenState extends State<MainScreen> {
     // PageControllerを初期化
     _pageController = PageController(initialPage: 0);
 
+    // コントローラーを初期化
+    _scrollControllerManager = ScrollControllerManager();
+    _headerController = HeaderController();
+
+    // ヘッダーコントローラーの変更を監視
+    _headerController.addListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+
     // ScrollControllersを初期化
-    _initializeScrollControllers();
+    _scrollControllerManager.initializeScrollControllers(
+      pageCount: 4, // タスク、スケジュール、メモ、設定
+      onScroll: _onScroll,
+    );
 
     _loadTasks();
     _loadMemos();
@@ -151,25 +160,11 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
-  // ScrollControllersを初期化（メモリリーク対策）
-  void _initializeScrollControllers() {
-    if (_isDisposed) return; // dispose後の初期化防止
-
-    final pageCount = 4; // タスク、スケジュール、メモ、設定
-    for (int i = 0; i < pageCount; i++) {
-      // 既存のコントローラーがあれば先にdispose
-      _scrollControllers[i]?.dispose();
-
-      _scrollControllers[i] = ScrollController();
-      _scrollControllers[i]!.addListener(() => _onScroll(i));
-    }
-  }
-
   // スクロール制御（メモリリーク対策）
   void _onScroll(int pageIndex) {
     if (_isDisposed || !mounted) return; // dispose後やマウント解除後の処理防止
 
-    final controller = _scrollControllers[pageIndex];
+    final controller = _scrollControllerManager.getScrollController(pageIndex);
     if (controller == null ||
         !controller.hasClients ||
         controller.hasClients == false)
@@ -180,36 +175,13 @@ class _MainScreenState extends State<MainScreen> {
     if (pageIndex != currentPageIndex) return;
 
     final currentPosition = controller.offset;
-    final scrollDelta = currentPosition - _lastScrollPosition;
 
-    // 最小スクロール量のフィルタ
-    if (scrollDelta.abs() > _scrollSensitivity) {
-      final shouldChangeState = _shouldChangeHeaderVisibility(scrollDelta);
-      if (shouldChangeState && mounted) {
-        setState(() {});
-      }
-    }
-
-    // 前回位置を更新
-    _lastScrollPosition = currentPosition;
-  }
-
-  // ヘッダーの表示/非表示を変更すべきかを判定
-  bool _shouldChangeHeaderVisibility(double scrollDelta) {
-    if (scrollDelta > 0) {
-      // 下スクロール：ヘッダーを隠す
-      if (_isHeaderVisible && scrollDelta > _scrollSensitivity) {
-        _isHeaderVisible = false;
-        return true;
-      }
-    } else {
-      // 上スクロール：ヘッダーを表示
-      if (!_isHeaderVisible && (-scrollDelta) > _scrollThreshold) {
-        _isHeaderVisible = true;
-        return true;
-      }
-    }
-    return false;
+    // ヘッダーコントローラーにスクロール位置を通知
+    _headerController.updateScrollPosition(
+      currentPosition: currentPosition,
+      currentPageIndex: pageIndex,
+      targetPageIndex: currentPageIndex,
+    );
   }
 
   // 現在のPageViewインデックスを取得
@@ -226,26 +198,6 @@ class _MainScreenState extends State<MainScreen> {
       default:
         return _taskPageIndex;
     }
-  }
-
-  // 動的トップパディング計算
-  double _calculateDynamicTopPadding(BuildContext context) {
-    final statusBarHeight = MediaQuery.of(context).padding.top;
-    const baseOffset = 4.0;
-    final baseTop = statusBarHeight + baseOffset;
-
-    // 表示時は通常、非表示時は詰める
-    return _isHeaderVisible ? baseTop + _headerHeight : statusBarHeight;
-  }
-
-  // ヘッダー位置制御
-  double _calculateHeaderTop(BuildContext context) {
-    final statusBarHeight = MediaQuery.of(context).padding.top;
-    const baseOffset = 4.0;
-    final baseTop = statusBarHeight + baseOffset;
-
-    // 表示/非表示の切り替え
-    return _isHeaderVisible ? baseTop : baseTop - _headerHeight;
   }
 
   // PageViewのページ変更処理
@@ -295,15 +247,9 @@ class _MainScreenState extends State<MainScreen> {
       debugPrint('PageController dispose error: $e');
     }
 
-    // ScrollControllersを安全に解放
-    for (final entry in _scrollControllers.entries) {
-      try {
-        entry.value.dispose();
-      } catch (e) {
-        debugPrint('ScrollController dispose error for ${entry.key}: $e');
-      }
-    }
-    _scrollControllers.clear();
+    // コントローラーを安全に解放
+    _scrollControllerManager.dispose();
+    _headerController.dispose();
 
     // AccountInfoOverlayを安全に解放
     try {
@@ -432,12 +378,12 @@ class _MainScreenState extends State<MainScreen> {
                 _tasks.addAll(updatedTasks);
               });
             },
-            scrollController: _scrollControllers[0],
+            scrollController: _scrollControllerManager.getScrollController(0),
           ),
       // 1: カレンダー画面
       ScheduleScreen(
         key: _scheduleScreenKey,
-        scrollController: _scrollControllers[1],
+        scrollController: _scrollControllerManager.getScrollController(1),
       ),
       // 2: メモ画面
       _isLoadingMemos
@@ -458,10 +404,12 @@ class _MainScreenState extends State<MainScreen> {
                 _newlyCreatedMemoId = null;
               });
             },
-            scrollController: _scrollControllers[2],
+            scrollController: _scrollControllerManager.getScrollController(2),
           ),
       // 3: 設定画面
-      SettingsScreen(scrollController: _scrollControllers[3]),
+      SettingsScreen(
+        scrollController: _scrollControllerManager.getScrollController(3),
+      ),
     ];
 
     return Scaffold(
@@ -471,7 +419,9 @@ class _MainScreenState extends State<MainScreen> {
           Positioned.fill(
             child: Padding(
               padding: EdgeInsets.only(
-                top: _calculateDynamicTopPadding(context), // ヘッダーの隠れ具合に応じて調整
+                top: _headerController.calculateDynamicTopPadding(
+                  context,
+                ), // ヘッダーの隠れ具合に応じて調整
               ),
               child: PageView(
                 controller: _pageController,
@@ -484,9 +434,9 @@ class _MainScreenState extends State<MainScreen> {
           ),
           // アニメーションヘッダー
           AnimatedPositioned(
-            duration: _headerAnimationDuration,
+            duration: HeaderController.headerAnimationDuration,
             curve: Curves.easeInOut,
-            top: _calculateHeaderTop(context),
+            top: _headerController.calculateHeaderTop(context),
             left: 0,
             right: 0,
             child: Column(
@@ -496,7 +446,7 @@ class _MainScreenState extends State<MainScreen> {
                 CollapsibleAppBar(
                   onAccountButtonPressed:
                       () => accountInfoOverlay.handleAccountButtonPressed(),
-                  scrollProgress: _isHeaderVisible ? 0.0 : 1.0,
+                  scrollProgress: _headerController.isHeaderVisible ? 0.0 : 1.0,
                 ),
                 // ガイドライン
                 Container(
