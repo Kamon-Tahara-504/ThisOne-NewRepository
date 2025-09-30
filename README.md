@@ -49,8 +49,16 @@ lib/
 ├── main.dart                          # アプリエントリーポイント・ナビゲーション
 ├── gradients.dart                     # カスタムグラデーション関数群
 ├── supabase_config.dart               # Supabase接続設定
+├── controllers/
+│   ├── header_controller.dart         # ヘッダー制御コントローラー
+│   └── scroll_controller_manager.dart # スクロール制御マネージャー
 ├── examples/
 │   └── gradient_showcase.dart         # グラデーション表示例
+├── models/
+│   ├── app_error.dart                 # アプリエラーモデル
+│   ├── memo.dart                      # メモモデル
+│   ├── schedule.dart                  # スケジュールモデル
+│   └── task.dart                      # タスクモデル
 ├── services/
 │   └── supabase_service.dart          # データベース操作サービス（認証・タスク・メモ・スケジュール）
 ├── screens/
@@ -62,38 +70,42 @@ lib/
 │   ├── unified_auth_screen.dart       # 統合認証画面
 │   ├── account_screen.dart            # アカウント管理画面
 │   └── settings_screen.dart           # 設定画面
-├── widgets/
-│   ├── app_bars/
-│   │   ├── collapsible_app_bar.dart   # 折りたたみ可能なアプリバー
-│   │   └── custom_app_bar.dart        # カスタムアプリバー
-│   ├── auth/
-│   │   ├── google_signin_button.dart  # Googleサインインボタン
-│   │   ├── login_bottom_sheet.dart    # ログインボトムシート
-│   │   ├── signup_page.dart           # サインアップページ
-│   │   └── x_signin_button.dart       # X（Twitter）サインインボタン
-│   ├── navigation/
-│   │   └── custom_bottom_navigation_bar.dart # カスタムボトムナビゲーション
-│   ├── overlays/
-│   │   ├── account_info_overlay.dart  # アカウント情報オーバーレイ
-│   │   └── custom_bottom_sheet.dart   # カスタムボトムシート
-│   ├── schedule/
-│   │   ├── add_schedule_bottom_sheet.dart # スケジュール追加ボトムシート
-│   │   ├── custom_time_picker.dart    # カスタム時間選択ピッカー（PageView版）
-│   │   └── time_setting_widget.dart   # 時間設定ウィジェット（間隔選択・時間選択）
-│   ├── memo_back_header.dart          # メモ画面ヘッダー
-│   ├── memo_filter_header.dart        # メモフィルターヘッダー
-│   ├── memo_item_card.dart            # メモアイテムカード
-│   ├── memo_save_manager.dart         # メモ自動保存管理
-│   ├── empty_memo_state.dart          # 空のメモ状態表示
-│   ├── color_palette.dart             # カラーパレット
-│   ├── quill_color_panel.dart         # Quillカラーパネル
-│   ├── quill_rich_editor.dart         # リッチテキストエディタ
-│   └── quill_toolbar.dart             # エディタツールバー
-└── utils/
-    ├── calculator_utils.dart          # 計算ユーティリティ
-    └── color_utils.dart               # カラーユーティリティ
+├── utils/
+│   ├── calculator_utils.dart          # 計算ユーティリティ
+│   ├── color_utils.dart               # カラーユーティリティ
+│   ├── error_handler.dart             # エラーハンドリングユーティリティ
+│   └── network_utils.dart             # ネットワークユーティリティ
+└── widgets/
+    ├── app_bars/
+    │   ├── collapsible_app_bar.dart   # 折りたたみ可能なアプリバー
+    │   └── custom_app_bar.dart        # カスタムアプリバー
+    ├── auth/
+    │   ├── google_signin_button.dart  # Googleサインインボタン
+    │   ├── login_bottom_sheet.dart    # ログインボトムシート
+    │   ├── signup_page.dart           # サインアップページ
+    │   └── x_signin_button.dart       # X（Twitter）サインインボタン
+    ├── navigation/
+    │   └── custom_bottom_navigation_bar.dart # カスタムボトムナビゲーション
+    ├── overlays/
+    │   ├── account_info_overlay.dart  # アカウント情報オーバーレイ
+    │   └── custom_bottom_sheet.dart   # カスタムボトムシート
+    ├── schedule/
+    │   ├── add_schedule_bottom_sheet.dart # スケジュール追加ボトムシート
+    │   ├── custom_time_picker.dart    # カスタム時間選択ピッカー（PageView版）
+    │   ├── schedule_calendar_widget.dart # スケジュールカレンダーウィジェット
+    │   └── time_setting_widget.dart   # 時間設定ウィジェット（間隔選択・時間選択）
+    ├── memo_back_header.dart          # メモ画面ヘッダー
+    ├── memo_filter_header.dart        # メモフィルターヘッダー
+    ├── memo_item_card.dart            # メモアイテムカード
+    ├── memo_save_manager.dart         # メモ自動保存管理
+    ├── empty_memo_state.dart          # 空のメモ状態表示
+    ├── color_palette.dart             # カラーパレット
+    ├── quill_color_panel.dart         # Quillカラーパネル
+    ├── quill_rich_editor.dart         # リッチテキストエディタ
+    └── quill_toolbar.dart             # エディタツールバー
 
 database/
+├── README.md                          # データベースドキュメント
 ├── schema/
 │   └── initial_schema.sql             # データベーススキーマ定義
 └── migrations/
@@ -102,6 +114,13 @@ database/
     ├── 003_rich_content.sql           # リッチコンテンツ対応
     ├── 004_smart_trigger.sql          # スマートトリガー実装
     └── 005_add_schedule_color.sql     # スケジュール色設定追加
+
+assets/
+├── icons/
+│   └── app_icon.png                   # アプリアイコン
+└── x_logo_white.svg                   # Xロゴ（白）
+
+env.example                            # 環境変数設定例
 ```
 
 ##  データベース構造
