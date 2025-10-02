@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'supabase_config.dart';
 import 'services/supabase_service.dart';
 import 'widgets/app_bars/collapsible_app_bar.dart';
@@ -46,7 +47,7 @@ void main() async {
   // Supabaseを初期化
   await SupabaseConfig.initialize();
 
-  runApp(const MyApp());
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
