@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../gradients.dart';
 import '../widgets/schedule/add_schedule_bottom_sheet.dart';
@@ -6,18 +7,19 @@ import '../widgets/overlays/custom_bottom_sheet.dart';
 import '../services/supabase_service.dart';
 import '../utils/error_handler.dart';
 import '../models/schedule.dart';
+import '../providers/repository_providers.dart';
 
-class ScheduleScreen extends StatefulWidget {
+class ScheduleScreen extends ConsumerStatefulWidget {
   final ScrollController? scrollController;
 
   const ScheduleScreen({super.key, this.scrollController});
 
   @override
-  State<ScheduleScreen> createState() => _ScheduleScreenState();
+  ConsumerState<ScheduleScreen> createState() => _ScheduleScreenState();
 }
 
-class _ScheduleScreenState extends State<ScheduleScreen> {
-  final Map<DateTime, List<Schedule>> _schedules = {}; // 型安全なScheduleモデルに変更
+class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
+  final Map<DateTime, List<Schedule>> _schedules = {};
   final SupabaseService _supabaseService = SupabaseService();
   DateTime _selectedDate = DateTime.now();
   DateTime _focusedDate = DateTime.now();
@@ -37,10 +39,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     });
 
     try {
-      final schedules = await _supabaseService.getUserSchedulesTyped();
+      await ref.read(scheduleNotifierProvider.notifier).loadSchedules();
 
-      // 型安全なScheduleオブジェクトを日付ごとにグループ化
-      final scheduleMap = schedules.groupByDate();
+      // Riverpodから取得したスケジュールをローカルMapに変換
+      final scheduleState = ref.read(scheduleNotifierProvider);
+      final scheduleMap = scheduleState.schedules.groupByDate();
 
       setState(() {
         _schedules.clear();
@@ -65,8 +68,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   /// スケジュールを削除（データベースからも削除）
   Future<void> _deleteSchedule(Schedule schedule) async {
     try {
-      // データベースから削除
-      await _supabaseService.deleteScheduleTyped(schedule.id);
+      await ref
+          .read(scheduleNotifierProvider.notifier)
+          .deleteSchedule(schedule.id);
 
       // ローカルのMapからも削除
       setState(() {
