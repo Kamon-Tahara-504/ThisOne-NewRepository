@@ -286,21 +286,13 @@ class _MainScreenState extends State<MainScreen> {
         scrollController: _scrollControllerManager.getScrollController(1),
       ),
       // 2: メモ画面
-      _dataService.isLoadingMemos
-          ? const Center(
-            child: CircularProgressIndicator(color: Color(0xFFE85A3B)),
-          )
-          : MemoScreen(
-            memos: _dataService.memos,
-            onMemosChanged: (updatedMemos) {
-              _dataService.updateMemos(updatedMemos);
-            },
-            newlyCreatedMemoId: _dataService.newlyCreatedMemoId,
-            onPopAnimationComplete: () {
-              _dataService.clearNewlyCreatedMemoId();
-            },
-            scrollController: _scrollControllerManager.getScrollController(2),
-          ),
+      MemoScreen(
+        newlyCreatedMemoId: _dataService.newlyCreatedMemoId,
+        onPopAnimationComplete: () {
+          _dataService.clearNewlyCreatedMemoId();
+        },
+        scrollController: _scrollControllerManager.getScrollController(2),
+      ),
       // 3: 設定画面
       SettingsScreen(
         scrollController: _scrollControllerManager.getScrollController(3),

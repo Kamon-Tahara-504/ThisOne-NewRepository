@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/supabase_service.dart';
 import '../gradients.dart';
 import '../widgets/memo_item_card.dart';
@@ -7,30 +8,27 @@ import '../widgets/empty_memo_state.dart';
 import '../widgets/color_palette.dart';
 import '../utils/error_handler.dart';
 import '../models/memo.dart';
+import '../providers/repository_providers.dart';
 import 'memo_detail_screen.dart';
 
-class MemoScreen extends StatefulWidget {
-  final List<Memo> memos; // 型安全なMemoモデルに変更
-  final Function(List<Memo>) onMemosChanged; // 型安全なコールバックに変更
-  final String? newlyCreatedMemoId; // 新しく作成されたメモのID
-  final VoidCallback? onPopAnimationComplete; // ポップアニメーション完了時のコールバック
+class MemoScreen extends ConsumerStatefulWidget {
+  final String? newlyCreatedMemoId;
+  final VoidCallback? onPopAnimationComplete;
   final ScrollController? scrollController;
 
   const MemoScreen({
     super.key,
-    required this.memos,
-    required this.onMemosChanged,
     this.newlyCreatedMemoId,
     this.onPopAnimationComplete,
     this.scrollController,
   });
 
   @override
-  State<MemoScreen> createState() => _MemoScreenState();
+  ConsumerState<MemoScreen> createState() => _MemoScreenState();
 }
 
-class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
-  final SupabaseService _supabaseService = SupabaseService();
+class _MemoScreenState extends ConsumerState<MemoScreen>
+    with TickerProviderStateMixin {
   late AnimationController _popAnimationController;
   late Animation<double> _popAnimation;
   String? _animatingMemoId; // アニメーション中のメモID
@@ -41,6 +39,11 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+
+    // メモを読み込み
+    Future.microtask(() {
+      ref.read(memoNotifierProvider.notifier).loadMemos();
+    });
 
     // ポップアニメーションコントローラー
     _popAnimationController = AnimationController(
@@ -92,7 +95,8 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
 
   // フィルタリングされたメモを取得（型安全版）
   List<Memo> get _filteredMemos {
-    return widget.memos.where(_currentFilter.matches).toList();
+    final memoState = ref.read(memoNotifierProvider);
+    return memoState.memos.where(_currentFilter.matches).toList();
   }
 
   // 色フィルタリングを設定
@@ -129,8 +133,7 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
   // Supabaseからメモを再読み込み（型安全版）
   Future<void> _loadMemos() async {
     try {
-      final memos = await _supabaseService.getUserMemosTyped();
-      widget.onMemosChanged(memos);
+      await ref.read(memoNotifierProvider.notifier).loadMemos();
     } catch (e) {
       if (mounted) {
         AppErrorHandler.handleError(
@@ -230,8 +233,7 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
 
     if (shouldDelete) {
       try {
-        await _supabaseService.deleteMemoTyped(memo.id);
-        _loadMemos(); // リストを再読み込み
+        await ref.read(memoNotifierProvider.notifier).deleteMemo(memo.id);
       } catch (e) {
         if (mounted) {
           AppErrorHandler.handleError(
@@ -250,13 +252,9 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
     final newPinStatus = !memo.isPinned;
 
     try {
-      await _supabaseService.updateMemoPinStatusTyped(
-        memoId: memo.id,
-        isPinned: newPinStatus,
-      );
-
-      // 成功した場合はリストを再読み込み
-      _loadMemos();
+      await ref
+          .read(memoNotifierProvider.notifier)
+          .toggleMemoPinStatus(memo.id, newPinStatus);
     } catch (e) {
       if (mounted) {
         AppErrorHandler.handleError(
@@ -283,7 +281,12 @@ class _MemoScreenState extends State<MemoScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final filteredMemos = _filteredMemos;
+    // メモの状態を監視
+    final memoState = ref.watch(memoNotifierProvider);
+    final allMemos = memoState.memos;
+
+    // フィルター適用
+    final filteredMemos = allMemos.where(_currentFilter.matches).toList();
 
     return Scaffold(
       backgroundColor: const Color(0xFF2B2B2B),

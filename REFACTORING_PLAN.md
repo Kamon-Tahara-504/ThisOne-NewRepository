@@ -234,8 +234,8 @@ lib/
 - [x] Phase 1: Repository層の追加
 - [x] Phase 2: Riverpod導入
 - [x] Phase 3: UseCase層追加
-- [ ] Phase 4: TaskScreen移行
-- [ ] Phase 5: 他画面移行
+- [x] Phase 4: TaskScreen移行
+- [x] Phase 5: 他画面移行
 - [ ] Phase 6: MainDataService削除
 - [ ] Phase 7: SupabaseService分割
 - [ ] Phase 8: ディレクトリ整理
