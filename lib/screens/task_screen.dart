@@ -1,42 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../gradients.dart';
-import '../services/supabase_service.dart';
 import '../utils/error_handler.dart';
 import '../models/task.dart';
+import '../providers/repository_providers.dart';
 
-class TaskScreen extends StatefulWidget {
-  final List<Task>? tasks; // 型安全なTaskモデルに変更
-  final Function(List<Task>)? onTasksChanged; // 型安全なコールバックに変更
+class TaskScreen extends ConsumerStatefulWidget {
   final ScrollController? scrollController;
 
-  const TaskScreen({
-    super.key,
-    this.tasks,
-    this.onTasksChanged,
-    this.scrollController,
-  });
+  const TaskScreen({super.key, this.scrollController});
 
   @override
-  State<TaskScreen> createState() => _TaskScreenState();
+  ConsumerState<TaskScreen> createState() => _TaskScreenState();
 }
 
-class _TaskScreenState extends State<TaskScreen> {
-  late List<Task> _tasks; // 型安全なTaskモデルに変更
+class _TaskScreenState extends ConsumerState<TaskScreen> {
   final TextEditingController _taskController = TextEditingController();
-  final SupabaseService _supabaseService = SupabaseService();
 
   @override
   void initState() {
     super.initState();
-    _tasks = widget.tasks != null ? List.from(widget.tasks!) : [];
-  }
-
-  @override
-  void didUpdateWidget(TaskScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.tasks != null) {
-      _tasks = List.from(widget.tasks!);
-    }
+    // タスクを読み込み
+    Future.microtask(() {
+      ref.read(taskNotifierProvider.notifier).loadTasks();
+    });
   }
 
   @override
@@ -48,17 +35,9 @@ class _TaskScreenState extends State<TaskScreen> {
   void addTask(String title) async {
     if (title.trim().isNotEmpty) {
       try {
-        final newTask = await _supabaseService.addTaskTyped(
-          title: title.trim(),
-          priority: TaskPriority.low,
-        );
-
-        if (newTask != null) {
-          setState(() {
-            _tasks.add(newTask);
-          });
-          _notifyTasksChanged();
-        }
+        await ref
+            .read(taskNotifierProvider.notifier)
+            .addTask(title: title.trim(), priority: TaskPriority.low);
       } catch (e) {
         if (mounted) {
           AppErrorHandler.handleError(
@@ -72,69 +51,46 @@ class _TaskScreenState extends State<TaskScreen> {
     }
   }
 
-  Future<void> _toggleTask(int index) async {
-    final task = _tasks[index];
+  Future<void> _toggleTask(Task task) async {
     final newCompletionStatus = !task.isCompleted;
 
     try {
-      // データベースを更新
-      await _supabaseService.updateTaskCompletionTyped(
-        taskId: task.id,
-        isCompleted: newCompletionStatus,
-      );
-
-      // ローカルの状態を更新
-      setState(() {
-        _tasks[index] = task.copyWith(
-          isCompleted: newCompletionStatus,
-          completedAt: newCompletionStatus ? DateTime.now() : null,
-        );
-      });
-
-      _notifyTasksChanged();
+      await ref
+          .read(taskNotifierProvider.notifier)
+          .toggleTaskCompletion(task.id, newCompletionStatus);
     } catch (e) {
       if (mounted) {
         AppErrorHandler.handleError(
           context,
           e,
           operation: 'タスクの完了状態更新',
-          onRetry: () => _toggleTask(index),
+          onRetry: () => _toggleTask(task),
         );
       }
     }
   }
 
-  Future<void> _deleteTask(int index) async {
-    final task = _tasks[index];
-
+  Future<void> _deleteTask(Task task) async {
     try {
-      // データベースから削除
-      await _supabaseService.deleteTaskTyped(task.id);
-
-      setState(() {
-        _tasks.removeAt(index);
-      });
-      _notifyTasksChanged();
+      await ref.read(taskNotifierProvider.notifier).deleteTask(task.id);
     } catch (e) {
       if (mounted) {
         AppErrorHandler.handleError(
           context,
           e,
           operation: 'タスクの削除',
-          onRetry: () => _deleteTask(index),
+          onRetry: () => _deleteTask(task),
         );
       }
     }
   }
 
-  void _notifyTasksChanged() {
-    if (widget.onTasksChanged != null) {
-      widget.onTasksChanged!(_tasks);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    // タスクの状態を監視
+    final taskState = ref.watch(taskNotifierProvider);
+    final tasks = taskState.tasks;
+
     return Scaffold(
       backgroundColor: const Color(0xFF2B2B2B),
       body: Column(
@@ -142,7 +98,9 @@ class _TaskScreenState extends State<TaskScreen> {
           // タスクリスト
           Expanded(
             child:
-                _tasks.isEmpty
+                taskState.isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : tasks.isEmpty
                     ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -181,9 +139,9 @@ class _TaskScreenState extends State<TaskScreen> {
                     : ListView.builder(
                       controller: widget.scrollController,
                       padding: const EdgeInsets.all(16),
-                      itemCount: _tasks.length,
+                      itemCount: tasks.length,
                       itemBuilder: (context, index) {
-                        final task = _tasks[index];
+                        final task = tasks[index];
                         return Container(
                           margin: const EdgeInsets.only(bottom: 12),
                           decoration: BoxDecoration(
@@ -200,7 +158,7 @@ class _TaskScreenState extends State<TaskScreen> {
                           ),
                           child: ListTile(
                             leading: GestureDetector(
-                              onTap: () => _toggleTask(index),
+                              onTap: () => _toggleTask(task),
                               child: Container(
                                 width: 24,
                                 height: 24,
@@ -243,7 +201,7 @@ class _TaskScreenState extends State<TaskScreen> {
                               ),
                             ),
                             trailing: IconButton(
-                              onPressed: () => _deleteTask(index),
+                              onPressed: () => _deleteTask(task),
                               icon: Icon(
                                 Icons.delete_outline,
                                 color: Colors.grey[500],

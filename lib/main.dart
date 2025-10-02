@@ -277,17 +277,9 @@ class _MainScreenState extends State<MainScreen> {
     // PageViewで表示する画面のリストを作成
     final List<Widget> pages = [
       // 0: タスク画面
-      _dataService.isLoading
-          ? const Center(
-            child: CircularProgressIndicator(color: Color(0xFFE85A3B)),
-          )
-          : TaskScreen(
-            tasks: _dataService.tasks,
-            onTasksChanged: (updatedTasks) {
-              _dataService.updateTasks(updatedTasks);
-            },
-            scrollController: _scrollControllerManager.getScrollController(0),
-          ),
+      TaskScreen(
+        scrollController: _scrollControllerManager.getScrollController(0),
+      ),
       // 1: カレンダー画面
       ScheduleScreen(
         key: _scheduleScreenKey,
