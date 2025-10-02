@@ -232,8 +232,8 @@ lib/
 ## 現在の進捗
 
 - [x] Phase 1: Repository層の追加
-- [ ] Phase 2: Riverpod導入
-- [ ] Phase 3: UseCase層追加
+- [x] Phase 2: Riverpod導入
+- [x] Phase 3: UseCase層追加
 - [ ] Phase 4: TaskScreen移行
 - [ ] Phase 5: 他画面移行
 - [ ] Phase 6: MainDataService削除
