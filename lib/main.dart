@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'supabase_config.dart';
 import 'services/supabase_service.dart';
 import 'widgets/app_bars/collapsible_app_bar.dart';
@@ -11,11 +10,10 @@ import 'screens/schedule_screen.dart';
 import 'screens/memo_screen.dart';
 import 'screens/settings_screen.dart';
 import 'utils/error_handler.dart';
-import 'models/memo.dart';
-import 'models/task.dart';
 import 'controllers/scroll_controller_manager.dart';
 import 'controllers/header_controller.dart';
 import 'controllers/page_controller.dart';
+import 'services/main_data_service.dart';
 
 // カスタムScrollPhysics for スワイプアニメーション速度調整
 class CustomPageScrollPhysics extends ScrollPhysics {
@@ -105,19 +103,14 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   // 状態変数
-  final List<Task> _tasks = [];
-  final List<Memo> _memos = [];
-  final SupabaseService _supabaseService = SupabaseService();
-  bool _isLoading = true;
-  bool _isLoadingMemos = true;
   AccountInfoOverlay? _accountInfoOverlay;
-  String? _newlyCreatedMemoId;
 
   // コントローラー（メモリリーク対策）
   late AppPageController _appPageController;
   final GlobalKey _scheduleScreenKey = GlobalKey();
   late ScrollControllerManager _scrollControllerManager;
   late HeaderController _headerController;
+  late MainDataService _dataService;
   bool _isDisposed = false; // 二重dispose防止
 
   @override
@@ -130,6 +123,7 @@ class _MainScreenState extends State<MainScreen> {
 
     _scrollControllerManager = ScrollControllerManager();
     _headerController = HeaderController();
+    _dataService = MainDataService();
 
     // ヘッダーコントローラーの変更を監視
     _headerController.addListener(() {
@@ -145,19 +139,24 @@ class _MainScreenState extends State<MainScreen> {
       }
     });
 
+    // データサービスの変更を監視
+    _dataService.addListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+
     // ScrollControllersを初期化
     _scrollControllerManager.initializeScrollControllers(
       pageCount: 4, // タスク、スケジュール、メモ、設定
       onScroll: _onScroll,
     );
 
-    _loadTasks();
-    _loadMemos();
+    // データを読み込み
+    _loadData();
+
     // 認証状態の変更を監視
-    _supabaseService.authStateChanges.listen((AuthState data) {
-      _loadTasks();
-      _loadMemos();
-    });
+    _dataService.startAuthStateListener();
   }
 
   // スクロール制御（メモリリーク対策）
@@ -188,7 +187,7 @@ class _MainScreenState extends State<MainScreen> {
   AccountInfoOverlay get accountInfoOverlay {
     _accountInfoOverlay ??= AccountInfoOverlay(
       context: context,
-      onTasksNeedReload: _loadTasks,
+      onTasksNeedReload: () => _dataService.loadTasks(),
     );
     return _accountInfoOverlay!;
   }
@@ -207,6 +206,7 @@ class _MainScreenState extends State<MainScreen> {
     // コントローラーを安全に解放
     _scrollControllerManager.dispose();
     _headerController.dispose();
+    _dataService.dispose();
 
     // AccountInfoOverlayを安全に解放
     try {
@@ -219,92 +219,45 @@ class _MainScreenState extends State<MainScreen> {
     super.dispose();
   }
 
-  // Supabaseからタスクを読み込み（型安全版・メモリリーク対策）
-  Future<void> _loadTasks() async {
+  // データを読み込み
+  Future<void> _loadData() async {
     if (_isDisposed || !mounted) return;
 
     try {
-      final tasks = await _supabaseService.getUserTasksTyped();
-      if (!_isDisposed && mounted) {
-        setState(() {
-          _tasks.clear();
-          _tasks.addAll(tasks);
-          _isLoading = false;
-        });
-      }
+      await _dataService.loadTasks();
     } catch (e) {
       if (!_isDisposed && mounted) {
-        setState(() {
-          _isLoading = false;
-        });
         AppErrorHandler.handleError(
           context,
           e,
           operation: 'タスクの読み込み',
-          onRetry: _loadTasks,
+          onRetry: _loadData,
         );
       }
     }
-  }
-
-  // Supabaseからメモを読み込み（型安全版・メモリリーク対策）
-  Future<void> _loadMemos() async {
-    if (_isDisposed || !mounted) return;
 
     try {
-      final memos = await _supabaseService.getUserMemosTyped();
-      if (!_isDisposed && mounted) {
-        setState(() {
-          _memos.clear();
-          _memos.addAll(memos);
-          _isLoadingMemos = false;
-        });
-      }
+      await _dataService.loadMemos();
     } catch (e) {
       if (!_isDisposed && mounted) {
-        setState(() {
-          _isLoadingMemos = false;
-        });
         AppErrorHandler.handleError(
           context,
           e,
           operation: 'メモの読み込み',
-          onRetry: _loadMemos,
+          onRetry: _loadData,
         );
       }
     }
   }
 
-  // Supabaseにタスクを追加（メモリリーク対策）
+  // タスクを追加
   Future<void> _addTask(String title) async {
     if (_isDisposed || !mounted || title.trim().isEmpty) return;
 
     try {
-      final newTask = await _supabaseService.addTaskTyped(title: title.trim());
-
-      if (!_isDisposed && mounted) {
-        if (newTask != null) {
-          setState(() {
-            _tasks.add(newTask);
-          });
-        } else {
-          // 認証されていない場合はローカルに保存
-          final localTask = Task(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            userId: 'local',
-            title: title.trim(),
-            isCompleted: false,
-            priority: TaskPriority.low,
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          );
-
-          setState(() {
-            _tasks.add(localTask);
-          });
-
-          AppErrorHandler.showInfo(context, 'ログインしていないため、タスクはローカルに保存されました');
-        }
+      await _dataService.addTask(title);
+      if (!_dataService.tasks.any((task) => task.userId == 'local')) {
+        AppErrorHandler.showInfo(context, 'ログインしていないため、タスクはローカルに保存されました');
       }
     } catch (e) {
       if (!_isDisposed && mounted) {
@@ -323,17 +276,14 @@ class _MainScreenState extends State<MainScreen> {
     // PageViewで表示する画面のリストを作成
     final List<Widget> pages = [
       // 0: タスク画面
-      _isLoading
+      _dataService.isLoading
           ? const Center(
             child: CircularProgressIndicator(color: Color(0xFFE85A3B)),
           )
           : TaskScreen(
-            tasks: _tasks,
+            tasks: _dataService.tasks,
             onTasksChanged: (updatedTasks) {
-              setState(() {
-                _tasks.clear();
-                _tasks.addAll(updatedTasks);
-              });
+              _dataService.updateTasks(updatedTasks);
             },
             scrollController: _scrollControllerManager.getScrollController(0),
           ),
@@ -343,23 +293,18 @@ class _MainScreenState extends State<MainScreen> {
         scrollController: _scrollControllerManager.getScrollController(1),
       ),
       // 2: メモ画面
-      _isLoadingMemos
+      _dataService.isLoadingMemos
           ? const Center(
             child: CircularProgressIndicator(color: Color(0xFFE85A3B)),
           )
           : MemoScreen(
-            memos: _memos,
+            memos: _dataService.memos,
             onMemosChanged: (updatedMemos) {
-              setState(() {
-                _memos.clear();
-                _memos.addAll(updatedMemos);
-              });
+              _dataService.updateMemos(updatedMemos);
             },
-            newlyCreatedMemoId: _newlyCreatedMemoId,
+            newlyCreatedMemoId: _dataService.newlyCreatedMemoId,
             onPopAnimationComplete: () {
-              setState(() {
-                _newlyCreatedMemoId = null;
-              });
+              _dataService.clearNewlyCreatedMemoId();
             },
             scrollController: _scrollControllerManager.getScrollController(2),
           ),
@@ -453,7 +398,7 @@ class _MainScreenState extends State<MainScreen> {
             currentIndex: _appPageController.currentIndex,
             onTabChanged: (index) => _appPageController.navigateToTab(index),
             pageController: _appPageController.pageController,
-            supabaseService: _supabaseService,
+            supabaseService: SupabaseService(),
             onTaskAdded: (title) => _addTask(title),
             onMemoCreated:
                 (title, mode, colorHex) => _createMemo(title, mode, colorHex),
@@ -474,37 +419,16 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  // _createMemo メソッドは CustomBottomNavigationBar で使用されるため保持
+  // メモを作成
   Future<void> _createMemo(String title, String mode, String colorHex) async {
     if (!mounted) return;
 
     try {
-      // modeをMemoModeに変換
-      final memoMode = MemoMode.fromString(mode);
-      final newMemo = await _supabaseService.addMemoTyped(
-        title: title,
-        mode: memoMode,
-        colorHex: colorHex,
-      );
-
-      if (!mounted) return;
-
-      if (newMemo != null) {
-        // 新しく作成されたメモのIDを設定
-        setState(() {
-          _newlyCreatedMemoId = newMemo.id;
-        });
-
-        // メモリストを再読み込み
-        _loadMemos();
-      } else {
-        if (mounted) {
-          AppErrorHandler.showInfo(context, 'ログインしていないため、メモはローカルに保存されました');
-        }
+      await _dataService.createMemo(title, mode, colorHex);
+      if (mounted) {
+        AppErrorHandler.showInfo(context, 'ログインしていないため、メモはローカルに保存されました');
       }
     } catch (e) {
-      if (!mounted) return;
-
       if (mounted) {
         AppErrorHandler.handleError(
           context,
